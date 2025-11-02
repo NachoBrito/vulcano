@@ -1,0 +1,64 @@
+/*
+ *    Copyright 2025 Nacho Brito
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package es.nachobrito.vulcanodb.atests;
+
+import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
+import es.nachobrito.vulcanodb.core.domain.model.document.Document;
+import es.nachobrito.vulcanodb.core.domain.model.query.Query;
+import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+
+/**
+ * @author nacho
+ */
+public class BigDbUseCaseTest {
+
+    public static final String FIELD_NAME = "vector";
+
+    @Test
+    void expectSimilaritySearchWork() {
+        var db = VulcanoDb.getInstance();
+        var positiveCount = 1_000;
+        var negativeCount = 1_000_000;
+        var query = Query.builder().and(new double[]{1, 0}, List.of("vector")).build();
+
+        for (int i = 0; i < positiveCount; i++) {
+            var document = Document.builder()
+                    .withVectorField(FIELD_NAME, new double[]{1, 0})
+                    .build();
+            db.add(document);
+        }
+
+        for (int i = 0; i < negativeCount; i++) {
+            var document = Document.builder()
+                    .withVectorField(FIELD_NAME, new double[]{0, 1})
+                    .build();
+            db.add(document);
+        }
+
+        assertTimeout(Duration.ofMillis(1000), () -> {
+            var result = db.search(query);
+            assertEquals(positiveCount, result.getDocuments().size());
+
+        });
+    }
+}

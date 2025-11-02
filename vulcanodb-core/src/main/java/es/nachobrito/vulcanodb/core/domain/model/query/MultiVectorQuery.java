@@ -26,7 +26,6 @@ import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.AND;
  * @author nacho
  */
 public class MultiVectorQuery implements Query {
-
     private final List<VectorQuery> queries;
     private final Operator operator;
 

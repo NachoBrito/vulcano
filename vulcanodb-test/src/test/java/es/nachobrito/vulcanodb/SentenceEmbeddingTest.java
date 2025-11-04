@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -58,6 +59,8 @@ public class SentenceEmbeddingTest {
         var result = db.search(query);
 
         assertNotNull(result);
+        assertEquals(candidates.size(), result.getDocuments().size());
+        assertEquals("How can I control pests on my cotton farm?", result.getDocuments().get(0).document().field("sentence").get().value().value());
         result.getDocuments()
                 .forEach(it -> IO.println("[%.2f] %s".formatted(it.score(), it.document().field("sentence").get().value().value())));
 

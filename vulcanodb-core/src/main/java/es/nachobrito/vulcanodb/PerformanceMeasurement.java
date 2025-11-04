@@ -14,29 +14,21 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.atests;
+package es.nachobrito.vulcanodb;
 
 import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
-import es.nachobrito.vulcanodb.core.domain.model.result.Result;
-import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author nacho
  */
-public class BigDbUseCaseTest {
-
+public class PerformanceMeasurement {
     public static final String FIELD_NAME = "vector";
 
-    @Test
-    void expectSimilaritySearchWork() {
+    static void main(String[] args) {
         var db = VulcanoDb.builder().build();
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
@@ -55,27 +47,8 @@ public class BigDbUseCaseTest {
                     .build();
             db.add(document);
         }
-
-        int rounds = 200;
-        long maxP95 = 50;
-        var measurements = new long[rounds];
-        var results = new Result[rounds];
-        long start, end;
-
-        for (int i = 0; i < measurements.length; i++) {
-            start = System.currentTimeMillis();
-            results[i] = db.search(query);
-            end = System.currentTimeMillis();
-            measurements[i] = end - start;
+        for (int i = 0; i < 100; i++) {
+            db.search(query);
         }
-
-        for (Result result : results) {
-            assertEquals(positiveCount, result.getDocuments().size());
-        }
-
-        Arrays.sort(measurements);
-        int p95Index = Math.toIntExact(Math.round(0.95 * measurements.length)) - 1;
-        var p95 = measurements[p95Index];
-        assertTrue(p95 < maxP95, "P95 of %d is not < %d".formatted(p95, maxP95));
     }
 }

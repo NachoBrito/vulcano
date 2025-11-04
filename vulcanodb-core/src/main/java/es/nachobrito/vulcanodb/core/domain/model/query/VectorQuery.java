@@ -20,6 +20,8 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 
 import java.util.List;
 
+import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.AND;
+
 /**
  * @author nacho
  */
@@ -35,11 +37,16 @@ public class VectorQuery implements Query {
 
     @Override
     public Double apply(Document document) {
-        return fieldQueries
-                .stream()
-                .map(it -> it.apply(document))
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(.0);
+        var sum = 0.0;
+        var partial = 0.0;
+        var isAnd = operator.equals(AND);
+        for (var query : fieldQueries) {
+            partial = query.apply(document);
+            if (isAnd && partial == 0.0) {
+                return .0;
+            }
+            sum += partial;
+        }
+        return sum / fieldQueries.size();
     }
 }

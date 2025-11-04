@@ -30,13 +30,6 @@ import java.util.Arrays;
  * @author nacho
  */
 public class VulcanoDb {
-    private static final VulcanoDb INSTANCE = createInstance();
-
-    private static VulcanoDb createInstance() {
-        //TODO: externalize config to choose concrete implementations
-        var dataStore = new InMemoryDataStore();
-        return new VulcanoDb(dataStore);
-    }
 
     private final DataStore dataStore;
 
@@ -44,14 +37,6 @@ public class VulcanoDb {
         this.dataStore = dataStore;
     }
 
-    /**
-     * Gets ths singleton instance of the database.
-     *
-     * @return the singleton instance of VulcanoDb
-     */
-    public static VulcanoDb getInstance() {
-        return INSTANCE;
-    }
 
     /**
      * Adds a new document to the database
@@ -81,4 +66,26 @@ public class VulcanoDb {
         return dataStore.search(query);
     }
 
+    /**
+     * Gets a new builder instance
+     *
+     * @return a new builder for VulcanoDb objects
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private DataStore dataStore = new InMemoryDataStore();
+
+        public Builder withDataStore(DataStore newDataStore) {
+            this.dataStore = newDataStore;
+            return this;
+        }
+
+        public VulcanoDb build() {
+            return new VulcanoDb(dataStore);
+        }
+
+    }
 }

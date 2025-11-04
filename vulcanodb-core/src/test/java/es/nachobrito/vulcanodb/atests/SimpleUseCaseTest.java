@@ -35,7 +35,7 @@ public class SimpleUseCaseTest {
 
     @Test
     void expectSimilaritySearchWork() {
-        var db = VulcanoDb.getInstance();
+        var db = VulcanoDb.builder().build();
         var document1 = Document.builder()
                 .withVectorField(FIELD_NAME, new double[]{1, 0})
                 .build();

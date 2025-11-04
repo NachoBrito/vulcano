@@ -17,20 +17,29 @@
 package es.nachobrito.vulcanodb.core.domain.model.document;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author nacho
  */
-public record Document(DocumentId id, List<Field<?>> fields) {
+public class Document {
+    private final DocumentId id;
+    private final Map<String, Field<?>> fields;
 
-    public Document(DocumentId id, List<Field<?>> fields) {
+    Document(DocumentId id, List<Field<?>> fields) {
         this.id = id;
-        this.fields = List.copyOf(fields);
+        this.fields = fields.stream().collect(Collectors.toMap(Field::key, Function.identity()));
     }
 
     public Optional<Field<?>> field(String fieldName) {
-        return fields.stream().filter(it -> it.key().equals(fieldName)).findFirst();
+        return Optional.ofNullable(fields.get(fieldName));
+    }
+
+    public DocumentId id() {
+        return id;
     }
 
     public static DocumentBuilder builder() {

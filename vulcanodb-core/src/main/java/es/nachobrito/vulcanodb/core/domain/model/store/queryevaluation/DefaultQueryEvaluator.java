@@ -29,53 +29,73 @@ import java.util.stream.Collector;
  */
 public class DefaultQueryEvaluator implements QueryEvaluator {
     private static final double MIN_SCORE = .0;
+    private static final CandiatePredicate CANDIDATE_PREDICATE = new CandiatePredicate();
+    private static final CandidateCollector CANDIDATE_COLLECTOR = new CandidateCollector();
 
     private final Query query;
+    private final CandidateMapper candidateMapper;
 
     public DefaultQueryEvaluator(Query query) {
         this.query = query;
+        candidateMapper = new CandidateMapper();
     }
 
     @Override
     public Function<Document, Candidate> mapper() {
-        return (Document document) -> new Candidate(document, query.apply(document));
+        return candidateMapper;
     }
 
     @Override
     public Predicate<Candidate> predicate() {
-        return (Candidate candidate) -> candidate.score() > MIN_SCORE;
+        return CANDIDATE_PREDICATE;
     }
 
     @Override
     public Collector<Candidate, ResultBuilder, Result> collector() {
-        return new Collector<>() {
-            @Override
-            public Supplier<ResultBuilder> supplier() {
-                return ResultBuilder::new;
-            }
+        return CANDIDATE_COLLECTOR;
+    }
+    
+    class CandidateMapper implements Function<Document, QueryEvaluator.Candidate> {
+        @Override
+        public QueryEvaluator.Candidate apply(Document document) {
+            return new QueryEvaluator.Candidate(document, query.apply(document));
+        }
+    }
 
-            @Override
-            public BiConsumer<ResultBuilder, Candidate> accumulator() {
-                return (builder, candidate) -> {
-                    builder.addDocument(candidate.toResult());
-                };
-            }
+    static class CandiatePredicate implements Predicate<Candidate> {
 
-            @Override
-            public BinaryOperator<ResultBuilder> combiner() {
-                return ResultBuilder::combine;
-            }
+        @Override
+        public boolean test(Candidate candidate) {
+            return candidate.score() > MIN_SCORE;
+        }
+    }
 
-            @Override
-            public Function<ResultBuilder, Result> finisher() {
-                return ResultBuilder::build;
-            }
+    static class CandidateCollector implements Collector<Candidate, ResultBuilder, Result> {
+        @Override
+        public Supplier<ResultBuilder> supplier() {
+            return ResultBuilder::new;
+        }
 
-            @Override
-            public Set<Characteristics> characteristics() {
-                return Set.of();
-            }
-        };
+        @Override
+        public BiConsumer<ResultBuilder, Candidate> accumulator() {
+            return (builder, candidate) -> {
+                builder.addDocument(candidate.toResult());
+            };
+        }
 
+        @Override
+        public BinaryOperator<ResultBuilder> combiner() {
+            return ResultBuilder::combine;
+        }
+
+        @Override
+        public Function<ResultBuilder, Result> finisher() {
+            return ResultBuilder::build;
+        }
+
+        @Override
+        public Set<Characteristics> characteristics() {
+            return Set.of();
+        }
     }
 }

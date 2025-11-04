@@ -57,7 +57,8 @@ public class BigDbUseCaseTest {
         }
 
         int rounds = 200;
-        long maxP95 = 50;
+        long maxP95 = 40;
+        double maxAvg = 30.0;
         var measurements = new long[rounds];
         var results = new Result[rounds];
         long start, end;
@@ -76,6 +77,12 @@ public class BigDbUseCaseTest {
         Arrays.sort(measurements);
         int p95Index = Math.toIntExact(Math.round(0.95 * measurements.length)) - 1;
         var p95 = measurements[p95Index];
+        var stats = Arrays.stream(measurements).summaryStatistics();
+        var max = stats.getMax();
+        var min = stats.getMin();
+        var avg = stats.getAverage();
+
         assertTrue(p95 < maxP95, "P95 of %d is not < %d".formatted(p95, maxP95));
+        assertTrue(avg < maxAvg, "avg of %f is not < %f".formatted(avg, maxAvg));
     }
 }

@@ -32,12 +32,10 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
     private static final CandiatePredicate CANDIDATE_PREDICATE = new CandiatePredicate();
     private static final CandidateCollector CANDIDATE_COLLECTOR = new CandidateCollector();
 
-    private final Query query;
     private final CandidateMapper candidateMapper;
 
     public DefaultQueryEvaluator(Query query) {
-        this.query = query;
-        candidateMapper = new CandidateMapper();
+        candidateMapper = new CandidateMapper(query);
     }
 
     @Override
@@ -55,10 +53,21 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
         return CANDIDATE_COLLECTOR;
     }
     
-    class CandidateMapper implements Function<Document, QueryEvaluator.Candidate> {
+    static class CandidateMapper implements Function<Document, QueryEvaluator.Candidate> {
+
+        private final Query query;
+
+        public CandidateMapper(Query query) {
+            this.query = query;
+        }
+
         @Override
         public QueryEvaluator.Candidate apply(Document document) {
-            return new QueryEvaluator.Candidate(document, query.apply(document));
+            var score = query.apply(document);
+            if (score > MIN_SCORE) {
+                return new QueryEvaluator.Candidate(document, score);
+            }
+            return null;
         }
     }
 
@@ -66,7 +75,7 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
 
         @Override
         public boolean test(Candidate candidate) {
-            return candidate.score() > MIN_SCORE;
+            return candidate != null;
         }
     }
 

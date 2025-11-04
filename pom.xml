@@ -27,6 +27,7 @@
     <url>http://maven.apache.org</url>
     <modules>
         <module>vulcanodb-core</module>
+        <module>vulcanodb-test</module>
     </modules>
 
     <properties>

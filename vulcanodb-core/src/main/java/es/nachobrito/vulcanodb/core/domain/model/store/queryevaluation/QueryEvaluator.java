@@ -21,6 +21,7 @@ import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.result.ResultDocument;
 
+import java.util.Comparator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
@@ -30,7 +31,7 @@ import java.util.stream.Collector;
  */
 public interface QueryEvaluator {
 
-    record Candidate(Document document, Double score) {
+    record Candidate(Document document, double score) {
         ResultDocument toResult() {
             return new ResultDocument(document, score);
         }
@@ -41,6 +42,8 @@ public interface QueryEvaluator {
     Predicate<Candidate> predicate();
 
     Collector<Candidate, ResultBuilder, Result> collector();
+
+    Comparator<Candidate> comparator();
 
     static QueryEvaluator of(Query query) {
         return new DefaultQueryEvaluator(query);

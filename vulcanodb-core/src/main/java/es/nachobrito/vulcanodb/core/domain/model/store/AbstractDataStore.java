@@ -35,6 +35,7 @@ public abstract class AbstractDataStore implements DataStore {
         return this.getDocumentStream()
                 .map(evaluator.mapper())
                 .filter(evaluator.predicate())
+                .sorted(evaluator.comparator())
                 .collect(evaluator.collector());
     }
 

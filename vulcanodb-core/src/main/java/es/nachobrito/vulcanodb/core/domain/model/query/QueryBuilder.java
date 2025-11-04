@@ -37,6 +37,15 @@ public class QueryBuilder {
 
     }
 
+    public QueryBuilder and(double[] vector, String fieldName) {
+        return and(vector, List.of(fieldName));
+    }
+
+    public QueryBuilder or(double[] vector, String fieldName) {
+
+        return or(vector, List.of(fieldName));
+    }
+
     public QueryBuilder and(double[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, AND);
     }
@@ -63,7 +72,7 @@ public class QueryBuilder {
         this.vectorSimilarity = vectorSimilarity;
         return this;
     }
-    
+
     public Query build() {
         return new MultiVectorQuery(vectorQueries, operator);
     }

@@ -19,6 +19,5 @@ package es.nachobrito.vulcanodb.core.domain.model.document;
 /**
  * @author nacho
  */
-public sealed interface FieldValueType<V> permits DoubleVectorFieldValue, StringVectorFieldValue {
-    V value();
+public record StringVectorFieldValue(String value) implements FieldValueType<String> {
 }

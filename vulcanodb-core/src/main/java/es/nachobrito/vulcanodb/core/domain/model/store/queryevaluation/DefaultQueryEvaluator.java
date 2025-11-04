@@ -20,6 +20,7 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 
+import java.util.Comparator;
 import java.util.Set;
 import java.util.function.*;
 import java.util.stream.Collector;
@@ -31,6 +32,7 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
     private static final double MIN_SCORE = .0;
     private static final CandiatePredicate CANDIDATE_PREDICATE = new CandiatePredicate();
     private static final CandidateCollector CANDIDATE_COLLECTOR = new CandidateCollector();
+    private static final CandidateComparator CANDIDATE_COMPARATOR = new CandidateComparator();
 
     private final CandidateMapper candidateMapper;
 
@@ -52,7 +54,12 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
     public Collector<Candidate, ResultBuilder, Result> collector() {
         return CANDIDATE_COLLECTOR;
     }
-    
+
+    @Override
+    public Comparator<Candidate> comparator() {
+        return CANDIDATE_COMPARATOR;
+    }
+
     static class CandidateMapper implements Function<Document, QueryEvaluator.Candidate> {
 
         private final Query query;
@@ -105,6 +112,14 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
         @Override
         public Set<Characteristics> characteristics() {
             return Set.of();
+        }
+    }
+
+    static class CandidateComparator implements Comparator<Candidate> {
+
+        @Override
+        public int compare(Candidate o1, Candidate o2) {
+            return Double.compare(o2.score(), o1.score());
         }
     }
 }

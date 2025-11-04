@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
  */
 public class VectorFieldQuery implements Query {
     private static final Logger log = LoggerFactory.getLogger(VectorFieldQuery.class);
+    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search vector fields.";
+    public static final String FIELD_NOT_FOUND_WARNING = "Document {} does not contain a '{}' field";
 
     private final double[] vector;
     private final String fieldName;
@@ -43,12 +45,13 @@ public class VectorFieldQuery implements Query {
     public Double apply(Document document) {
         var maybeField = document.field(fieldName);
         if (maybeField.isEmpty()) {
-            log.warn("Document {} does not contain a '{}' field", document.id().value(), fieldName);
+            log.warn(FIELD_NOT_FOUND_WARNING, document.id().value(), fieldName);
             return .0;
         }
+
         var field = maybeField.get();
         if (!(field.type().equals(DoubleVectorFieldValue.class))) {
-            log.warn("Field {} in document {} is not a vector field ({})", fieldName, document.id().value(), field.type().getName());
+            log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
             return .0;
         }
 

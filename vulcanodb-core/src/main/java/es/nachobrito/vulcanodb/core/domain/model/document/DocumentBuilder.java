@@ -34,8 +34,14 @@ public class DocumentBuilder {
         return this;
     }
 
+    public DocumentBuilder withStringField(String name, String value) {
+        this.fields.add(new Field<>(name, StringVectorFieldValue.class, new StringVectorFieldValue(value)));
+        return this;
+    }
+
     public Document build() {
         var id = DocumentId.newRandomId();
         return new Document(id, fields);
     }
+
 }

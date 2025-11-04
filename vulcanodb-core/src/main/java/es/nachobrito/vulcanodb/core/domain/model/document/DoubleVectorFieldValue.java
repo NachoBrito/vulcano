@@ -16,8 +16,18 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.document;
 
+import java.util.Arrays;
+
 /**
  * @author nacho
  */
 public record DoubleVectorFieldValue(double[] value) implements FieldValueType<double[]> {
+    public DoubleVectorFieldValue {
+        value = Arrays.copyOf(value, value.length);
+    }
+
+    @Override
+    public double[] value() {
+        return Arrays.copyOf(value, value.length);
+    }
 }

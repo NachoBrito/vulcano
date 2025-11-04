@@ -23,6 +23,8 @@ import es.nachobrito.vulcanodb.core.domain.model.query.similarity.VectorSimilari
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+
 /**
  * @author nacho
  */
@@ -36,7 +38,7 @@ public class VectorFieldQuery implements Query {
     private final VectorSimilarity vectorSimilarity;
 
     public VectorFieldQuery(double[] vector, String fieldName, VectorSimilarity vectorSimilarity) {
-        this.vector = vector;
+        this.vector = Arrays.copyOf(vector, vector.length);
         this.fieldName = fieldName;
         this.vectorSimilarity = vectorSimilarity;
     }

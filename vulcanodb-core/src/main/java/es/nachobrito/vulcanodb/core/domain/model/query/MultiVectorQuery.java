@@ -18,6 +18,7 @@ package es.nachobrito.vulcanodb.core.domain.model.query;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.AND;
@@ -30,7 +31,7 @@ public class MultiVectorQuery implements Query {
     private final Operator operator;
 
     public MultiVectorQuery(List<VectorQuery> queries, Operator operator) {
-        this.queries = queries;
+        this.queries = new ArrayList<>(queries);
         this.operator = operator;
     }
 

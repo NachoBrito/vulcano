@@ -20,6 +20,7 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.function.*;
@@ -115,7 +116,7 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
         }
     }
 
-    static class CandidateComparator implements Comparator<Candidate> {
+    static class CandidateComparator implements Comparator<Candidate>, Serializable {
 
         @Override
         public int compare(Candidate o1, Candidate o2) {

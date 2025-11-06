@@ -40,7 +40,7 @@ public class BigDbUseCaseTest {
         var db = VulcanoDb.builder().build();
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
-        var query = Query.builder().and(new double[]{1, 0}, List.of("vector")).build();
+        var query = Query.builder().allSimilarTo(new double[]{1, 0}, List.of("vector")).build();
 
         for (int i = 0; i < positiveCount; i++) {
             var document = Document.builder()

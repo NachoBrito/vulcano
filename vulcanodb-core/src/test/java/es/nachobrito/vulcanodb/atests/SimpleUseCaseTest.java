@@ -51,7 +51,7 @@ public class SimpleUseCaseTest {
 
         for (int i = 0; i < queries.length; i++) {
             var query = Query.builder()
-                    .and(queries[i], List.of(FIELD_NAME))
+                    .allSimilarTo(queries[i], List.of(FIELD_NAME))
                     .build();
             var expectedResult = expected[i];
 

@@ -20,8 +20,6 @@ import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 
-import java.util.List;
-
 /**
  * @author nacho
  */
@@ -32,7 +30,9 @@ public class PerformanceMeasurement {
         var db = VulcanoDb.builder().build();
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
-        var query = Query.builder().and(new double[]{1, 0}, List.of("vector")).build();
+        var query = Query.builder()
+                .isSimilarTo(new double[]{1, 0}, "vector")
+                .build();
 
         for (int i = 0; i < positiveCount; i++) {
             var document = Document.builder()

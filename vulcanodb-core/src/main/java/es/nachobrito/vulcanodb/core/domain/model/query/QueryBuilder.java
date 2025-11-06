@@ -30,31 +30,42 @@ import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.OR;
  */
 public class QueryBuilder {
     private Operator operator = AND;
-    private VectorSimilarity vectorSimilarity = new CosineSimilarity();
-    private List<VectorQuery> vectorQueries = new ArrayList<>();
+    private final List<VectorQuery> vectorQueries = new ArrayList<>();
 
     QueryBuilder() {
 
     }
 
-    public QueryBuilder and(double[] vector, String fieldName) {
-        return and(vector, List.of(fieldName));
+
+    ///  Match documents where the value in the provided field is similar (semantic search) to the vector provided.
+    ///
+    /// @param vector    the vector to search
+    /// @param fieldName the field to compare
+    /// @return this query builder
+    public QueryBuilder isSimilarTo(double[] vector, String fieldName) {
+        return allSimilarTo(vector, List.of(fieldName));
     }
 
-    public QueryBuilder or(double[] vector, String fieldName) {
-
-        return or(vector, List.of(fieldName));
+    /// Match documents where the value of **all** the fields in the list are similar the vector provided.
+    ///
+    /// @param vector     the vector to search
+    /// @param fieldNames the field names to compare
+    /// @return this query builder
+    public QueryBuilder allSimilarTo(double[] vector, List<String> fieldNames) {
+        return addVectorQuery(vector, fieldNames, AND, new CosineSimilarity());
     }
 
-    public QueryBuilder and(double[] vector, List<String> fieldNames) {
-        return addVectorQuery(vector, fieldNames, AND);
+    /// Match documents where the value of **any** of the fields in the list is similar to the vector provided.
+    ///
+    /// @param vector     the vector to search
+    /// @param fieldNames the field names to compare
+    /// @return this query builder
+    public QueryBuilder anySimilarTo(double[] vector, List<String> fieldNames) {
+        return addVectorQuery(vector, fieldNames, OR, new CosineSimilarity());
     }
 
-    public QueryBuilder or(double[] vector, List<String> fieldNames) {
-        return addVectorQuery(vector, fieldNames, OR);
-    }
+    private QueryBuilder addVectorQuery(double[] vector, List<String> fieldNames, Operator operator, VectorSimilarity vectorSimilarity) {
 
-    private QueryBuilder addVectorQuery(double[] vector, List<String> fieldNames, Operator operator) {
         var fieldQueries = fieldNames
                 .stream()
                 .map(it -> new VectorFieldQuery(vector, it, vectorSimilarity))
@@ -63,15 +74,16 @@ public class QueryBuilder {
         return this;
     }
 
+    ///  Set the operator for this query, affecting all the conditions added with [#isSimilarTo(double\[\], String)],
+    /// [#allSimilarTo(double\[\], List)], [#anySimilarTo(double\[\], List)]
+    ///
+    /// @param operator [Operator]
+    /// @return this query builder
     public QueryBuilder withOperator(Operator operator) {
         this.operator = operator;
         return this;
     }
 
-    public QueryBuilder withVectorSimilarity(VectorSimilarity vectorSimilarity) {
-        this.vectorSimilarity = vectorSimilarity;
-        return this;
-    }
 
     public Query build() {
         return new MultiVectorQuery(vectorQueries, operator);

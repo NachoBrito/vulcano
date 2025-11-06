@@ -55,7 +55,7 @@ public class SentenceEmbeddingTest {
         }
 
         var questionVector = convertFloatsToDoubles(embeddingModel.embed(question).content().vector());
-        var query = Query.builder().and(questionVector, "embedding").build();
+        var query = Query.builder().isSimilarTo(questionVector, "embedding").build();
         var result = db.search(query);
 
         assertNotNull(result);

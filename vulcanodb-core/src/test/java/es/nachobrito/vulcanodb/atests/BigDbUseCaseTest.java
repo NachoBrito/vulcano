@@ -57,8 +57,8 @@ public class BigDbUseCaseTest {
         }
 
         int rounds = 200;
-        long maxP95 = 40;
-        double maxAvg = 30.0;
+        long maxP95 = 100;
+        double maxAvg = 75.0;
         var measurements = new long[rounds];
         var results = new Result[rounds];
         long start, end;

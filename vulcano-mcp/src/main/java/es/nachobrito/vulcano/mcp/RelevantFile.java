@@ -27,7 +27,7 @@ import jakarta.validation.constraints.NotNull;
  */
 @Serdeable
 @JsonSchema
-public record RelevantPath(
+public record RelevantFile(
         @NotNull @NotBlank String path,
         @NotNull @Min(0) double score) {
 }

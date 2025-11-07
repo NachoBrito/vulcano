@@ -35,7 +35,7 @@ public class McpTools {
     @Tool(
             description = "Finds files in within this project that are relevant for the given search"
     )
-    public List<RelevantPath> getRelevantPaths(String search) {
+    public List<RelevantFile> getRelevantFiles(String search) {
         return documentIndex.getRelevantFiles(search);
     }
 }

@@ -110,7 +110,7 @@ public class DocumentIndex {
         return embeddingModel;
     }
 
-    public List<RelevantPath> getRelevantFiles(String query) {
+    public List<RelevantFile> getRelevantFiles(String query) {
         log.info("Searching files relevant for the query '{}'", query);
         init();
         var embeddingModel = getEmbeddingModel();
@@ -123,7 +123,7 @@ public class DocumentIndex {
                 .filter(it -> it.score() >= SCORE_THRESHOLD)
                 .map(result -> {
                     var path = (String) result.document().field("path").orElseThrow().value();
-                    return new RelevantPath(path, (double) Math.round(100.0 * result.score()) / 100);
+                    return new RelevantFile(path, (double) Math.round(100.0 * result.score()) / 100);
                 })
                 .toList();
     }

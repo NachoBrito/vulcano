@@ -38,7 +38,7 @@ class DocumentIndexTest {
     @Test
     @Property(name = "vulcano.mcp.index-file", value = "test-data/vulcano-mcp.yaml")
     void expectDataLoaded() {
-        List<RelevantPath> paths = documentIndex.getRelevantFiles("roman mythology, flames");
+        List<RelevantFile> paths = documentIndex.getRelevantFiles("roman mythology, flames");
         assertFalse(paths.isEmpty());
         assertTrue(paths.getFirst().path().toString().endsWith("file1.txt"));
 

@@ -43,6 +43,7 @@
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-embeddings-bge-small-en-v15</artifactId>
             <version>1.6.0-beta12</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>es.nachobrito.vulcanodb</groupId>

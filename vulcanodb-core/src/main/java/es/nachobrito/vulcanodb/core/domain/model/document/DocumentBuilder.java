@@ -18,12 +18,13 @@ package es.nachobrito.vulcanodb.core.domain.model.document;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author nacho
  */
 public class DocumentBuilder {
-    private final List<Field<?>> fields = new ArrayList<>();
+    private final List<Field<?, ?>> fields = new ArrayList<>();
 
     DocumentBuilder() {
 
@@ -36,6 +37,20 @@ public class DocumentBuilder {
     /// @return this builder
     public DocumentBuilder withVectorField(String name, double[] value) {
         this.fields.add(new Field<>(name, DoubleVectorFieldValue.class, new DoubleVectorFieldValue(value)));
+        return this;
+    }
+
+    /// Adds a new vector field to the document
+    ///
+    /// @param name  the field name
+    /// @param value the field value
+    /// @return this builder
+    public DocumentBuilder withVectorField(String name, Double[] value) {
+        var unboxed = new double[value.length];
+        for (int i = 0; i < unboxed.length; i++) {
+            unboxed[i] = value[i];
+        }
+        this.fields.add(new Field<>(name, DoubleVectorFieldValue.class, new DoubleVectorFieldValue(unboxed)));
         return this;
     }
 
@@ -58,6 +73,29 @@ public class DocumentBuilder {
         this.fields.add(new Field<>(name, IntegerFieldValue.class, new IntegerFieldValue(value)));
         return this;
     }
+
+    /// Adds all the fields in the Map. This method handles three value types:
+    /// - Map values of type double[] or Double[] will be added as vector fields
+    /// - Map values of type Integer will be added as integer fields
+    /// - Any other type will be indexed as a string, calling [String#valueOf(Object)] in the value
+    ///
+    /// @param fields the fields to add to the document
+    /// @return this builder
+    public DocumentBuilder with(Map<String, Object> fields) {
+        fields.forEach((key, value) -> {
+            if (value == null) {
+                return;
+            }
+            switch (value) {
+                case double[] vectorField -> withVectorField(key, vectorField);
+                case Double[] vectorField -> withVectorField(key, vectorField);
+                case Integer intField -> withIntegerField(key, intField);
+                default -> withStringField(key, String.valueOf(value));
+            }
+        });
+        return this;
+    }
+
 
     public Document build() {
         var id = DocumentId.newRandomId();

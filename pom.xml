@@ -28,6 +28,7 @@
     <modules>
         <module>vulcanodb-core</module>
         <module>vulcanodb-test</module>
+        <module>vulcano-mcp</module>
     </modules>
 
     <properties>

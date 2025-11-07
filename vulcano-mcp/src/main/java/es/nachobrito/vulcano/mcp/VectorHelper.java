@@ -14,13 +14,21 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.document;
+package es.nachobrito.vulcano.mcp;
 
 /**
  * @author nacho
  */
-public record Field<V, T extends FieldValueType<V>>(String key, Class<T> type, T content) {
-    public V value() {
-        return content.value();
+interface VectorHelper {
+
+    static double[] toDoubles(float[] input) {
+        if (input == null) {
+            return null; // Or throw an exception - your choice
+        }
+        double[] output = new double[input.length];
+        for (int i = 0; i < input.length; i++) {
+            output[i] = input[i];
+        }
+        return output;
     }
 }

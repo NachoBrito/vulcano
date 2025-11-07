@@ -14,13 +14,23 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.document;
+package es.nachobrito.vulcano.mcp;
 
-/**
- * @author nacho
- */
-public record Field<V, T extends FieldValueType<V>>(String key, Class<T> type, T content) {
-    public V value() {
-        return content.value();
+import io.micronaut.runtime.EmbeddedApplication;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+@MicronautTest
+class VulcanoMcpTest {
+
+    @Inject
+    EmbeddedApplication<?> application;
+
+    @Test
+    void testItWorks() {
+        Assertions.assertTrue(application.isRunning());
     }
+
 }

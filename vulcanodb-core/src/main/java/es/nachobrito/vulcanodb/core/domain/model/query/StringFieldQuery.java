@@ -60,7 +60,7 @@ public class StringFieldQuery implements Query {
             return .0;
         }
 
-        @SuppressWarnings("unchecked") var stringField = ((Field<StringFieldValue>) field).value().value();
+        @SuppressWarnings("unchecked") var stringField = ((Field<String, StringFieldValue>) field).value();
         return switch (operator) {
             case EQUALS -> stringField.equals(value) ? 1.0 : 0.0;
             case STARTS_WITH -> stringField.startsWith(value) ? 1.0 : 0.0;

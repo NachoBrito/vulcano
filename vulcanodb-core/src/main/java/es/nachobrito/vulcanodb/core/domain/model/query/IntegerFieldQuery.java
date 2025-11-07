@@ -60,7 +60,7 @@ public class IntegerFieldQuery implements Query {
             return .0;
         }
 
-        @SuppressWarnings("unchecked") var integerField = ((Field<IntegerFieldValue>) field).value().value();
+        @SuppressWarnings("unchecked") var integerField = ((Field<Integer, IntegerFieldValue>) field).value();
         return switch (operator) {
             case EQUALS -> integerField.equals(value) ? 1.0 : 0.0;
             case LESS_THAN -> integerField < value ? 1.0 : 0.0;

@@ -14,13 +14,22 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.document;
+package es.nachobrito.vulcano.mcp;
+
+import io.micronaut.jsonschema.JsonSchema;
+import io.micronaut.serde.annotation.Serdeable;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.nio.file.Path;
 
 /**
  * @author nacho
  */
-public record Field<V, T extends FieldValueType<V>>(String key, Class<T> type, T content) {
-    public V value() {
-        return content.value();
-    }
+@Serdeable
+@JsonSchema
+public record RelevantPath(
+        @NotNull @NotBlank Path path,
+        @NotNull @Min(0) double score) {
 }

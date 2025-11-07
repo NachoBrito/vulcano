@@ -14,13 +14,14 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.document;
+package es.nachobrito.vulcano.mcp;
 
-/**
- * @author nacho
- */
-public record Field<V, T extends FieldValueType<V>>(String key, Class<T> type, T content) {
-    public V value() {
-        return content.value();
+import io.micronaut.runtime.Micronaut;
+
+public class Application {
+    static void main(String[] args) {
+        Micronaut.build(args)
+                .banner(false)
+                .start();
     }
 }

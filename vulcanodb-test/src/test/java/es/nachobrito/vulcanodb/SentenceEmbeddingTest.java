@@ -60,9 +60,9 @@ public class SentenceEmbeddingTest {
 
         assertNotNull(result);
         assertEquals(candidates.size(), result.getDocuments().size());
-        assertEquals("How can I control pests on my cotton farm?", result.getDocuments().get(0).document().field("sentence").get().value().value());
+        assertEquals("How can I control pests on my cotton farm?", result.getDocuments().get(0).document().field("sentence").get().value());
         result.getDocuments()
-                .forEach(it -> IO.println("[%.2f] %s".formatted(it.score(), it.document().field("sentence").get().value().value())));
+                .forEach(it -> IO.println("[%.2f] %s".formatted(it.score(), it.document().field("sentence").get().value())));
 
     }
 

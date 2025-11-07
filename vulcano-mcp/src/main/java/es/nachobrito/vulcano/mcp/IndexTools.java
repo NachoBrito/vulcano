@@ -14,13 +14,28 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.document;
+package es.nachobrito.vulcano.mcp;
+
+import io.micronaut.mcp.annotations.Tool;
+import jakarta.inject.Singleton;
+
+import java.util.List;
 
 /**
  * @author nacho
  */
-public record Field<V, T extends FieldValueType<V>>(String key, Class<T> type, T content) {
-    public V value() {
-        return content.value();
+@Singleton
+public class IndexTools {
+    private final IndexReader indexReader;
+
+    public IndexTools(IndexReader indexReader) {
+        this.indexReader = indexReader;
+    }
+
+    @Tool(
+            description = "Finds files in within this project that are relevant for the given search"
+    )
+    public List<RelevantPath> getRelevantPaths(String search) {
+        return indexReader.getRelevantFiles(search);
     }
 }

@@ -61,7 +61,7 @@ public class VectorFieldQuery implements Query {
             return .0;
         }
 
-        @SuppressWarnings("unchecked") var vectorField = (Field<DoubleVectorFieldValue>) field;
-        return vectorSimilarity.between(this.vector, vectorField.value().value());
+        @SuppressWarnings("unchecked") var vectorField = (Field<double[], DoubleVectorFieldValue>) field;
+        return vectorSimilarity.between(this.vector, vectorField.value());
     }
 }

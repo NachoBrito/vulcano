@@ -21,9 +21,9 @@ import java.util.UUID;
 /**
  * @author nacho
  */
-public record DocumentId(String value) {
+public record DocumentId(UUID value) {
 
     public static DocumentId newRandomId() {
-        return new DocumentId(UUID.randomUUID().toString());
+        return new DocumentId(UUID.randomUUID());
     }
 }

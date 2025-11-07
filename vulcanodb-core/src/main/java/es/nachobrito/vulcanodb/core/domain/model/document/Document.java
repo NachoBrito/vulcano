@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.document;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,14 +28,14 @@ import java.util.stream.Collectors;
  */
 public class Document {
     private final DocumentId id;
-    private final Map<String, Field<?>> fields;
+    private final Map<String, Field<?, ?>> fields;
 
-    Document(DocumentId id, List<Field<?>> fields) {
+    Document(DocumentId id, List<Field<?, ?>> fields) {
         this.id = id;
         this.fields = fields.stream().collect(Collectors.toMap(Field::key, Function.identity()));
     }
 
-    public Optional<Field<?>> field(String fieldName) {
+    public Optional<Field<?, ?>> field(String fieldName) {
         return Optional.ofNullable(fields.get(fieldName));
     }
 
@@ -44,5 +45,18 @@ public class Document {
 
     public static DocumentBuilder builder() {
         return new DocumentBuilder();
+    }
+
+    /// Build an unmodifiable map with the fields of this document
+    ///
+    /// @return an unmodifiable map of this document
+    public Map<String, Object> toMap() {
+        return Collections.unmodifiableMap(fields
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        it -> it.getValue().value()
+                )));
     }
 }

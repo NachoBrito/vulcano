@@ -14,12 +14,10 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.query;
+package es.nachobrito.vulcanodb.core.domain.model.document;
 
 /**
  * @author nacho
  */
-public enum Operator {
-    AND,
-    OR
+public record StringFieldValue(String value) implements FieldValueType<String> {
 }

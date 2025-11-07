@@ -21,33 +21,32 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import java.util.ArrayList;
 import java.util.List;
 
-import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.AND;
+import static es.nachobrito.vulcanodb.core.domain.model.query.QueryOperator.AND;
 
 /**
  * @author nacho
  */
-public class VectorQuery implements Query {
-    private final List<VectorFieldQuery> fieldQueries;
-    private final Operator operator;
+public class MultiQuery implements Query {
+    private final List<? extends Query> queries;
+    private final QueryOperator operator;
 
-    public VectorQuery(List<VectorFieldQuery> fieldQueries, Operator operator) {
-        this.fieldQueries = new ArrayList<>(fieldQueries);
+    public MultiQuery(List<? extends Query> queries, QueryOperator operator) {
+        this.queries = new ArrayList<>(queries);
         this.operator = operator;
     }
-
 
     @Override
     public Double apply(Document document) {
         var sum = 0.0;
         var partial = 0.0;
         var isAnd = operator.equals(AND);
-        for (var query : fieldQueries) {
+        for (var query : queries) {
             partial = query.apply(document);
             if (isAnd && partial == 0.0) {
                 return .0;
             }
             sum += partial;
         }
-        return sum / fieldQueries.size();
+        return sum / queries.size();
     }
 }

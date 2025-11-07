@@ -17,35 +17,34 @@
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.document.DoubleVectorFieldValue;
 import es.nachobrito.vulcanodb.core.domain.model.document.Field;
-import es.nachobrito.vulcanodb.core.domain.model.query.similarity.VectorSimilarity;
+import es.nachobrito.vulcanodb.core.domain.model.document.StringFieldValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
  * @author nacho
  */
-public class VectorFieldQuery implements Query {
-    private static final Logger log = LoggerFactory.getLogger(VectorFieldQuery.class);
-    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search vector fields.";
+public class StringFieldQuery implements Query {
+    private static final Logger log = LoggerFactory.getLogger(StringFieldQuery.class);
+    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search text fields.";
     public static final String FIELD_NOT_FOUND_WARNING = "Document {} does not contain a '{}' field";
 
-    private final double[] vector;
+    private final String value;
     private final String fieldName;
-    private final VectorSimilarity vectorSimilarity;
+    private final StringFieldOperator operator;
 
-    public VectorFieldQuery(double[] vector, String fieldName, VectorSimilarity vectorSimilarity) {
-        Objects.requireNonNull(vector);
+    public StringFieldQuery(String value, String fieldName, StringFieldOperator operator) {
+        Objects.requireNonNull(value);
         Objects.requireNonNull(fieldName);
-        Objects.requireNonNull(vectorSimilarity);
-        this.vector = Arrays.copyOf(vector, vector.length);
+        Objects.requireNonNull(operator);
+        this.value = value;
         this.fieldName = fieldName;
-        this.vectorSimilarity = vectorSimilarity;
+        this.operator = operator;
     }
+
 
     @Override
     public Double apply(Document document) {
@@ -56,12 +55,17 @@ public class VectorFieldQuery implements Query {
         }
 
         var field = maybeField.get();
-        if (!(field.type().equals(DoubleVectorFieldValue.class))) {
+        if (!(field.type().equals(StringFieldValue.class))) {
             log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
             return .0;
         }
 
-        @SuppressWarnings("unchecked") var vectorField = (Field<DoubleVectorFieldValue>) field;
-        return vectorSimilarity.between(this.vector, vectorField.value().value());
+        @SuppressWarnings("unchecked") var stringField = ((Field<StringFieldValue>) field).value().value();
+        return switch (operator) {
+            case EQUALS -> stringField.equals(value) ? 1.0 : 0.0;
+            case STARTS_WITH -> stringField.startsWith(value) ? 1.0 : 0.0;
+            case ENDS_WITH -> stringField.endsWith(value) ? 1.0 : 0.0;
+            case CONTAINS -> stringField.contains(value) ? 1.0 : 0.0;
+        };
     }
 }

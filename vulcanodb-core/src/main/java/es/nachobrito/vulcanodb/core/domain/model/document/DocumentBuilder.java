@@ -29,13 +29,33 @@ public class DocumentBuilder {
 
     }
 
+    /// Adds a new vector field to the document
+    ///
+    /// @param name  the field name
+    /// @param value the field value
+    /// @return this builder
     public DocumentBuilder withVectorField(String name, double[] value) {
         this.fields.add(new Field<>(name, DoubleVectorFieldValue.class, new DoubleVectorFieldValue(value)));
         return this;
     }
 
+    /// Adds a new String field to the document
+    ///
+    /// @param name  the field name
+    /// @param value the field value
+    /// @return this builder
     public DocumentBuilder withStringField(String name, String value) {
-        this.fields.add(new Field<>(name, StringVectorFieldValue.class, new StringVectorFieldValue(value)));
+        this.fields.add(new Field<>(name, StringFieldValue.class, new StringFieldValue(value)));
+        return this;
+    }
+
+    /// Adds a new Integer field to the document
+    ///
+    /// @param name  the field name
+    /// @param value the field value
+    /// @return this builder
+    public DocumentBuilder withIntegerField(String name, Integer value) {
+        this.fields.add(new Field<>(name, IntegerFieldValue.class, new IntegerFieldValue(value)));
         return this;
     }
 

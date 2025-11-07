@@ -19,5 +19,5 @@ package es.nachobrito.vulcanodb.core.domain.model.document;
 /**
  * @author nacho
  */
-public record StringVectorFieldValue(String value) implements FieldValueType<String> {
+public record IntegerFieldValue(Integer value) implements FieldValueType<Integer> {
 }

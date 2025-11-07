@@ -19,18 +19,18 @@ package es.nachobrito.vulcanodb.core.domain.model.query;
 import es.nachobrito.vulcanodb.core.domain.model.query.similarity.CosineSimilarity;
 import es.nachobrito.vulcanodb.core.domain.model.query.similarity.VectorSimilarity;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
 
-import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.AND;
-import static es.nachobrito.vulcanodb.core.domain.model.query.Operator.OR;
+import static es.nachobrito.vulcanodb.core.domain.model.query.QueryOperator.AND;
+import static es.nachobrito.vulcanodb.core.domain.model.query.QueryOperator.OR;
 
 /**
  * @author nacho
  */
 public class QueryBuilder {
-    private Operator operator = AND;
-    private final List<VectorQuery> vectorQueries = new ArrayList<>();
+    private QueryOperator operator = AND;
+    private final PriorityQueue<Query> queries = new PriorityQueue<>(new QueryComparator());
 
     QueryBuilder() {
 
@@ -64,28 +64,118 @@ public class QueryBuilder {
         return addVectorQuery(vector, fieldNames, OR, new CosineSimilarity());
     }
 
-    private QueryBuilder addVectorQuery(double[] vector, List<String> fieldNames, Operator operator, VectorSimilarity vectorSimilarity) {
+    /// Match documents where the value of the *fieldMame* field starts with the provided prefix
+    ///
+    /// @param prefix    the prefix to search
+    /// @param fieldName the field to search in
+    /// @return this query builder
+    public QueryBuilder startsWith(String prefix, String fieldName) {
+        queries.add(new StringFieldQuery(prefix, fieldName, StringFieldOperator.STARTS_WITH));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field ends with the provided suffix
+    ///
+    /// @param suffix    the suffix to search
+    /// @param fieldName the field to search in
+    /// @return this query builder
+    public QueryBuilder endsWith(String suffix, String fieldName) {
+        queries.add(new StringFieldQuery(suffix, fieldName, StringFieldOperator.ENDS_WITH));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field contains the provided value
+    ///
+    /// @param value     the text to search
+    /// @param fieldName the field to search in
+    /// @return this query builder
+    public QueryBuilder contains(String value, String fieldName) {
+        queries.add(new StringFieldQuery(value, fieldName, StringFieldOperator.CONTAINS));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field is equal to the provided value
+    ///
+    /// @param value     the text to search
+    /// @param fieldName the field to search in
+    /// @return this query builder
+    public QueryBuilder isEqual(String value, String fieldName) {
+        queries.add(new StringFieldQuery(value, fieldName, StringFieldOperator.EQUALS));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field is equal to the provided value
+    ///
+    /// @param value     the integer to compare
+    /// @param fieldName the field to compare with
+    /// @return this query builder
+    public QueryBuilder isEqual(Integer value, String fieldName) {
+        queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.EQUALS));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field is less than the provided value
+    ///
+    /// @param value     the integer to compare
+    /// @param fieldName the field to compare with
+    /// @return this query builder
+    public QueryBuilder isLessThan(Integer value, String fieldName) {
+        queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.LESS_THAN));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field is less than or equal the provided value
+    ///
+    /// @param value     the integer to compare
+    /// @param fieldName the field to compare with
+    /// @return this query builder
+    public QueryBuilder isLessThanOrEqual(Integer value, String fieldName) {
+        queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.LESS_THAN_EQUAL));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field is greater than the provided value
+    ///
+    /// @param value     the integer to compare
+    /// @param fieldName the field to compare with
+    /// @return this query builder
+    public QueryBuilder isGreaterThan(Integer value, String fieldName) {
+        queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.GREATER_THAN));
+        return this;
+    }
+
+    /// Match documents where the value of the *fieldMame* field is greater than or equal the provided value
+    ///
+    /// @param value     the integer to compare
+    /// @param fieldName the field to compare with
+    /// @return this query builder
+    public QueryBuilder isGreaterThanOrEqual(Integer value, String fieldName) {
+        queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.GREATER_THAN_EQUAL));
+        return this;
+    }
+
+    private QueryBuilder addVectorQuery(double[] vector, List<String> fieldNames, QueryOperator operator, VectorSimilarity vectorSimilarity) {
 
         var fieldQueries = fieldNames
                 .stream()
                 .map(it -> new VectorFieldQuery(vector, it, vectorSimilarity))
                 .toList();
-        vectorQueries.add(new VectorQuery(fieldQueries, operator));
+        queries.add(new MultiQuery(fieldQueries, operator));
         return this;
     }
 
     ///  Set the operator for this query, affecting all the conditions added with [#isSimilarTo(double\[\], String)],
     /// [#allSimilarTo(double\[\], List)], [#anySimilarTo(double\[\], List)]
     ///
-    /// @param operator [Operator]
+    /// @param operator [QueryOperator]
     /// @return this query builder
-    public QueryBuilder withOperator(Operator operator) {
+    public QueryBuilder withOperator(QueryOperator operator) {
         this.operator = operator;
         return this;
     }
 
 
     public Query build() {
-        return new MultiVectorQuery(vectorQueries, operator);
+        return new MultiQuery(queries.stream().toList(), operator);
     }
 }

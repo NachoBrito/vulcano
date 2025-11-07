@@ -16,18 +16,10 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.function.Function;
-
 /**
  * @author nacho
  */
-public interface Query extends Function<Document, Double> {
-    Double apply(Document document);
-
-    static QueryBuilder builder() {
-        return new QueryBuilder();
-    }
-
+public enum QueryOperator {
+    AND,
+    OR
 }

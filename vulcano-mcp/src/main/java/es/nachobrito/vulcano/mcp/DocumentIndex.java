@@ -23,6 +23,8 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
@@ -38,20 +40,24 @@ import static es.nachobrito.vulcano.mcp.VectorHelper.toDoubles;
  * @author nacho
  */
 @Singleton
-public class IndexReader {
+public class DocumentIndex {
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
     private static final double SCORE_THRESHOLD = .5;
     private final String indexFile;
     private VulcanoDb vectorDb;
     private EmbeddingModel embeddingModel;
 
-    public IndexReader(@Value("${vulcano.mcp.index-file}") String indexFile) {
+    public DocumentIndex(@Value("${vulcano.mcp.index-file}") String indexFile) {
         this.indexFile = indexFile;
+        init();
     }
 
     private void init() {
         if (vectorDb != null) {
             return;
         }
+        log.info("Initializing Vulcano MCP index");
         vectorDb = VulcanoDb.builder().build();
 
         var indexPath = Path.of(indexFile);
@@ -71,6 +77,8 @@ public class IndexReader {
     }
 
     private void indexEntry(String s, Map<String, String> o) {
+        log.info("Indexing entry {} ({})", s, o);
+
         var path = verifyPath(o.get("path"));
         var description = o.get("description");
         var embedding = toDoubles(getEmbeddingModel().embed(description).content().vector());
@@ -103,6 +111,7 @@ public class IndexReader {
     }
 
     public List<RelevantPath> getRelevantFiles(String query) {
+        log.info("Searching files relevant for the query '{}'", query);
         init();
         var embeddingModel = getEmbeddingModel();
         var vector = toDoubles(embeddingModel.embed(query).content().vector());
@@ -114,7 +123,7 @@ public class IndexReader {
                 .filter(it -> it.score() >= SCORE_THRESHOLD)
                 .map(result -> {
                     var path = (String) result.document().field("path").orElseThrow().value();
-                    return new RelevantPath(Path.of(path), result.score());
+                    return new RelevantPath(path, (double) Math.round(100.0 * result.score()) / 100);
                 })
                 .toList();
     }

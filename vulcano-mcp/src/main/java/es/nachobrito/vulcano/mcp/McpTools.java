@@ -25,17 +25,17 @@ import java.util.List;
  * @author nacho
  */
 @Singleton
-public class IndexTools {
-    private final IndexReader indexReader;
+public class McpTools {
+    private final DocumentIndex documentIndex;
 
-    public IndexTools(IndexReader indexReader) {
-        this.indexReader = indexReader;
+    public McpTools(DocumentIndex documentIndex) {
+        this.documentIndex = documentIndex;
     }
 
     @Tool(
             description = "Finds files in within this project that are relevant for the given search"
     )
     public List<RelevantPath> getRelevantPaths(String search) {
-        return indexReader.getRelevantFiles(search);
+        return documentIndex.getRelevantFiles(search);
     }
 }

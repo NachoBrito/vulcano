@@ -30,19 +30,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @author nacho
  */
 @MicronautTest(rebuildContext = true)
-class IndexReaderTest {
+class DocumentIndexTest {
 
     @Inject
-    IndexReader indexReader;
+    DocumentIndex documentIndex;
 
     @Test
     @Property(name = "vulcano.mcp.index-file", value = "test-data/vulcano-mcp.yaml")
     void expectDataLoaded() {
-        List<RelevantPath> paths = indexReader.getRelevantFiles("roman mythology, flames");
+        List<RelevantPath> paths = documentIndex.getRelevantFiles("roman mythology, flames");
         assertFalse(paths.isEmpty());
         assertTrue(paths.getFirst().path().toString().endsWith("file1.txt"));
 
-        paths = indexReader.getRelevantFiles("engineering, rows and columns, varchar");
+        paths = documentIndex.getRelevantFiles("engineering, rows and columns, varchar");
         assertFalse(paths.isEmpty());
         assertTrue(paths.getFirst().path().toString().endsWith("file2.txt"));
     }

@@ -16,18 +16,17 @@
 
 package es.nachobrito.vulcano.mcp;
 
-import io.micronaut.jsonschema.JsonSchema;
-import io.micronaut.serde.annotation.Serdeable;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import io.micronaut.mcp.annotations.Prompt;
+import io.micronaut.mcp.annotations.PromptArg;
+import jakarta.inject.Singleton;
 
 /**
  * @author nacho
  */
-@Serdeable
-@JsonSchema
-public record RelevantPath(
-        @NotNull @NotBlank String path,
-        @NotNull @Min(0) double score) {
+@Singleton
+public class McpPrompts {
+    @Prompt(name = "search-documents-topic", description = "Finds documents related to a topic")
+    String searchDocumentsByTopic(@PromptArg(description = "Topic description") String name) {
+        return String.format("Find documents about %s ....", name);
+    }
 }

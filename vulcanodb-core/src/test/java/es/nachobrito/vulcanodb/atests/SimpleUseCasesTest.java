@@ -67,6 +67,39 @@ public class SimpleUseCasesTest {
         }
     }
 
+
+    @Test
+    void expectSimilaritySplitSearchWork() {
+        var db = VulcanoDb.builder().build();
+        var document1 = Document.builder()
+                .withVectorField(VECTOR_FIELD_NAME, new double[][]{{1, 0}, {0, 1}})
+                .build();
+
+        var document2 = Document.builder()
+                .withVectorField(VECTOR_FIELD_NAME, new double[][]{{0, 1}, {0, 2}})
+                .build();
+
+        db.add(document1, document2);
+
+        var queries = new double[][]{{1, 0}, {0, 1}, {1, 1}};
+        var expected = new Document[][]{{document1}, {document1, document2}, {document1, document2}};
+
+        for (int i = 0; i < queries.length; i++) {
+            var query = Query.builder()
+                    .allSimilarTo(queries[i], List.of(VECTOR_FIELD_NAME))
+                    .build();
+            var expectedResult = expected[i];
+
+            var result = db.search(query);
+
+            assertEquals(expectedResult.length, result.getDocuments().size());
+            for (var document : expectedResult) {
+                assertTrue(result.getDocuments().stream().anyMatch(it -> it.document().equals(document)));
+            }
+        }
+    }
+
+
     @Test
     void expectStringFieldSearchWork() {
         var db = VulcanoDb.builder().build();

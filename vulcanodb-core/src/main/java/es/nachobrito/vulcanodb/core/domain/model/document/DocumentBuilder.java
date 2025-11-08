@@ -36,7 +36,17 @@ public class DocumentBuilder {
     /// @param value the field value
     /// @return this builder
     public DocumentBuilder withVectorField(String name, double[] value) {
-        this.fields.add(new Field<>(name, DoubleVectorFieldValue.class, new DoubleVectorFieldValue(value)));
+        this.fields.add(new Field<>(name, VectorFieldValue.class, new VectorFieldValue(value)));
+        return this;
+    }
+
+    /// Adds a new vector field that is split into several segments to the document
+    ///
+    /// @param name  the field name
+    /// @param value the field value segments
+    /// @return this builder
+    public DocumentBuilder withVectorField(String name, double[][] value) {
+        this.fields.add(new Field<>(name, MatrixFieldValue.class, new MatrixFieldValue(value)));
         return this;
     }
 
@@ -50,7 +60,7 @@ public class DocumentBuilder {
         for (int i = 0; i < unboxed.length; i++) {
             unboxed[i] = value[i];
         }
-        this.fields.add(new Field<>(name, DoubleVectorFieldValue.class, new DoubleVectorFieldValue(unboxed)));
+        this.fields.add(new Field<>(name, VectorFieldValue.class, new VectorFieldValue(unboxed)));
         return this;
     }
 

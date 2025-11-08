@@ -16,9 +16,18 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.document;
 
+import java.util.Arrays;
+
 /**
  * @author nacho
  */
-public sealed interface FieldValueType<V> permits IntegerFieldValue, MatrixFieldValue, StringFieldValue, VectorFieldValue {
-    V value();
+public record VectorFieldValue(double[] value) implements FieldValueType<double[]> {
+    public VectorFieldValue {
+        value = Arrays.copyOf(value, value.length);
+    }
+
+    @Override
+    public double[] value() {
+        return Arrays.copyOf(value, value.length);
+    }
 }

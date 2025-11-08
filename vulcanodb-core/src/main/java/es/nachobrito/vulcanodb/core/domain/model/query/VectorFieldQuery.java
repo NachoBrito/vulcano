@@ -16,9 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.document.DoubleVectorFieldValue;
-import es.nachobrito.vulcanodb.core.domain.model.document.Field;
+import es.nachobrito.vulcanodb.core.domain.model.document.*;
 import es.nachobrito.vulcanodb.core.domain.model.query.similarity.VectorSimilarity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,12 +29,12 @@ import java.util.Objects;
  */
 public class VectorFieldQuery implements Query {
     private static final Logger log = LoggerFactory.getLogger(VectorFieldQuery.class);
-    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search vector fields.";
+    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search vector or matrix fields.";
     public static final String FIELD_NOT_FOUND_WARNING = "Document {} does not contain a '{}' field";
-
     private final double[] vector;
     private final String fieldName;
     private final VectorSimilarity vectorSimilarity;
+
 
     public VectorFieldQuery(double[] vector, String fieldName, VectorSimilarity vectorSimilarity) {
         Objects.requireNonNull(vector);
@@ -47,6 +45,7 @@ public class VectorFieldQuery implements Query {
         this.vectorSimilarity = vectorSimilarity;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Double apply(Document document) {
         var maybeField = document.field(fieldName);
@@ -56,12 +55,30 @@ public class VectorFieldQuery implements Query {
         }
 
         var field = maybeField.get();
-        if (!(field.type().equals(DoubleVectorFieldValue.class))) {
-            log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
-            return .0;
+
+        Class<? extends FieldValueType<?>> type = field.type();
+        if (type.equals(VectorFieldValue.class)) {
+            return handleVectorField((Field<double[], VectorFieldValue>) field);
+        }
+        if (type.equals(MatrixFieldValue.class)) {
+            return handleMatrixField((Field<double[][], MatrixFieldValue>) field);
         }
 
-        @SuppressWarnings("unchecked") var vectorField = (Field<double[], DoubleVectorFieldValue>) field;
-        return vectorSimilarity.between(this.vector, vectorField.value());
+        log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
+        return .0;
+
+    }
+
+    private Double handleMatrixField(Field<double[][], MatrixFieldValue> field) {
+        var matrix = field.value();
+        var sum = .0;
+        for (double[] doubles : matrix) {
+            sum += vectorSimilarity.between(this.vector, doubles);
+        }
+        return sum / matrix.length;
+    }
+
+    private Double handleVectorField(Field<double[], VectorFieldValue> field) {
+        return vectorSimilarity.between(this.vector, field.value());
     }
 }

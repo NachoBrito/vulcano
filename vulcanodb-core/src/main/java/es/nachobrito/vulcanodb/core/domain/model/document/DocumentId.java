@@ -26,4 +26,9 @@ public record DocumentId(UUID value) {
     public static DocumentId newRandomId() {
         return new DocumentId(UUID.randomUUID());
     }
+
+    @Override
+    public String toString() {
+        return value.toString();
+    }
 }

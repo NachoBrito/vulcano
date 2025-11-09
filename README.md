@@ -2,4 +2,5 @@
 
 # VulcanoDb - An in-process light-weight vector database
 
-TODO
+You can read more about this project
+in [this article](https://www.nachobrito.es/artificial-intelligence/project-vulcano/).

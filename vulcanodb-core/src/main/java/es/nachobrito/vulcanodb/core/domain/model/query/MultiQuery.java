@@ -36,14 +36,14 @@ public class MultiQuery implements Query {
     }
 
     @Override
-    public Double apply(Document document) {
-        var sum = 0.0;
-        var partial = 0.0;
+    public Float apply(Document document) {
+        var sum = 0.0f;
+        var partial = 0.0f;
         var isAnd = operator.equals(AND);
         for (var query : queries) {
             partial = query.apply(document);
             if (isAnd && partial == 0.0) {
-                return .0;
+                return .0f;
             }
             sum += partial;
         }

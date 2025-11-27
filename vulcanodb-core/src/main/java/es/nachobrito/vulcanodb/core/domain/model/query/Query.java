@@ -23,8 +23,8 @@ import java.util.function.Function;
 /**
  * @author nacho
  */
-public interface Query extends Function<Document, Double> {
-    Double apply(Document document);
+public interface Query extends Function<Document, Float> {
+    Float apply(Document document);
 
     static QueryBuilder builder() {
         return new QueryBuilder();

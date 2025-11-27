@@ -21,5 +21,5 @@ package es.nachobrito.vulcanodb.core.domain.model.query.similarity;
  */
 public interface VectorSimilarity {
 
-    double between(double[] vector1, double[] vector2);
+    float between(float[] vector1, float[] vector2);
 }

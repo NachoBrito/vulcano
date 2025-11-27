@@ -21,5 +21,5 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 /**
  * @author nacho
  */
-public record ResultDocument(Document document, Double score) {
+public record ResultDocument(Document document, Float score) {
 }

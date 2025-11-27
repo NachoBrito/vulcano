@@ -21,13 +21,13 @@ import java.util.Arrays;
 /**
  * @author nacho
  */
-public record VectorFieldValue(double[] value) implements FieldValueType<double[]> {
+public record VectorFieldValue(float[] value) implements FieldValueType<float[]> {
     public VectorFieldValue {
         value = Arrays.copyOf(value, value.length);
     }
 
     @Override
-    public double[] value() {
+    public float[] value() {
         return Arrays.copyOf(value, value.length);
     }
 }

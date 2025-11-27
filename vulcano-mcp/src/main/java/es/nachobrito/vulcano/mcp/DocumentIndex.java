@@ -34,8 +34,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static es.nachobrito.vulcano.mcp.VectorHelper.toDoubles;
-
 /**
  * @author nacho
  */
@@ -43,7 +41,7 @@ import static es.nachobrito.vulcano.mcp.VectorHelper.toDoubles;
 public class DocumentIndex {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private static final double SCORE_THRESHOLD = .5;
+    private static final float SCORE_THRESHOLD = .5f;
     private final String indexFile;
     private VulcanoDb vectorDb;
     private EmbeddingModel embeddingModel;
@@ -81,7 +79,7 @@ public class DocumentIndex {
 
         var path = verifyPath(o.get("path"));
         var description = o.get("description");
-        var embedding = toDoubles(getEmbeddingModel().embed(description).content().vector());
+        var embedding = getEmbeddingModel().embed(description).content().vector();
         var document = Document.builder()
                 .withStringField("path", path)
                 .withStringField("description", description)
@@ -114,7 +112,7 @@ public class DocumentIndex {
         log.info("Searching files relevant for the query '{}'", query);
         init();
         var embeddingModel = getEmbeddingModel();
-        var vector = toDoubles(embeddingModel.embed(query).content().vector());
+        var vector = embeddingModel.embed(query).content().vector();
         var vectorQuery = Query.builder().isSimilarTo(vector, "embedding").build();
         return vectorDb
                 .search(vectorQuery)
@@ -123,7 +121,7 @@ public class DocumentIndex {
                 .filter(it -> it.score() >= SCORE_THRESHOLD)
                 .map(result -> {
                     var path = (String) result.document().field("path").orElseThrow().value();
-                    return new RelevantFile(path, (double) Math.round(100.0 * result.score()) / 100);
+                    return new RelevantFile(path, (float) Math.round(100.0 * result.score()) / 100);
                 })
                 .toList();
     }

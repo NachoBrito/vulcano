@@ -30,7 +30,7 @@ class DocumentTest {
         var documentMap = Document.builder()
                 .withStringField("StringField", "StringValue")
                 .withIntegerField("IntegerField", 100)
-                .withVectorField("VectorField", new double[]{1.0, 2.0})
+                .withVectorField("VectorField", new float[]{1.0f, 2.0f})
                 .build()
                 .toMap();
 
@@ -40,6 +40,6 @@ class DocumentTest {
 
         assertEquals("StringValue", documentMap.get("StringField"));
         assertEquals(100, documentMap.get("IntegerField"));
-        assertArrayEquals(new double[]{1.0, 2.0}, (double[]) documentMap.get("VectorField"));
+        assertArrayEquals(new float[]{1.0f, 2.0f}, (float[]) documentMap.get("VectorField"));
     }
 }

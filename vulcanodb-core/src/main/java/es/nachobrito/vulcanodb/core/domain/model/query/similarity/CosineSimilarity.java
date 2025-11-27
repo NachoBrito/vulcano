@@ -23,15 +23,15 @@ public class CosineSimilarity implements VectorSimilarity {
     private static final float EPSILON = 1e-8f;
 
     @Override
-    public double between(double[] vector1, double[] vector2) {
+    public float between(float[] vector1, float[] vector2) {
 
         if (vector1.length != vector2.length) {
             throw new IllegalArgumentException("Vectors are not the same size");
         }
 
-        double dotProduct = 0.0;
-        double normA = 0.0;
-        double normB = 0.0;
+        float dotProduct = 0.0f;
+        float normA = 0.0f;
+        float normB = 0.0f;
 
         for (int i = 0; i < vector1.length; i++) {
             dotProduct += vector1[i] * vector2[i];
@@ -40,6 +40,6 @@ public class CosineSimilarity implements VectorSimilarity {
         }
 
         // Avoid division by zero.
-        return dotProduct / Math.max(Math.sqrt(normA) * Math.sqrt(normB), EPSILON);
+        return dotProduct / (float) Math.max(Math.sqrt(normA) * Math.sqrt(normB), EPSILON);
     }
 }

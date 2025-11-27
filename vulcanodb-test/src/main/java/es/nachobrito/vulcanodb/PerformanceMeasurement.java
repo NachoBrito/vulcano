@@ -31,19 +31,19 @@ public class PerformanceMeasurement {
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
         var query = Query.builder()
-                .isSimilarTo(new double[]{1, 0}, "vector")
+                .isSimilarTo(new float[]{1, 0}, "vector")
                 .build();
 
         for (int i = 0; i < positiveCount; i++) {
             var document = Document.builder()
-                    .withVectorField(FIELD_NAME, new double[]{1, 0})
+                    .withVectorField(FIELD_NAME, new float[]{1, 0})
                     .build();
             db.add(document);
         }
 
         for (int i = 0; i < negativeCount; i++) {
             var document = Document.builder()
-                    .withVectorField(FIELD_NAME, new double[]{0, 1})
+                    .withVectorField(FIELD_NAME, new float[]{0, 1})
                     .build();
             db.add(document);
         }

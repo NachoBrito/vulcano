@@ -47,26 +47,26 @@ public class IntegerFieldQuery implements Query {
 
 
     @Override
-    public Double apply(Document document) {
+    public Float apply(Document document) {
         var maybeField = document.field(fieldName);
         if (maybeField.isEmpty()) {
             log.warn(FIELD_NOT_FOUND_WARNING, document.id().value(), fieldName);
-            return .0;
+            return .0f;
         }
 
         var field = maybeField.get();
         if (!(field.type().equals(IntegerFieldValue.class))) {
             log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
-            return .0;
+            return .0f;
         }
 
         @SuppressWarnings("unchecked") var integerField = ((Field<Integer, IntegerFieldValue>) field).value();
         return switch (operator) {
-            case EQUALS -> integerField.equals(value) ? 1.0 : 0.0;
-            case LESS_THAN -> integerField < value ? 1.0 : 0.0;
-            case LESS_THAN_EQUAL -> integerField <= value ? 1.0 : 0.0;
-            case GREATER_THAN -> integerField > value ? 1.0 : 0.0;
-            case GREATER_THAN_EQUAL -> integerField >= value ? 1.0 : 0.0;
+            case EQUALS -> integerField.equals(value) ? 1.0f : 0.0f;
+            case LESS_THAN -> integerField < value ? 1.0f : 0.0f;
+            case LESS_THAN_EQUAL -> integerField <= value ? 1.0f : 0.0f;
+            case GREATER_THAN -> integerField > value ? 1.0f : 0.0f;
+            case GREATER_THAN_EQUAL -> integerField >= value ? 1.0f : 0.0f;
         };
     }
 }

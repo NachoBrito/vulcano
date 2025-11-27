@@ -35,7 +35,7 @@ public class DocumentBuilder {
     /// @param name  the field name
     /// @param value the field value
     /// @return this builder
-    public DocumentBuilder withVectorField(String name, double[] value) {
+    public DocumentBuilder withVectorField(String name, float[] value) {
         this.fields.add(new Field<>(name, VectorFieldValue.class, new VectorFieldValue(value)));
         return this;
     }
@@ -45,7 +45,7 @@ public class DocumentBuilder {
     /// @param name  the field name
     /// @param value the field value segments
     /// @return this builder
-    public DocumentBuilder withVectorField(String name, double[][] value) {
+    public DocumentBuilder withVectorField(String name, float[][] value) {
         this.fields.add(new Field<>(name, MatrixFieldValue.class, new MatrixFieldValue(value)));
         return this;
     }
@@ -55,8 +55,8 @@ public class DocumentBuilder {
     /// @param name  the field name
     /// @param value the field value
     /// @return this builder
-    public DocumentBuilder withVectorField(String name, Double[] value) {
-        var unboxed = new double[value.length];
+    public DocumentBuilder withVectorField(String name, Float[] value) {
+        var unboxed = new float[value.length];
         for (int i = 0; i < unboxed.length; i++) {
             unboxed[i] = value[i];
         }
@@ -85,7 +85,7 @@ public class DocumentBuilder {
     }
 
     /// Adds all the fields in the Map. This method handles three value types:
-    /// - Map values of type double[] or Double[] will be added as vector fields
+    /// - Map values of type float[] or Float[] will be added as vector fields
     /// - Map values of type Integer will be added as integer fields
     /// - Any other type will be indexed as a string, calling [String#valueOf(Object)] in the value
     ///
@@ -97,8 +97,8 @@ public class DocumentBuilder {
                 return;
             }
             switch (value) {
-                case double[] vectorField -> withVectorField(key, vectorField);
-                case Double[] vectorField -> withVectorField(key, vectorField);
+                case float[] vectorField -> withVectorField(key, vectorField);
+                case Float[] vectorField -> withVectorField(key, vectorField);
                 case Integer intField -> withIntegerField(key, intField);
                 default -> withStringField(key, String.valueOf(value));
             }

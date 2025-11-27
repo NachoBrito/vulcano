@@ -31,7 +31,7 @@ import java.util.stream.Collector;
  */
 public interface QueryEvaluator {
 
-    record Candidate(Document document, double score) {
+    record Candidate(Document document, float score) {
         ResultDocument toResult() {
             return new ResultDocument(document, score);
         }

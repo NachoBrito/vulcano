@@ -47,25 +47,25 @@ public class StringFieldQuery implements Query {
 
 
     @Override
-    public Double apply(Document document) {
+    public Float apply(Document document) {
         var maybeField = document.field(fieldName);
         if (maybeField.isEmpty()) {
             log.warn(FIELD_NOT_FOUND_WARNING, document.id().value(), fieldName);
-            return .0;
+            return .0f;
         }
 
         var field = maybeField.get();
         if (!(field.type().equals(StringFieldValue.class))) {
             log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
-            return .0;
+            return .0f;
         }
 
         @SuppressWarnings("unchecked") var stringField = ((Field<String, StringFieldValue>) field).value();
         return switch (operator) {
-            case EQUALS -> stringField.equals(value) ? 1.0 : 0.0;
-            case STARTS_WITH -> stringField.startsWith(value) ? 1.0 : 0.0;
-            case ENDS_WITH -> stringField.endsWith(value) ? 1.0 : 0.0;
-            case CONTAINS -> stringField.contains(value) ? 1.0 : 0.0;
+            case EQUALS -> stringField.equals(value) ? 1.0f : 0.0f;
+            case STARTS_WITH -> stringField.startsWith(value) ? 1.0f : 0.0f;
+            case ENDS_WITH -> stringField.endsWith(value) ? 1.0f : 0.0f;
+            case CONTAINS -> stringField.contains(value) ? 1.0f : 0.0f;
         };
     }
 }

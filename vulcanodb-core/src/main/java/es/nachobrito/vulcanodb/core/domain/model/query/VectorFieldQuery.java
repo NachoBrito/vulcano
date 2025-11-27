@@ -31,12 +31,12 @@ public class VectorFieldQuery implements Query {
     private static final Logger log = LoggerFactory.getLogger(VectorFieldQuery.class);
     public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search vector or matrix fields.";
     public static final String FIELD_NOT_FOUND_WARNING = "Document {} does not contain a '{}' field";
-    private final double[] vector;
+    private final float[] vector;
     private final String fieldName;
     private final VectorSimilarity vectorSimilarity;
 
 
-    public VectorFieldQuery(double[] vector, String fieldName, VectorSimilarity vectorSimilarity) {
+    public VectorFieldQuery(float[] vector, String fieldName, VectorSimilarity vectorSimilarity) {
         Objects.requireNonNull(vector);
         Objects.requireNonNull(fieldName);
         Objects.requireNonNull(vectorSimilarity);
@@ -47,38 +47,38 @@ public class VectorFieldQuery implements Query {
 
     @SuppressWarnings("unchecked")
     @Override
-    public Double apply(Document document) {
+    public Float apply(Document document) {
         var maybeField = document.field(fieldName);
         if (maybeField.isEmpty()) {
             log.warn(FIELD_NOT_FOUND_WARNING, document.id().value(), fieldName);
-            return .0;
+            return .0f;
         }
 
         var field = maybeField.get();
 
         Class<? extends FieldValueType<?>> type = field.type();
         if (type.equals(VectorFieldValue.class)) {
-            return handleVectorField((Field<double[], VectorFieldValue>) field);
+            return handleVectorField((Field<float[], VectorFieldValue>) field);
         }
         if (type.equals(MatrixFieldValue.class)) {
-            return handleMatrixField((Field<double[][], MatrixFieldValue>) field);
+            return handleMatrixField((Field<float[][], MatrixFieldValue>) field);
         }
 
         log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
-        return .0;
+        return .0f;
 
     }
 
-    private Double handleMatrixField(Field<double[][], MatrixFieldValue> field) {
+    private Float handleMatrixField(Field<float[][], MatrixFieldValue> field) {
         var matrix = field.value();
-        var sum = .0;
-        for (double[] doubles : matrix) {
+        var sum = .0f;
+        for (float[] doubles : matrix) {
             sum += vectorSimilarity.between(this.vector, doubles);
         }
         return sum / matrix.length;
     }
 
-    private Double handleVectorField(Field<double[], VectorFieldValue> field) {
+    private Float handleVectorField(Field<float[], VectorFieldValue> field) {
         return vectorSimilarity.between(this.vector, field.value());
     }
 }

@@ -34,8 +34,8 @@ class DocumentBuilderTest {
         Map<String, Object> fields = Map.of(
                 "integer", 1,
                 "string", "a string",
-                "vector1", new double[]{1.0, 2.0},
-                "vector2", new Double[]{1.0, 2.0},
+                "vector1", new float[]{1.0f, 2.0f},
+                "vector2", new Float[]{1.0f, 2.0f},
                 "date", now
         );
 
@@ -45,11 +45,11 @@ class DocumentBuilderTest {
         assertEquals(now.toString(), document.field("date").orElseThrow().value());
 
         var vector1 = document.field("vector1").orElseThrow().value();
-        assertInstanceOf(double[].class, vector1);
-        assertArrayEquals(new double[]{1.0, 2.0}, (double[]) vector1);
+        assertInstanceOf(float[].class, vector1);
+        assertArrayEquals(new float[]{1.0f, 2.0f}, (float[]) vector1);
         var vector2 = document.field("vector2").orElseThrow().value();
-        assertInstanceOf(double[].class, vector2);
-        assertArrayEquals(new double[]{1.0, 2.0}, (double[]) vector2);
+        assertInstanceOf(float[].class, vector2);
+        assertArrayEquals(new float[]{1.0f, 2.0f}, (float[]) vector2);
     }
 
 }

@@ -40,16 +40,16 @@ public class SimpleUseCasesTest {
     void expectSimilaritySearchWork() {
         var db = VulcanoDb.builder().build();
         var document1 = Document.builder()
-                .withVectorField(VECTOR_FIELD_NAME, new double[]{1, 0})
+                .withVectorField(VECTOR_FIELD_NAME, new float[]{1, 0})
                 .build();
 
         var document2 = Document.builder()
-                .withVectorField(VECTOR_FIELD_NAME, new double[]{0, 1})
+                .withVectorField(VECTOR_FIELD_NAME, new float[]{0, 1})
                 .build();
 
         db.add(document1, document2);
 
-        var queries = new double[][]{{1, 0}, {0, 1}, {1, 1}};
+        var queries = new float[][]{{1, 0}, {0, 1}, {1, 1}};
         var expected = new Document[][]{{document1}, {document2}, {document1, document2}};
 
         for (int i = 0; i < queries.length; i++) {
@@ -72,16 +72,16 @@ public class SimpleUseCasesTest {
     void expectSimilaritySplitSearchWork() {
         var db = VulcanoDb.builder().build();
         var document1 = Document.builder()
-                .withVectorField(VECTOR_FIELD_NAME, new double[][]{{1, 0}, {0, 1}})
+                .withVectorField(VECTOR_FIELD_NAME, new float[][]{{1, 0}, {0, 1}})
                 .build();
 
         var document2 = Document.builder()
-                .withVectorField(VECTOR_FIELD_NAME, new double[][]{{0, 1}, {0, 2}})
+                .withVectorField(VECTOR_FIELD_NAME, new float[][]{{0, 1}, {0, 2}})
                 .build();
 
         db.add(document1, document2);
 
-        var queries = new double[][]{{1, 0}, {0, 1}, {1, 1}};
+        var queries = new float[][]{{1, 0}, {0, 1}, {1, 1}};
         var expected = new Document[][]{{document1}, {document1, document2}, {document1, document2}};
 
         for (int i = 0; i < queries.length; i++) {

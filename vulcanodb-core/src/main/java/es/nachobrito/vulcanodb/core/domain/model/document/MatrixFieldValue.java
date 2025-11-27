@@ -21,13 +21,13 @@ import java.util.Arrays;
 /**
  * @author nacho
  */
-public record MatrixFieldValue(double[][] value) implements FieldValueType<double[][]> {
+public record MatrixFieldValue(float[][] value) implements FieldValueType<float[][]> {
     public MatrixFieldValue {
         value = Arrays.copyOf(value, value.length);
     }
 
     @Override
-    public double[][] value() {
+    public float[][] value() {
         return Arrays.copyOf(value, value.length);
     }
 }

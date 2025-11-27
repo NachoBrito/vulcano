@@ -40,25 +40,25 @@ public class BigDbUseCaseTest {
         var db = VulcanoDb.builder().build();
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
-        var query = Query.builder().allSimilarTo(new double[]{1, 0}, List.of("vector")).build();
+        var query = Query.builder().allSimilarTo(new float[]{1, 0}, List.of("vector")).build();
 
         for (int i = 0; i < positiveCount; i++) {
             var document = Document.builder()
-                    .withVectorField(FIELD_NAME, new double[]{1, 0})
+                    .withVectorField(FIELD_NAME, new float[]{1, 0})
                     .build();
             db.add(document);
         }
 
         for (int i = 0; i < negativeCount; i++) {
             var document = Document.builder()
-                    .withVectorField(FIELD_NAME, new double[]{0, 1})
+                    .withVectorField(FIELD_NAME, new float[]{0, 1})
                     .build();
             db.add(document);
         }
 
         int rounds = 200;
         long maxP95 = 100;
-        double maxAvg = 75.0;
+        float maxAvg = 75.0f;
         var measurements = new long[rounds];
         var results = new Result[rounds];
         long start, end;

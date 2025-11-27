@@ -29,5 +29,5 @@ import jakarta.validation.constraints.NotNull;
 @JsonSchema
 public record RelevantFile(
         @NotNull @NotBlank String path,
-        @NotNull @Min(0) double score) {
+        @NotNull @Min(0) float score) {
 }

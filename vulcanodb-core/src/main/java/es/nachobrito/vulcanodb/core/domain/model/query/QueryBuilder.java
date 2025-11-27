@@ -42,7 +42,7 @@ public class QueryBuilder {
     /// @param vector    the vector to search
     /// @param fieldName the field to compare
     /// @return this query builder
-    public QueryBuilder isSimilarTo(double[] vector, String fieldName) {
+    public QueryBuilder isSimilarTo(float[] vector, String fieldName) {
         return allSimilarTo(vector, List.of(fieldName));
     }
 
@@ -51,7 +51,7 @@ public class QueryBuilder {
     /// @param vector     the vector to search
     /// @param fieldNames the field names to compare
     /// @return this query builder
-    public QueryBuilder allSimilarTo(double[] vector, List<String> fieldNames) {
+    public QueryBuilder allSimilarTo(float[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, AND, new CosineSimilarity());
     }
 
@@ -60,7 +60,7 @@ public class QueryBuilder {
     /// @param vector     the vector to search
     /// @param fieldNames the field names to compare
     /// @return this query builder
-    public QueryBuilder anySimilarTo(double[] vector, List<String> fieldNames) {
+    public QueryBuilder anySimilarTo(float[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, OR, new CosineSimilarity());
     }
 
@@ -154,7 +154,7 @@ public class QueryBuilder {
         return this;
     }
 
-    private QueryBuilder addVectorQuery(double[] vector, List<String> fieldNames, QueryOperator operator, VectorSimilarity vectorSimilarity) {
+    private QueryBuilder addVectorQuery(float[] vector, List<String> fieldNames, QueryOperator operator, VectorSimilarity vectorSimilarity) {
 
         var fieldQueries = fieldNames
                 .stream()
@@ -164,8 +164,8 @@ public class QueryBuilder {
         return this;
     }
 
-    ///  Set the operator for this query, affecting all the conditions added with [#isSimilarTo(double\[\], String)],
-    /// [#allSimilarTo(double\[\], List)], [#anySimilarTo(double\[\], List)]
+    ///  Set the operator for this query, affecting all the conditions added with [#isSimilarTo(float\[\], String)],
+    /// [#allSimilarTo(float\[\], List)], [#anySimilarTo(float\[\], List)]
     ///
     /// @param operator [QueryOperator]
     /// @return this query builder

@@ -30,7 +30,7 @@ import java.util.stream.Collector;
  * @author nacho
  */
 public class DefaultQueryEvaluator implements QueryEvaluator {
-    private static final double MIN_SCORE = .0;
+    private static final float MIN_SCORE = .0f;
     private static final CandiatePredicate CANDIDATE_PREDICATE = new CandiatePredicate();
     private static final CandidateCollector CANDIDATE_COLLECTOR = new CandidateCollector();
     private static final CandidateComparator CANDIDATE_COMPARATOR = new CandidateComparator();
@@ -120,7 +120,7 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
 
         @Override
         public int compare(Candidate o1, Candidate o2) {
-            return Double.compare(o2.score(), o1.score());
+            return Float.compare(o2.score(), o1.score());
         }
     }
 }

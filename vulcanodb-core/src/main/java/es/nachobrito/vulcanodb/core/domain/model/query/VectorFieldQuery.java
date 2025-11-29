@@ -72,8 +72,8 @@ public class VectorFieldQuery implements Query {
     private Float handleMatrixField(Field<float[][], MatrixFieldValue> field) {
         var matrix = field.value();
         var sum = .0f;
-        for (float[] doubles : matrix) {
-            sum += vectorSimilarity.between(this.vector, doubles);
+        for (float[] floats : matrix) {
+            sum += vectorSimilarity.between(this.vector, floats);
         }
         return sum / matrix.length;
     }

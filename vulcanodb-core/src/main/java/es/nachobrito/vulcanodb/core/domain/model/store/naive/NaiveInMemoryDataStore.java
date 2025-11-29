@@ -14,30 +14,41 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store;
+package es.nachobrito.vulcanodb.core.domain.model.store.naive;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
+import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
-import es.nachobrito.vulcanodb.core.domain.model.store.queryevaluation.QueryEvaluator;
+import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
+import es.nachobrito.vulcanodb.core.domain.model.store.naive.queryevaluation.QueryEvaluator;
 
-import java.util.stream.Stream;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Keeps all the vectors in an in-memory concurrent hashmap, and implements search with a brute-force approach
+ * (calculating the distance between the query and every vector stored)
+ *
  * @author nacho
  */
-public abstract class AbstractDataStore implements DataStore {
-
+public class NaiveInMemoryDataStore implements DataStore {
+    private final ConcurrentHashMap<DocumentId, Document> documents = new ConcurrentHashMap<>();
 
     @Override
     public Result search(Query query) {
         var evaluator = QueryEvaluator.of(query);
-        return this.getDocumentStream()
+        return this.documents
+                .values()
+                .stream()
+                .parallel()
                 .map(evaluator.mapper())
                 .filter(evaluator.predicate())
                 .sorted(evaluator.comparator())
                 .collect(evaluator.collector());
     }
 
-    protected abstract Stream<Document> getDocumentStream();
+    @Override
+    public void add(Document document) {
+        this.documents.put(document.id(), document);
+    }
 }

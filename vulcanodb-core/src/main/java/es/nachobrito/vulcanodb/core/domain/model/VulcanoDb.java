@@ -20,7 +20,7 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
-import es.nachobrito.vulcanodb.core.domain.model.store.InMemoryDataStore;
+import es.nachobrito.vulcanodb.core.domain.model.store.naive.NaiveInMemoryDataStore;
 
 import java.util.Arrays;
 
@@ -76,7 +76,7 @@ public class VulcanoDb {
     }
 
     public static final class Builder {
-        private DataStore dataStore = new InMemoryDataStore();
+        private DataStore dataStore = new NaiveInMemoryDataStore();
 
         public Builder withDataStore(DataStore newDataStore) {
             this.dataStore = newDataStore;

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.queryevaluation;
+package es.nachobrito.vulcanodb.core.domain.model.store.naive.queryevaluation;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;

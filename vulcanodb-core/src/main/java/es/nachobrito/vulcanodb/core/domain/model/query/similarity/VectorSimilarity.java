@@ -19,7 +19,7 @@ package es.nachobrito.vulcanodb.core.domain.model.query.similarity;
 /**
  * @author nacho
  */
-public interface VectorSimilarity {
+public sealed interface VectorSimilarity permits CosineSimilarity {
 
     float between(float[] vector1, float[] vector2);
 }

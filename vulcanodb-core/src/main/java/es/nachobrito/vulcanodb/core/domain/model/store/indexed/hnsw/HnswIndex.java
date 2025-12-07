@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.hnsw;
+package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
 
 import java.util.ArrayList;
 import java.util.List;

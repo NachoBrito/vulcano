@@ -19,7 +19,7 @@ package es.nachobrito.vulcanodb.core.domain.model.query.similarity;
 /**
  * @author nacho
  */
-public class CosineSimilarity implements VectorSimilarity {
+public final class CosineSimilarity implements VectorSimilarity {
     private static final float EPSILON = 1e-8f;
 
     @Override

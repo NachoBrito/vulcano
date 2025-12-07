@@ -14,24 +14,12 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.hnsw;
-
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.query.Query;
-import es.nachobrito.vulcanodb.core.domain.model.result.Result;
-import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
+package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
 
 /**
+ * A match in the index.
+ *
  * @author nacho
  */
-public class HnswDataStore implements DataStore {
-    @Override
-    public void add(Document document) {
-
-    }
-
-    @Override
-    public Result search(Query query) {
-        return null;
-    }
+public record Match(long id, float score) {
 }

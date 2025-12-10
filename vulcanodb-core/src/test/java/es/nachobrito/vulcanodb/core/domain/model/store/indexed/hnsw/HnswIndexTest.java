@@ -19,6 +19,10 @@ package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
 import es.nachobrito.vulcanodb.core.domain.model.query.similarity.CosineSimilarity;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -26,8 +30,57 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class HnswIndexTest {
 
+
+    @Test
+    void expectBoundaryChecks() {
+        var config = HnswConfig.builder().withDimensions(2).build();
+        var index = new HnswIndex(config);
+        assertThrows(IllegalArgumentException.class, () -> {
+            index.insert(new float[]{1});
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            index.insert(new float[]{1, 2, 3});
+        });
+    }
+
     @Test
     void expectIndexCreated() {
+        var config = getHnswConfig();
+        var index = new HnswIndex(config);
+        assertNotNull(index);
+
+        var vectorCount = 1000000;
+        var vectors = createRandomVectors(vectorCount, config);
+        var vectorIds = Arrays
+                .stream(vectors)
+                .map(index::insert)
+                .toArray(Long[]::new);
+
+        var storedVectors = Arrays
+                .stream(vectorIds)
+                .sorted()
+                .map(index::get)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toArray(float[][]::new);
+
+        assertArrayEquals(vectors, storedVectors);
+
+    }
+
+    private float[][] createRandomVectors(int count, HnswConfig config) {
+        var vectors = new float[count][config.dimensions()];
+        var random = ThreadLocalRandom.current();
+        for (int i = 0; i < count; i++) {
+            vectors[i] = new float[config.dimensions()];
+            for (int j = 0; j < config.dimensions(); j++) {
+                vectors[i][j] = random.nextFloat();
+            }
+        }
+        return vectors;
+    }
+
+    private static HnswConfig getHnswConfig() {
         var config = HnswConfig.builder().build();
         assertInstanceOf(CosineSimilarity.class, config.vectorSimilarity());
         assertEquals(1_048_576, config.blockSize());
@@ -37,9 +90,7 @@ class HnswIndexTest {
         assertEquals(16, config.mMax());
         assertEquals(32, config.mMax0());
         assertEquals(0, config.mL());
-
-        var index = new HnswIndex(config);
-        assertNotNull(index);
+        return config;
     }
 
 }

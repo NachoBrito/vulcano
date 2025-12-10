@@ -39,7 +39,18 @@ class PagedVectorIndex {
     private final int blockSize;
     private final int dimensions;
 
+    /**
+     *
+     * @param blockSize  how many vectors per page
+     * @param dimensions how many elements per vector
+     */
     public PagedVectorIndex(int blockSize, int dimensions) {
+        if (blockSize < 1) {
+            throw new IllegalArgumentException("Invalid block size, must be > 0");
+        }
+        if (dimensions < 1) {
+            throw new IllegalArgumentException("Invalid dimensions, must be > 0");
+        }
         this.blockSize = blockSize;
         this.dimensions = dimensions;
         // Start with one page
@@ -90,12 +101,38 @@ class PagedVectorIndex {
      * @param dimIndex the position within the vector
      * @return the value of the requested position in the vector
      */
-    public float get(long id, int dimIndex) {
+    public float getElement(long id, int dimIndex) {
+        if (dimIndex < 0 || dimIndex >= dimensions) {
+            throw new IllegalArgumentException("Illegal dimension index");
+        }
+        if (id < 0 || id >= currentCount.get()) {
+            throw new IllegalArgumentException("Illegal vector id");
+        }
+
         int pageIdx = (int) (id / blockSize);
+
         long pageOffset = (id % blockSize) * dimensions * Float.BYTES;
         long finalOffset = pageOffset + ((long) dimIndex * Float.BYTES);
 
         return pages.get(pageIdx).get(ValueLayout.JAVA_FLOAT, finalOffset);
+    }
+
+    /**
+     * Returns the vector corresponding to the given Id
+     *
+     * @param id the id to retrieve
+     * @return the vector with given Id
+     */
+    public float[] getVector(long id) {
+        if (id < 0 || id >= currentCount.get()) {
+            throw new IllegalArgumentException("Illegal vector id");
+        }
+        int pageIdx = (int) (id / blockSize);
+        long pageOffset = (id % blockSize) * dimensions * Float.BYTES;
+        var sliceSize = dimensions * Float.BYTES;
+
+        var slice = pages.get(pageIdx).asSlice(pageOffset, sliceSize);
+        return slice.toArray(ValueLayout.JAVA_FLOAT);
     }
 
     /**
@@ -104,5 +141,9 @@ class PagedVectorIndex {
      */
     int getPageCount() {
         return this.pages.size();
+    }
+
+    long getVectorCount() {
+        return this.currentCount.get();
     }
 }

@@ -21,7 +21,7 @@ import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
-import es.nachobrito.vulcanodb.core.domain.model.store.naive.queryevaluation.QueryEvaluator;
+import es.nachobrito.vulcanodb.core.domain.model.store.naive.queryevaluation.QueryOperations;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,7 +36,7 @@ public class NaiveInMemoryDataStore implements DataStore {
 
     @Override
     public Result search(Query query) {
-        var evaluator = QueryEvaluator.of(query);
+        var evaluator = QueryOperations.of(query);
         return this.documents
                 .values()
                 .stream()

@@ -29,15 +29,16 @@ import java.util.stream.Collector;
 /**
  * @author nacho
  */
-public class DefaultQueryEvaluator implements QueryEvaluator {
+public class DefaultQueryOperations implements QueryOperations {
     private static final float MIN_SCORE = .0f;
     private static final CandiatePredicate CANDIDATE_PREDICATE = new CandiatePredicate();
     private static final CandidateCollector CANDIDATE_COLLECTOR = new CandidateCollector();
     private static final CandidateComparator CANDIDATE_COMPARATOR = new CandidateComparator();
+    private static final QueryEvaluator queryEvaluator = new QueryEvaluator();
 
     private final CandidateMapper candidateMapper;
 
-    public DefaultQueryEvaluator(Query query) {
+    public DefaultQueryOperations(Query query) {
         candidateMapper = new CandidateMapper(query);
     }
 
@@ -61,7 +62,7 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
         return CANDIDATE_COMPARATOR;
     }
 
-    static class CandidateMapper implements Function<Document, QueryEvaluator.Candidate> {
+    static class CandidateMapper implements Function<Document, QueryOperations.Candidate> {
 
         private final Query query;
 
@@ -70,10 +71,10 @@ public class DefaultQueryEvaluator implements QueryEvaluator {
         }
 
         @Override
-        public QueryEvaluator.Candidate apply(Document document) {
-            var score = query.apply(document);
+        public QueryOperations.Candidate apply(Document document) {
+            var score = queryEvaluator.apply(query, document);
             if (score > MIN_SCORE) {
-                return new QueryEvaluator.Candidate(document, score);
+                return new QueryOperations.Candidate(document, score);
             }
             return null;
         }

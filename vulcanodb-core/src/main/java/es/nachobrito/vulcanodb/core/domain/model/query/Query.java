@@ -16,15 +16,11 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.function.Function;
-
 /**
  * @author nacho
  */
-public interface Query extends Function<Document, Float> {
-    Float apply(Document document);
+public sealed interface Query permits MultiQuery, VectorFieldQuery, IntegerFieldQuery, StringFieldQuery {
+
 
     static QueryBuilder builder() {
         return new QueryBuilder();

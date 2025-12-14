@@ -16,22 +16,12 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.document.Field;
-import es.nachobrito.vulcanodb.core.domain.model.document.IntegerFieldValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Objects;
 
 /**
  * @author nacho
  */
-public class IntegerFieldQuery implements Query {
-    private static final Logger log = LoggerFactory.getLogger(IntegerFieldQuery.class);
-    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search integer fields.";
-    public static final String FIELD_NOT_FOUND_WARNING = "Document {} does not contain a '{}' field";
-
+public final class IntegerFieldQuery implements Query {
     private final Integer value;
     private final String fieldName;
     private final IntegerFieldOperator operator;
@@ -45,28 +35,15 @@ public class IntegerFieldQuery implements Query {
         this.operator = operator;
     }
 
+    public Integer getValue() {
+        return value;
+    }
 
-    @Override
-    public Float apply(Document document) {
-        var maybeField = document.field(fieldName);
-        if (maybeField.isEmpty()) {
-            log.warn(FIELD_NOT_FOUND_WARNING, document.id().value(), fieldName);
-            return .0f;
-        }
+    public String getFieldName() {
+        return fieldName;
+    }
 
-        var field = maybeField.get();
-        if (!(field.type().equals(IntegerFieldValue.class))) {
-            log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
-            return .0f;
-        }
-
-        @SuppressWarnings("unchecked") var integerField = ((Field<Integer, IntegerFieldValue>) field).value();
-        return switch (operator) {
-            case EQUALS -> integerField.equals(value) ? 1.0f : 0.0f;
-            case LESS_THAN -> integerField < value ? 1.0f : 0.0f;
-            case LESS_THAN_EQUAL -> integerField <= value ? 1.0f : 0.0f;
-            case GREATER_THAN -> integerField > value ? 1.0f : 0.0f;
-            case GREATER_THAN_EQUAL -> integerField >= value ? 1.0f : 0.0f;
-        };
+    public IntegerFieldOperator getOperator() {
+        return operator;
     }
 }

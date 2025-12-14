@@ -158,7 +158,7 @@ public class QueryBuilder {
 
         var fieldQueries = fieldNames
                 .stream()
-                .map(it -> new VectorFieldQuery(vector, it, vectorSimilarity))
+                .map(it -> new VectorFieldQuery(vector, it))
                 .toList();
         queries.add(new MultiQuery(fieldQueries, operator));
         return this;

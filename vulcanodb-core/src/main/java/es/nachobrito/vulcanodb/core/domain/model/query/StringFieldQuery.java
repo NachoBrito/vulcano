@@ -16,22 +16,12 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.document.Field;
-import es.nachobrito.vulcanodb.core.domain.model.document.StringFieldValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Objects;
 
 /**
  * @author nacho
  */
-public class StringFieldQuery implements Query {
-    private static final Logger log = LoggerFactory.getLogger(StringFieldQuery.class);
-    public static final String FIELD_TYPE_WARNING = "Field {} in document {} is of type '{}'. You can only search text fields.";
-    public static final String FIELD_NOT_FOUND_WARNING = "Document {} does not contain a '{}' field";
-
+public final class StringFieldQuery implements Query {
     private final String value;
     private final String fieldName;
     private final StringFieldOperator operator;
@@ -45,27 +35,15 @@ public class StringFieldQuery implements Query {
         this.operator = operator;
     }
 
+    public String getValue() {
+        return value;
+    }
 
-    @Override
-    public Float apply(Document document) {
-        var maybeField = document.field(fieldName);
-        if (maybeField.isEmpty()) {
-            log.warn(FIELD_NOT_FOUND_WARNING, document.id().value(), fieldName);
-            return .0f;
-        }
+    public String getFieldName() {
+        return fieldName;
+    }
 
-        var field = maybeField.get();
-        if (!(field.type().equals(StringFieldValue.class))) {
-            log.warn(FIELD_TYPE_WARNING, fieldName, document.id().value(), field.type().getName());
-            return .0f;
-        }
-
-        @SuppressWarnings("unchecked") var stringField = ((Field<String, StringFieldValue>) field).value();
-        return switch (operator) {
-            case EQUALS -> stringField.equals(value) ? 1.0f : 0.0f;
-            case STARTS_WITH -> stringField.startsWith(value) ? 1.0f : 0.0f;
-            case ENDS_WITH -> stringField.endsWith(value) ? 1.0f : 0.0f;
-            case CONTAINS -> stringField.contains(value) ? 1.0f : 0.0f;
-        };
+    public StringFieldOperator getOperator() {
+        return operator;
     }
 }

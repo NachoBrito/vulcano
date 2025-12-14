@@ -16,17 +16,14 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.query;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
-import static es.nachobrito.vulcanodb.core.domain.model.query.QueryOperator.AND;
 
 /**
  * @author nacho
  */
-public class MultiQuery implements Query {
+public final class MultiQuery implements Query {
     private final List<? extends Query> queries;
     private final QueryOperator operator;
 
@@ -35,18 +32,11 @@ public class MultiQuery implements Query {
         this.operator = operator;
     }
 
-    @Override
-    public Float apply(Document document) {
-        var sum = 0.0f;
-        var partial = 0.0f;
-        var isAnd = operator.equals(AND);
-        for (var query : queries) {
-            partial = query.apply(document);
-            if (isAnd && partial == 0.0) {
-                return .0f;
-            }
-            sum += partial;
-        }
-        return sum / queries.size();
+    public List<? extends Query> getQueries() {
+        return Collections.unmodifiableList(queries);
+    }
+
+    public QueryOperator getOperator() {
+        return operator;
     }
 }

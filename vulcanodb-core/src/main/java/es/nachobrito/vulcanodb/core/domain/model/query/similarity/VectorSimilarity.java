@@ -22,5 +22,9 @@ package es.nachobrito.vulcanodb.core.domain.model.query.similarity;
 @FunctionalInterface
 public interface VectorSimilarity {
 
+    static VectorSimilarity getDefault() {
+        return new CosineSimilarity();
+    }
+
     float between(float[] vector1, float[] vector2);
 }

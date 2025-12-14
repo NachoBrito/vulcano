@@ -18,6 +18,7 @@ package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -32,13 +33,10 @@ public class HnswIndex {
     Only ~5% of the nodes exist in Layer 1, and ~0.25% in Layer 2. The memory overhead of Java objects here is
     negligible compared to the massive Layer 0.
      */
-    private final Map<Integer, Map<Long, long[]>> upperLayerConnections = new HashMap<>();
+    private final Map<Integer, Map<Long, Set<Long>>> upperLayerConnections = new HashMap<>();
 
     private int globalMaxLayer = 0;
     private long globalEnterPoint = 0;
-
-    private record NodeSimilarity(long vectorId, float similarity) {
-    }
 
     public HnswIndex(HnswConfig config) {
         this.config = config;
@@ -46,6 +44,13 @@ public class HnswIndex {
         layer0Connections = new PagedGraphIndex(config.mMax0(), config.blockSize());
     }
 
+    /**
+     *
+     * @return the index configuration
+     */
+    HnswConfig getConfig() {
+        return config;
+    }
 
     /**
      * Inserts a new vector to the index
@@ -63,18 +68,20 @@ public class HnswIndex {
         int maxL = globalMaxLayer;
 
         //1. Randomly choose a maximum layer
-        int l = determineMaxLayer();
+        int vectorMaxLayer = determineMaxLayer();
 
         //2. Add vector to layer 0
         long newId = layer0.addVector(newVector);
 
-        //3. Zoom down from Top Layer to l+1 (Greedy search, ef=1)
-        currentId = this.determineEnterPoint(newVector, currentId, maxL, l);
+        //3. Zoom down from Top Layer to vectorMaxLayer+1 (Greedy search, ef=1)
+        for (int l = globalMaxLayer; l > vectorMaxLayer; l--) {
+            currentId = searchLayerGreedy(newVector, currentId, l);
+        }
 
         // 4. From L down to 0, find neighbors and link
-        for (int i = Math.min(l, maxL); i >= 0; i--) {
+        for (int layer = Math.min(vectorMaxLayer, maxL); layer >= 0; layer--) {
             // Search layer with efConstruction
-            var neighborCandidates = searchLayer(newVector, currentId, i, config.efConstruction());
+            var neighborCandidates = searchLayer(newVector, currentId, layer, config.efConstruction());
             if (neighborCandidates.isEmpty()) {
                 continue;
             }
@@ -87,14 +94,16 @@ public class HnswIndex {
 
             // Add connections bidirectional
             for (long neighborId : neighbors) {
-                // Add q to neighborId's connections
-                addConnection(newId, neighborId, i);
+                // Register connection bidirectionally. Not both connections are guaranteed to be stored,
+                // as there will be a pruning process for each node.
+                addConnection(newId, neighborId, layer);
+                addConnection(neighborId, newId, layer);
             }
         }
 
         // 5. Update global entry point if new node is in a higher layer
-        if (l > globalMaxLayer) {
-            globalMaxLayer = l;
+        if (vectorMaxLayer > globalMaxLayer) {
+            globalMaxLayer = vectorMaxLayer;
             globalEnterPoint = newId;
         }
         return newId;
@@ -110,23 +119,22 @@ public class HnswIndex {
      * @param layer     the layer index
      */
     private void addConnection(long vectorId1, long vectorId2, int layer) {
-        var currentConnections = getConnections(vectorId1, layer);
-        var currentCount = currentConnections.length;
-
-        var newConnections = new long[1 + currentConnections.length];
-        newConnections[currentCount] = vectorId2;
+        var connections = getConnections(vectorId1, layer);
+        var currentCount = connections.size();
+        
+        connections.add(vectorId2);
 
         if (currentCount >= config.mMax()) {
-            newConnections = shrinkConnections(vectorId1, newConnections);
+            connections = shrinkConnections(vectorId1, connections);
         }
 
         if (layer == 0) {
-            layer0Connections.setConnections(vectorId1, newConnections);
+            layer0Connections.setConnections(vectorId1, connections);
             return;
         }
 
         var layerConnections = upperLayerConnections.computeIfAbsent(layer, k -> new HashMap<>());
-        layerConnections.put(vectorId1, newConnections);
+        layerConnections.put(vectorId1, connections);
     }
 
     /**
@@ -134,21 +142,20 @@ public class HnswIndex {
      *
      * @param vectorId           the vector id
      * @param currentConnections the current connections
-     * @return the shrunk connections array
+     * @return the new list of connections
      */
-    private long[] shrinkConnections(long vectorId, long[] currentConnections) {
+    private Set<Long> shrinkConnections(long vectorId, Set<Long> currentConnections) {
         var vector = layer0.getVector(vectorId);
         var similarity = config.vectorSimilarity();
         var candidates = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity).reversed());
 
-        Arrays.stream(currentConnections)
-                .boxed()
+        currentConnections
+                .stream()
                 .map(id -> new NodeSimilarity(id, similarity.between(vector, layer0.getVector(id))))
                 .forEach(candidates::add);
 
-        var boxed = selectNeighborsHeuristic(candidates).toArray(new Long[0]);
+        return selectNeighborsHeuristic(candidates);
 
-        return Arrays.stream(boxed).mapToLong(Long::longValue).toArray();
     }
 
     /**
@@ -179,8 +186,8 @@ public class HnswIndex {
      * @param candidates the efConstruction closest nodes
      * @return the list of selected neighbors
      */
-    private List<Long> selectNeighborsHeuristic(PriorityQueue<NodeSimilarity> candidates) {
-        List<Long> neighbors = new ArrayList<>();
+    private Set<Long> selectNeighborsHeuristic(PriorityQueue<NodeSimilarity> candidates) {
+        Set<Long> neighbors = new HashSet<>();
 
         // candidates is a min-queue (closest first)
         while (!candidates.isEmpty() && neighbors.size() < config.m()) {
@@ -217,29 +224,11 @@ public class HnswIndex {
         //
         // As a result, l is a random number between 0 and mL, but values close to 0
         // are much more probable.
-        return (int) (-Math.log(ThreadLocalRandom.current().nextDouble()) * config.mL());
-    }
-
-    /**
-     * Find the closest vector in layers > l
-     *
-     * @param newVector the vector to compare with
-     * @param currentId the current entry point
-     * @param maxL      the maximum layer
-     * @param l         the boundary layer
-     * @return the id of the closest vector in a layer > l
-     */
-    private long determineEnterPoint(float[] newVector, long currentId, int maxL, int l) {
-        var result = currentId;
-        var minDistance = Float.MAX_VALUE;
-        for (int i = maxL; i > l; i--) {
-            var nodeDist = searchLayer(newVector, currentId, i, 1).peek();
-            if (nodeDist.similarity() < minDistance) {
-                minDistance = nodeDist.similarity();
-                result = nodeDist.vectorId();
-            }
-        }
-        return result;
+        var random = ThreadLocalRandom.current().nextDouble();
+        var log = -Math.log(random);
+        var value = log * config.mL();
+        var maxLayer = (int) Math.round(value);
+        return maxLayer;
     }
 
 
@@ -253,27 +242,33 @@ public class HnswIndex {
      * @return a PriorityQueue with the top closest vectors
      */
     private PriorityQueue<NodeSimilarity> searchLayer(float[] vector, long enterPointId, int layer, int ef) {
+        var similarity = config.vectorSimilarity();
+
         // Visited set to avoid loops
         Set<Long> visited = new HashSet<>();
         visited.add(enterPointId);
 
-        // Candidates (Min-Heap): Best nodes to explore next
-        PriorityQueue<NodeSimilarity> candidates = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity).reversed());
+        // 1. Candidates (Min-Heap): Order by best similarity (highest score first)
+        // Uses NodeSimilarity's natural ordering (which orders by sim DESC)
+        PriorityQueue<NodeSimilarity> candidates = new PriorityQueue<>();
 
-        // Found results (Max-Heap): Keeps track of the 'ef' closest nodes found so far
-        // We need Max-Heap to easily remove the furthest element if the list gets too big
-        PriorityQueue<NodeSimilarity> nearestNeighbors = new PriorityQueue<>((a, b) -> -Float.compare(b.similarity(), a.similarity()));
+        // 2. Nearest Neighbors (Max-Heap): Order by worst similarity (lowest score at the top)
+        // Used to track the FURTHEST element in the result set W, which is the SMALLEST similarity.
+        PriorityQueue<NodeSimilarity> nearestNeighbors = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity));
 
-        float dist = config.vectorSimilarity().between(vector, layer0.getVector(enterPointId));
-        NodeSimilarity epDist = new NodeSimilarity(enterPointId, dist);
-        candidates.add(epDist);
-        nearestNeighbors.add(epDist);
-        var similarity = config.vectorSimilarity();
+        var entryPoint = layer0.getVector(enterPointId);
+        float sim = similarity.between(vector, entryPoint);
+        NodeSimilarity epSim = new NodeSimilarity(enterPointId, sim);
+        candidates.add(epSim);
+        nearestNeighbors.add(epSim);
         while (!candidates.isEmpty()) {
+            // Best candidate (highest similarity)
             NodeSimilarity current = candidates.poll();
-            NodeSimilarity furthestResult = nearestNeighbors.peek(); // The worst of the best so far
+            // Furthest neighbor found so far (lowest similarity)
+            NodeSimilarity furthestResult = nearestNeighbors.peek();
 
-            // Optimization: if the best candidate is worse than the worst neighbor we've already found, stop.
+            // Stopping Condition: Check if the best candidate is WORSE than the worst result
+            // If candidate's similarity is less than the worst result, STOP.
             if (current.similarity() < furthestResult.similarity()) {
                 break;
             }
@@ -286,30 +281,69 @@ public class HnswIndex {
                 }
                 visited.add(neighborId);
                 var neighbor = layer0.getVector(neighborId);
-                float s = similarity.between(vector, neighbor);
-
-                if (s > nearestNeighbors.peek().similarity() || nearestNeighbors.size() < ef) {
-                    NodeSimilarity nd = new NodeSimilarity(neighborId, s);
-                    candidates.add(nd);
-                    nearestNeighbors.add(nd);
+                float neighborSim = similarity.between(vector, neighbor);
+                var currentWorstSim = nearestNeighbors.peek().similarity();
+                if (neighborSim > currentWorstSim || nearestNeighbors.size() < ef) {
+                    NodeSimilarity nodeSimilarity = new NodeSimilarity(neighborId, neighborSim);
+                    candidates.add(nodeSimilarity);
+                    nearestNeighbors.add(nodeSimilarity);
 
                     if (nearestNeighbors.size() > ef) {
-                        nearestNeighbors.poll(); // Remove the furthest
+                        // Remove the element with the lowest similarity (worst result)
+                        nearestNeighbors.poll();
                     }
                 }
 
             }
         }
-        return nearestNeighbors; // This actually returns a Max-Heap, generally you convert to list
+        return nearestNeighbors;
     }
 
-    private long[] getConnections(long currentId, int layer) {
-        if (layer == 0) {
-            return layer0Connections.getConnections(currentId);
+    /**
+     * Simple greedy search for a single closest neighbor (ef=1)
+     *
+     * @param query      the query vector
+     * @param entryPoint the id of the entry point vector
+     * @param layer      the layer
+     * @return the id of the closest node to q in the given layer
+     */
+    private long searchLayerGreedy(float[] query, long entryPoint, int layer) {
+        var similarity = config.vectorSimilarity();
+        long bestNode = entryPoint;
+        float maxContextSim = similarity.between(query, layer0.getVector(bestNode));
+        boolean changed = true;
+
+        while (changed) {
+            changed = false;
+            var neighbors = getConnections(bestNode, layer);
+            for (long neighborId : neighbors) {
+                float sim = similarity.between(query, layer0.getVector(neighborId));
+                if (sim > maxContextSim) {
+                    maxContextSim = sim;
+                    bestNode = neighborId;
+                    changed = true;
+                }
+            }
         }
-        var connections = upperLayerConnections.get(layer).get(currentId);
+        return bestNode;
+    }
+
+    private Set<Long> getConnections(long currentId, int layer) {
+        if (layer == 0) {
+            var connections = layer0Connections.getConnections(currentId);
+            return Arrays.stream(connections)
+                    .boxed()
+                    .collect(Collectors.toCollection(HashSet::new));
+        }
+
+        var layerConnections = upperLayerConnections.get(layer);
+        if (layerConnections == null) {
+            return new HashSet<>();
+        }
+
+        var connections = layerConnections.get(currentId);
         if (connections == null) {
-            return new long[0];
+            return new HashSet<>();
         }
         return connections;
     }
@@ -319,10 +353,33 @@ public class HnswIndex {
      * Returns the K-Nearest Neighbors of queryVector
      *
      * @param queryVector the query vector
-     * @return a list of {@link Match} instances representing the search results.
+     * @param k           the number of vectors to return
+     * @return a list of {@link NodeSimilarity} instances representing the search results.
      */
-    public List<Match> search(float[] queryVector) {
-        return List.of();
+    public List<NodeSimilarity> search(float[] queryVector, int k) {
+        long currObj = globalEnterPoint;
+
+        // 1. Zoom-in Phase: Fast greedy search through upper layers
+        // We use ef=1 for speed as we just need a good entry point for the next layer
+        for (int l = globalMaxLayer; l >= 1; l--) {
+            currObj = searchLayerGreedy(queryVector, currObj, l);
+        }
+
+        // 2. Fine Search Phase: Comprehensive search at the ground layer (Layer 0)
+        // W is a Max-Heap that keeps track of the 'ef' best candidates
+        PriorityQueue<NodeSimilarity> w = searchLayer(queryVector, currObj, 0, config.efSearch());
+
+        // 3. Return top K results from the candidates found in Layer 0
+        List<NodeSimilarity> results = new ArrayList<>();
+        // W is a max-heap; we want the closest K, so we might need to sort or poll
+        while (w.size() > k) {
+            w.poll(); // Remove furthest until we have K
+        }
+        while (!w.isEmpty()) {
+            results.add(w.poll());
+        }
+        Collections.reverse(results);
+        return results;
     }
 
     /**

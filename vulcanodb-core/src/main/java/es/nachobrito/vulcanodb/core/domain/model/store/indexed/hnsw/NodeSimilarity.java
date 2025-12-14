@@ -14,13 +14,19 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.query.similarity;
+package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
 
 /**
  * @author nacho
  */
-@FunctionalInterface
-public interface VectorSimilarity {
+public record NodeSimilarity(long vectorId, float similarity) implements Comparable<NodeSimilarity> {
 
-    float between(float[] vector1, float[] vector2);
+
+    @Override
+    public int compareTo(NodeSimilarity other) {
+        // We implement natural ordering for the Min-Heap (Candidates).
+        // Max similarity should be considered the 'smallest' (highest priority).
+        // i.e., larger 'similarity' means higher priority (comes first).
+        return Float.compare(other.similarity, this.similarity); // Reversed comparison
+    }
 }

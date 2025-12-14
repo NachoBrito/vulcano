@@ -30,6 +30,7 @@ class CosineSimilarityTest {
     @Test
     void expectCosineDistance() {
         assertEquals(1.0, similarity.between(new float[]{0, 1}, new float[]{0, 1}));
+        assertEquals(-1.0, similarity.between(new float[]{1, 1}, new float[]{-1, -1}));
         assertEquals(0.0, similarity.between(new float[]{0, 1}, new float[]{1, 0}));
         assertEquals(
                 Math.round(100.0 * Math.cos(Math.PI / 4)),

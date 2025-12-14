@@ -21,6 +21,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * <pre>
@@ -58,6 +59,17 @@ public class PagedGraphIndex {
         while (pages.size() <= pageIdx) {
             addPage();
         }
+    }
+
+    /**
+     * Convenience method, to handle unboxing
+     *
+     * @param vectorId  the vectorId
+     * @param neighbors the new connections
+     */
+    public void setConnections(long vectorId, Set<Long> neighbors) {
+        var unboxedArray = neighbors.stream().mapToLong(it -> it).toArray();
+        setConnections(vectorId, unboxedArray);
     }
 
     /**

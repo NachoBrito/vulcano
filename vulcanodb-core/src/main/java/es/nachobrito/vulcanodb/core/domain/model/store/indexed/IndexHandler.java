@@ -14,12 +14,17 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
+package es.nachobrito.vulcanodb.core.domain.model.store.indexed;
+
+import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
+
+import java.util.List;
 
 /**
- * A match in the index.
- *
  * @author nacho
  */
-public record Match(long id, float score) {
+public interface IndexHandler<T> {
+    void index(DocumentId documentId, T value);
+
+    List<IndexMatch> search(T query, int maxResults);
 }

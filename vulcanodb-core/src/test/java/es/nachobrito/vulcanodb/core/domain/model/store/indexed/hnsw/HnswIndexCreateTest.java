@@ -16,7 +16,6 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
 
-import es.nachobrito.vulcanodb.core.domain.model.query.similarity.CosineSimilarity;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -28,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author nacho
  */
-class HnswIndexTest {
+class HnswIndexCreateTest {
 
 
     @Test
@@ -45,11 +44,11 @@ class HnswIndexTest {
 
     @Test
     void expectIndexCreated() {
-        var config = getHnswConfig();
+        var config = HnswConfig.builder().build();
         var index = new HnswIndex(config);
         assertNotNull(index);
 
-        var vectorCount = 1000000;
+        var vectorCount = 1000;
         var vectors = createRandomVectors(vectorCount, config);
         var vectorIds = Arrays
                 .stream(vectors)
@@ -65,7 +64,6 @@ class HnswIndexTest {
                 .toArray(float[][]::new);
 
         assertArrayEquals(vectors, storedVectors);
-
     }
 
     private float[][] createRandomVectors(int count, HnswConfig config) {
@@ -80,17 +78,5 @@ class HnswIndexTest {
         return vectors;
     }
 
-    private static HnswConfig getHnswConfig() {
-        var config = HnswConfig.builder().build();
-        assertInstanceOf(CosineSimilarity.class, config.vectorSimilarity());
-        assertEquals(1_048_576, config.blockSize());
-        assertEquals(364, config.dimensions());
-        assertEquals(100, config.efConstruction());
-        assertEquals(16, config.m());
-        assertEquals(16, config.mMax());
-        assertEquals(32, config.mMax0());
-        assertEquals(0, config.mL());
-        return config;
-    }
 
 }

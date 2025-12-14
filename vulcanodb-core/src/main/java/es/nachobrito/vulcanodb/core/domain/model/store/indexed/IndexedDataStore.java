@@ -21,10 +21,20 @@ import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author nacho
  */
 public class IndexedDataStore implements DataStore {
+
+    private final Map<String, IndexHandler<?>> indexes;
+
+    private IndexedDataStore(Map<String, IndexHandler<?>> indexes) {
+        this.indexes = indexes;
+    }
+
     @Override
     public void add(Document document) {
 
@@ -33,5 +43,22 @@ public class IndexedDataStore implements DataStore {
     @Override
     public Result search(Query query) {
         return null;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final Map<String, IndexHandler<?>> indexes = new HashMap<>();
+
+        public IndexedDataStore build() {
+            return new IndexedDataStore(indexes);
+        }
+
+        public Builder withVectorIndex(String fieldName) {
+            this.indexes.put(fieldName, new HnswIndexHandler());
+            return this;
+        }
     }
 }

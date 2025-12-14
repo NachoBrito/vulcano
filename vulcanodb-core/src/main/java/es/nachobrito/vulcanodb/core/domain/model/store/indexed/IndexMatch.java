@@ -14,13 +14,12 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.query.similarity;
+package es.nachobrito.vulcanodb.core.domain.model.store.indexed;
+
+import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
 
 /**
  * @author nacho
  */
-@FunctionalInterface
-public interface VectorSimilarity {
-
-    float between(float[] vector1, float[] vector2);
+public record IndexMatch(DocumentId documentId, Float score) {
 }

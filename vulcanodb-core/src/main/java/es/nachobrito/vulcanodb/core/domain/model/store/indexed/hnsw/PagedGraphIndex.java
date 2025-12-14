@@ -31,7 +31,7 @@ import java.util.Set;
  *
  * @author nacho
  */
-public class PagedGraphIndex {
+final public class PagedGraphIndex {
     // Max neighbors for Layer 0 (usually 2 * M)
     private final int maxConnections;
 

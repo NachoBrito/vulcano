@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author nacho
  */
-class PagedVectorIndex {
+final class PagedVectorIndex {
     // List of memory segments (pages)
     private final List<MemorySegment> pages = new ArrayList<>();
     private final AtomicLong currentCount = new AtomicLong(0);
@@ -45,14 +45,15 @@ class PagedVectorIndex {
      * @param dimensions how many elements per vector
      */
     public PagedVectorIndex(int blockSize, int dimensions) {
+        this.blockSize = blockSize;
+        this.dimensions = dimensions;
+
         if (blockSize < 1) {
             throw new IllegalArgumentException("Invalid block size, must be > 0");
         }
         if (dimensions < 1) {
             throw new IllegalArgumentException("Invalid dimensions, must be > 0");
         }
-        this.blockSize = blockSize;
-        this.dimensions = dimensions;
         // Start with one page
         addPage();
     }

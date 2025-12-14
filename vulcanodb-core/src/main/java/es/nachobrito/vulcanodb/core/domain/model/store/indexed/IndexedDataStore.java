@@ -57,7 +57,7 @@ public class IndexedDataStore implements DataStore {
         }
 
         public Builder withVectorIndex(String fieldName) {
-            this.indexes.put(fieldName, new HnswIndexHandler());
+            this.indexes.put(fieldName, new HnswIndexHandler(fieldName));
             return this;
         }
     }

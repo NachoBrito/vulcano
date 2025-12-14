@@ -16,15 +16,15 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.store.indexed;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
+import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 
 import java.util.List;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<T> {
-    void index(DocumentId documentId, T value);
+public interface IndexHandler<V> {
+    void index(Document document);
 
-    List<IndexMatch> search(T query, int maxResults);
+    List<IndexMatch> search(V query, int maxResults);
 }

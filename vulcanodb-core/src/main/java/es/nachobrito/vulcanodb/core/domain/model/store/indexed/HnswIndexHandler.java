@@ -16,9 +16,14 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.store.indexed;
 
+import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
+import es.nachobrito.vulcanodb.core.domain.model.document.Field;
+import es.nachobrito.vulcanodb.core.domain.model.document.VectorFieldValue;
 import es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw.HnswConfig;
 import es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw.HnswIndex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,20 +33,36 @@ import java.util.Map;
  * @author nacho
  */
 public class HnswIndexHandler implements IndexHandler<float[]> {
+    private final Logger log = LoggerFactory.getLogger(getClass());
     private final HnswIndex index;
+    private final String fieldName;
 
     private final Map<Long, DocumentId> documentIdMap = new HashMap<>();
 
-    public HnswIndexHandler() {
+    public HnswIndexHandler(String fieldName) {
+        this.fieldName = fieldName;
         var config = HnswConfig.builder().build();
         this.index = new HnswIndex(config);
     }
 
 
     @Override
-    public void index(DocumentId documentId, float[] value) {
-        var newId = index.insert(value);
-        documentIdMap.put(newId, documentId);
+    public void index(Document document) {
+        var mayBeField = document.field(fieldName);
+        if (mayBeField.isEmpty()) {
+            log.debug("Ignoring document {}, it does not contain field {}", document.id(), fieldName);
+            return;
+        }
+        var field = mayBeField.get();
+        if (!field.type().equals(VectorFieldValue.class)) {
+            throw new IllegalArgumentException(
+                    "Field %s in document %s is of invalid type %s"
+                            .formatted(fieldName, document.id(), field.type().getName()));
+        }
+
+        @SuppressWarnings("unchecked")
+        var newId = index.insert(((Field<float[], VectorFieldValue>) field).value());
+        documentIdMap.put(newId, document.id());
     }
 
     @Override

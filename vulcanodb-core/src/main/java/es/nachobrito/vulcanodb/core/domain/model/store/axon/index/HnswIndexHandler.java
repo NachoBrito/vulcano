@@ -14,14 +14,14 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.indexed;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
 import es.nachobrito.vulcanodb.core.domain.model.document.Field;
 import es.nachobrito.vulcanodb.core.domain.model.document.VectorFieldValue;
-import es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw.HnswConfig;
-import es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw.HnswIndex;
+import es.nachobrito.vulcanodb.core.domain.model.store.axon.index.hnsw.HnswConfig;
+import es.nachobrito.vulcanodb.core.domain.model.store.axon.index.hnsw.HnswIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

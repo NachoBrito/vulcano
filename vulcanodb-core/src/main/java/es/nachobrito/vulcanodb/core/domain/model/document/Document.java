@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author nacho
@@ -58,5 +59,14 @@ public class Document {
                         Map.Entry::getKey,
                         it -> it.getValue().value()
                 )));
+    }
+
+    /**
+     * .
+     *
+     * @return a stream of this document's fields
+     */
+    public Stream<Field<?, ?>> getfieldsStream() {
+        return fields.values().stream();
     }
 }

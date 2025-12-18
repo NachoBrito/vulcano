@@ -14,19 +14,13 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
+package es.nachobrito.vulcanodb.core.util;
 
 /**
  * @author nacho
  */
-public record NodeSimilarity(long vectorId, float similarity) implements Comparable<NodeSimilarity> {
-
-
-    @Override
-    public int compareTo(NodeSimilarity other) {
-        // We implement natural ordering for the Min-Heap (Candidates).
-        // Max similarity should be considered the 'smallest' (highest priority).
-        // i.e., larger 'similarity' means higher priority (comes first).
-        return Float.compare(other.similarity, this.similarity); // Reversed comparison
+public interface FileNameHelper {
+    static String toLegalFileName(String string) {
+        return string.replaceAll("[^a-zA-Z0-9\\._]+", "_");
     }
 }

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon.index.hnsw;
 
 import org.junit.jupiter.api.Test;
 

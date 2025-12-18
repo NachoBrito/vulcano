@@ -14,17 +14,19 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.indexed;
-
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.List;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon.index.hnsw;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> {
-    void index(Document document);
+public record NodeSimilarity(long vectorId, float similarity) implements Comparable<NodeSimilarity> {
 
-    List<IndexMatch> search(V query, int maxResults);
+
+    @Override
+    public int compareTo(NodeSimilarity other) {
+        // We implement natural ordering for the Min-Heap (Candidates).
+        // Max similarity should be considered the 'smallest' (highest priority).
+        // i.e., larger 'similarity' means higher priority (comes first).
+        return Float.compare(other.similarity, this.similarity); // Reversed comparison
+    }
 }

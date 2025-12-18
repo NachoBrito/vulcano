@@ -87,7 +87,7 @@ public class DocumentBuilder {
     /// Adds all the fields in the Map. This method handles three value types:
     /// - Map values of type float[] or Float[] will be added as vector fields
     /// - Map values of type Integer will be added as integer fields
-    /// - Any other type will be indexed as a string, calling [String#valueOf(Object)] in the value
+    /// - Any other type will be axon as a string, calling [String#valueOf(Object)] in the value
     ///
     /// @param fields the fields to add to the document
     /// @return this builder

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.indexed.hnsw;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon.index.hnsw;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -121,7 +121,7 @@ public class HnswIndex {
     private void addConnection(long vectorId1, long vectorId2, int layer) {
         var connections = getConnections(vectorId1, layer);
         var currentCount = connections.size();
-        
+
         connections.add(vectorId2);
 
         if (currentCount >= config.mMax()) {

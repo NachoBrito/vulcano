@@ -14,14 +14,17 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.filesystem;
-
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon;
 
 /**
  * @author nacho
  */
-public interface DocumentWriter {
+public class AxonDataStoreException extends RuntimeException {
+    public AxonDataStoreException(Throwable e) {
+        super(e);
+    }
 
-    void write(Document document);
+    public AxonDataStoreException(String s) {
+        super(s);
+    }
 }

@@ -16,11 +16,26 @@
 
 package es.nachobrito.vulcanodb.core.util;
 
+import java.io.File;
+
 /**
  * @author nacho
  */
-public interface FileNameHelper {
+public interface FileUtils {
     static String toLegalFileName(String string) {
         return string.replaceAll("[^a-zA-Z0-9\\._]+", "_");
+    }
+
+    static void deleteRecursively(File fileOrDirectory) {
+        if (fileOrDirectory.isDirectory()) {
+            // Recursively delete contents of the directory
+            for (File child : fileOrDirectory.listFiles()) {
+                deleteRecursively(child);
+            }
+        }
+        // Delete the file or empty directory
+        if (!fileOrDirectory.delete()) {
+            System.err.println("Failed to delete: " + fileOrDirectory.getAbsolutePath());
+        }
     }
 }

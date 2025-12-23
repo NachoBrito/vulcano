@@ -51,4 +51,9 @@ public class NaiveInMemoryDataStore implements DataStore {
     public void add(Document document) {
         this.documents.put(document.id(), document);
     }
+
+    @Override
+    public void close() throws Exception {
+        //nothing to do here, this is 100% in-memory storage
+    }
 }

@@ -17,41 +17,71 @@
 package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.store.axon.filesystem.DocumentWriter;
+import es.nachobrito.vulcanodb.core.domain.model.store.axon.write.DocumentWriteResult;
+import es.nachobrito.vulcanodb.core.domain.model.store.axon.write.DocumentWriter;
+import es.nachobrito.vulcanodb.core.infrastructure.concurrent.ExecutorProvider;
+import es.nachobrito.vulcanodb.core.util.TypedProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 
 /**
  * @author nacho
  */
 public class DefaultDocumentWriter implements DocumentWriter {
-    private final Path dataFolder;
+    private final Logger logger = LoggerFactory.getLogger(getClass());
     private final FieldWriter fieldWriter;
 
-    public DefaultDocumentWriter(Path dataFolder) {
-        this.dataFolder = dataFolder;
-        this.fieldWriter = new FieldWriter(dataFolder);
+    public DefaultDocumentWriter(TypedProperties config) {
+        this.fieldWriter = new FieldWriter(config);
     }
 
+    public DefaultDocumentWriter() {
+        this.fieldWriter = new FieldWriter(new TypedProperties());
+    }
+
+
     /**
-     * Uses the common fork-join pool to write each field in the document asynchronously
+     * Returns the result of writing the Document as a Future that will contain a {@link DocumentWriteResult} when the
+     * operation completes.
      *
      * @param document the document to write
+     * @return a Future containing the result.
      */
     @Override
-    public void write(Document document) {
+    public Future<DocumentWriteResult> write(Document document) {
+        return ExecutorProvider
+                .defaultExecutor()
+                .submit(() -> writeDocumentAsync(document));
+    }
+
+    private DocumentWriteResult writeDocumentAsync(Document document) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Writing document {}", document.id());
+        }
         try {
-            ForkJoinPool
-                    .commonPool()
+            var results = ExecutorProvider
+                    .defaultExecutor()
                     .invokeAll(
                             document
                                     .getfieldsStream()
                                     .map(it -> fieldWriter.writeOperation(document.id(), it))
                                     .toList()
-                    );
+                    )
+                    .stream()
+                    .map(Future::resultNow)
+                    .toList();
+            return DocumentWriteResult.ofFieldResults(results);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return DocumentWriteResult.ofError(e);
         }
+    }
+
+
+    @Override
+    public void close() throws Exception {
+        fieldWriter.close();
     }
 }

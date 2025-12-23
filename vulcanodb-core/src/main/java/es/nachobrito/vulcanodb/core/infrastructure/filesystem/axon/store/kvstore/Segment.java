@@ -14,17 +14,23 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
+package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.store.kvstore;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.List;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.nio.channels.FileChannel;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
-
-    List<IndexMatch> search(V query, int maxResults);
+record Segment(
+        FileChannel channel,
+        Arena arena,
+        MemorySegment memory
+) implements AutoCloseable {
+    @Override
+    public void close() throws Exception {
+        arena.close();
+        channel.close();
+    }
 }

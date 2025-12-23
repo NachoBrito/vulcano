@@ -20,19 +20,20 @@ import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
-import es.nachobrito.vulcanodb.core.domain.model.store.axon.filesystem.DocumentWriter;
 import es.nachobrito.vulcanodb.core.domain.model.store.axon.index.HnswIndexHandler;
 import es.nachobrito.vulcanodb.core.domain.model.store.axon.index.IndexHandler;
+import es.nachobrito.vulcanodb.core.domain.model.store.axon.write.DocumentWriter;
 import es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.DefaultDocumentWriter;
+import es.nachobrito.vulcanodb.core.util.TypedProperties;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * The Axon data store provides support for:
  * <ul>
- *     <li>filesystem persistence via {@link DocumentWriter} implementations</li>
+ *     <li>write persistence via {@link DocumentWriter} implementations</li>
  *     <li>HNSW indexing for vector fields</li>
  * </ul>
  *
@@ -62,25 +63,38 @@ public class AxonDataStore implements DataStore {
         return new Builder();
     }
 
+    @Override
+    public void close() throws Exception {
+        documentWriter.close();
+        var errors = new HashMap<IndexHandler<?>, Exception>();
+        for (IndexHandler<?> indexHandler : indexes.values()) {
+            try {
+                indexHandler.close();
+            } catch (Exception exception) {
+                errors.put(indexHandler, exception);
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw new AxonDataStoreCloseException("Some Index Handlers could not  be closed", errors);
+        }
+    }
+
 
     public static class Builder {
         private final Map<String, IndexHandler<?>> indexes = new HashMap<>();
-        private Path dataFolder = Path.of(System.getProperty("user.dir"), ".VulcanoDB");
+        private final Properties config = new Properties();
         private DocumentWriter documentWriter;
 
         public AxonDataStore build() {
-            var documentWriter = this.documentWriter != null ? this.documentWriter : new DefaultDocumentWriter(dataFolder);
+            var documentWriter = this.documentWriter != null ?
+                    this.documentWriter :
+                    new DefaultDocumentWriter(new TypedProperties(config));
 
             return new AxonDataStore(indexes, documentWriter);
         }
 
         public Builder withVectorIndex(String fieldName) {
             this.indexes.put(fieldName, new HnswIndexHandler(fieldName));
-            return this;
-        }
-
-        public Builder withDataFolder(Path dataFolder) {
-            this.dataFolder = dataFolder;
             return this;
         }
 

@@ -14,17 +14,17 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
+package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.List;
+import es.nachobrito.vulcanodb.core.domain.model.document.Field;
+import es.nachobrito.vulcanodb.core.domain.model.document.FieldValueType;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
+public record FieldIdentity<T>(String fieldName, Class<T> type) {
 
-    List<IndexMatch> search(V query, int maxResults);
+    public static <V, T extends FieldValueType<V>> FieldIdentity<T> of(Field<V, T> field) {
+        return new FieldIdentity<>(field.key(), field.type());
+    }
 }

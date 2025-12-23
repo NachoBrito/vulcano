@@ -14,17 +14,24 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
+package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
+public class AxonFieldWriterCloseException extends Exception {
+    private final List<Throwable> causes;
 
-    List<IndexMatch> search(V query, int maxResults);
+    public AxonFieldWriterCloseException(String message, List<Throwable> causes) {
+        super(message);
+        this.causes = new ArrayList<>(causes);
+    }
+
+    public List<Throwable> getCauses() {
+        return Collections.unmodifiableList(causes);
+    }
 }

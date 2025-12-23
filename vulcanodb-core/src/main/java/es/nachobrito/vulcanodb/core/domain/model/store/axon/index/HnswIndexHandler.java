@@ -73,4 +73,9 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
                 .map(hit -> new IndexMatch(documentIdMap.get(hit.vectorId()), hit.similarity()))
                 .toList();
     }
+
+    @Override
+    public void close() throws Exception {
+        //nothing to do
+    }
 }

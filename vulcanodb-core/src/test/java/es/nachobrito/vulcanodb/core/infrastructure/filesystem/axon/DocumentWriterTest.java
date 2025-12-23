@@ -19,9 +19,10 @@ package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon;
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * @author nacho
@@ -30,19 +31,23 @@ class DocumentWriterTest {
 
     @Test
     void expectDocumentWritten() {
-        Path dataFolder = Path.of(System.getProperty("user.dir"), ".VulcanoDB");
-        var writer = new DefaultDocumentWriter(dataFolder);
-        var now = ZonedDateTime.now();
-        Map<String, Object> fields = Map.of(
-                "integer", 1,
-                "string", "a string",
-                "vector1", new float[]{1.0f, 2.0f},
-                "vector2", new Float[]{1.0f, 2.0f},
-                "date", now
-        );
+        try (var writer = new DefaultDocumentWriter()) {
+            var now = ZonedDateTime.now();
+            Map<String, Object> fields = Map.of(
+                    "integer", 1,
+                    "string", "a string",
+                    "vector1", new float[]{1.0f, 2.0f},
+                    "vector2", new Float[]{1.0f, 2.0f},
+                    "date", now
+            );
 
-        var document = Document.builder().with(fields).build();
-        writer.write(document);
+            var document = Document.builder().with(fields).build();
+            var result = writer.write(document).get();
+
+            assertNotNull(result);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
     }
 

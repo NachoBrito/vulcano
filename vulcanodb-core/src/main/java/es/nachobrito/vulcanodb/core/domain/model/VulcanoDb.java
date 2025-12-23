@@ -29,7 +29,7 @@ import java.util.Arrays;
  *
  * @author nacho
  */
-public class VulcanoDb {
+public class VulcanoDb implements AutoCloseable {
 
     private final DataStore dataStore;
 
@@ -73,6 +73,11 @@ public class VulcanoDb {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    @Override
+    public void close() throws Exception {
+        dataStore.close();
     }
 
     public static final class Builder {

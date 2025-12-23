@@ -14,17 +14,30 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
-
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.List;
+package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.store.kvstore;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
+enum ValueType {
+    STRING(1),
+    INTEGER(2),
+    FLOAT_ARRAY(3),
+    FLOAT_MATRIX(4);
 
-    List<IndexMatch> search(V query, int maxResults);
+    final int id;
+
+    ValueType(int id) {
+        this.id = id;
+    }
+
+    static ValueType fromId(int id) {
+        return switch (id) {
+            case 1 -> STRING;
+            case 2 -> INTEGER;
+            case 3 -> FLOAT_ARRAY;
+            case 4 -> FLOAT_MATRIX;
+            default -> throw new IllegalStateException("Unknown type " + id);
+        };
+    }
 }

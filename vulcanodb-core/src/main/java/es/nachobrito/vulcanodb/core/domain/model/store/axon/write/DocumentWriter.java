@@ -14,17 +14,16 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon.write;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
 
-import java.util.List;
+import java.util.concurrent.Future;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
+public interface DocumentWriter extends AutoCloseable {
 
-    List<IndexMatch> search(V query, int maxResults);
+    Future<DocumentWriteResult> write(Document document);
 }

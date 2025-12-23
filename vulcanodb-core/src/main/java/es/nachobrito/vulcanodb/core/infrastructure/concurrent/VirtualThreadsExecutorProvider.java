@@ -14,17 +14,22 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.index;
+package es.nachobrito.vulcanodb.core.infrastructure.concurrent;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
+public class VirtualThreadsExecutorProvider implements ExecutorProvider {
 
-    List<IndexMatch> search(V query, int maxResults);
+    static final VirtualThreadsExecutorProvider INSTANCE = new VirtualThreadsExecutorProvider();
+
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+    @Override
+    public ExecutorService getExecutor() {
+        return executor;
+    }
 }

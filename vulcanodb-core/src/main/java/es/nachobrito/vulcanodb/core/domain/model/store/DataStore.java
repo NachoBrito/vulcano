@@ -23,7 +23,7 @@ import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 /**
  * @author nacho
  */
-public interface DataStore {
+public interface DataStore extends AutoCloseable {
 
     /**
      * Adds a new document to the store. If a document with the same id exists, it will be replaced by this one.

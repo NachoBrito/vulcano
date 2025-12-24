@@ -17,23 +17,27 @@
 package es.nachobrito.vulcanodb.core.domain.model.store.axon;
 
 import es.nachobrito.vulcanodb.core.domain.model.document.Document;
+import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
 import es.nachobrito.vulcanodb.core.domain.model.query.Query;
 import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
 import es.nachobrito.vulcanodb.core.domain.model.store.axon.index.HnswIndexHandler;
 import es.nachobrito.vulcanodb.core.domain.model.store.axon.index.IndexHandler;
-import es.nachobrito.vulcanodb.core.domain.model.store.axon.write.DocumentWriter;
-import es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.DefaultDocumentWriter;
+import es.nachobrito.vulcanodb.core.infrastructure.concurrent.ExecutorProvider;
+import es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.DefaultDocumentDiskStore;
 import es.nachobrito.vulcanodb.core.util.TypedProperties;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The Axon data store provides support for:
  * <ul>
- *     <li>write persistence via {@link DocumentWriter} implementations</li>
+ *     <li>write persistence via {@link DocumentDiskStore} implementations</li>
  *     <li>HNSW indexing for vector fields</li>
  * </ul>
  *
@@ -42,16 +46,27 @@ import java.util.Properties;
 public class AxonDataStore implements DataStore {
 
     private final Map<String, IndexHandler<?>> indexes;
-    private final DocumentWriter documentWriter;
+    private final DocumentDiskStore documentDiskStore;
 
-    private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentWriter documentWriter) {
+    private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentDiskStore documentDiskStore) {
         this.indexes = indexes;
-        this.documentWriter = documentWriter;
+        this.documentDiskStore = documentDiskStore;
     }
 
     @Override
     public void add(Document document) {
-        documentWriter.write(document);
+        var result = documentDiskStore
+                .write(document)
+                .join();
+
+        if (!result.success()) {
+            throw new AxonDataStoreException(result.error());
+        }
+    }
+
+    @Override
+    public Optional<Document> get(DocumentId documentId) {
+        return documentDiskStore.read(documentId);
     }
 
     @Override
@@ -59,13 +74,35 @@ public class AxonDataStore implements DataStore {
         return null;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    @Override
+    public CompletableFuture<Void> addAsync(Document document) {
+        return documentDiskStore
+                .write(document)
+                .thenAcceptAsync(
+                        result -> {
+                            if (!result.success()) {
+                                throw new AxonDataStoreException(result.error());
+                            }
+                        },
+                        ExecutorProvider.defaultExecutor()
+                );
+    }
+
+    @Override
+    public CompletableFuture<Optional<Document>> getAsync(DocumentId documentId) {
+        return CompletableFuture.supplyAsync(
+                () -> documentDiskStore.read(documentId), ExecutorProvider.defaultExecutor());
+    }
+
+    @Override
+    public CompletableFuture<Result> searchAsync(Query query) {
+        return CompletableFuture.supplyAsync(
+                () -> search(query), ExecutorProvider.defaultExecutor());
     }
 
     @Override
     public void close() throws Exception {
-        documentWriter.close();
+        documentDiskStore.close();
         var errors = new HashMap<IndexHandler<?>, Exception>();
         for (IndexHandler<?> indexHandler : indexes.values()) {
             try {
@@ -79,16 +116,20 @@ public class AxonDataStore implements DataStore {
         }
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
 
     public static class Builder {
         private final Map<String, IndexHandler<?>> indexes = new HashMap<>();
         private final Properties config = new Properties();
-        private DocumentWriter documentWriter;
+        private DocumentDiskStore documentDiskStore;
 
         public AxonDataStore build() {
-            var documentWriter = this.documentWriter != null ?
-                    this.documentWriter :
-                    new DefaultDocumentWriter(new TypedProperties(config));
+            var documentWriter = this.documentDiskStore != null ?
+                    this.documentDiskStore :
+                    new DefaultDocumentDiskStore(new TypedProperties(config));
 
             return new AxonDataStore(indexes, documentWriter);
         }
@@ -98,8 +139,13 @@ public class AxonDataStore implements DataStore {
             return this;
         }
 
-        public Builder withDocumentWriter(DocumentWriter documentWriter) {
-            this.documentWriter = documentWriter;
+        public Builder withDocumentWriter(DocumentDiskStore documentDiskStore) {
+            this.documentDiskStore = documentDiskStore;
+            return this;
+        }
+
+        public Builder withDataPath(Path dataPath) {
+            config.setProperty(ConfigProperties.PROPERTY_PATH, dataPath.toString());
             return this;
         }
     }

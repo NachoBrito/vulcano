@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.domain.model.document;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * @author nacho
@@ -29,5 +30,17 @@ public record VectorFieldValue(float[] value) implements FieldValueType<float[]>
     @Override
     public float[] value() {
         return Arrays.copyOf(value, value.length);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        VectorFieldValue that = (VectorFieldValue) o;
+        return Objects.deepEquals(value(), that.value());
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(value());
     }
 }

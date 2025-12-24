@@ -14,23 +14,20 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.store.kvstore;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
-import java.nio.channels.FileChannel;
+import es.nachobrito.vulcanodb.core.domain.model.document.Document;
+import es.nachobrito.vulcanodb.core.domain.model.document.DocumentId;
+
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author nacho
  */
-record Segment(
-        FileChannel channel,
-        Arena arena,
-        MemorySegment memory
-) implements AutoCloseable {
-    @Override
-    public void close() throws Exception {
-        arena.close();
-        channel.close();
-    }
+public interface DocumentDiskStore extends AutoCloseable {
+
+    CompletableFuture<DocumentWriteResult> write(Document document);
+
+    Optional<Document> read(DocumentId documentId);
 }

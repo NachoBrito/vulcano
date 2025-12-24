@@ -14,17 +14,23 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon;
+package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.kvstore;
 
-import es.nachobrito.vulcanodb.core.domain.model.document.Field;
-import es.nachobrito.vulcanodb.core.domain.model.document.FieldValueType;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.nio.channels.FileChannel;
 
 /**
  * @author nacho
  */
-record FieldIdentity<T>(String fieldName, Class<T> type) {
-
-    static <V, T extends FieldValueType<V>> FieldIdentity<T> of(Field<V, T> field) {
-        return new FieldIdentity<>(field.key(), field.type());
+record Segment(
+        FileChannel channel,
+        Arena arena,
+        MemorySegment memory
+) implements AutoCloseable {
+    @Override
+    public void close() throws Exception {
+        arena.close();
+        channel.close();
     }
 }

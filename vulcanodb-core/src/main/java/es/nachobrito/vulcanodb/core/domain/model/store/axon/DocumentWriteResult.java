@@ -14,17 +14,26 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.domain.model.store.axon.write;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author nacho
  */
-public record FieldWriteResult(String fieldName, boolean success, String errorMessage, Throwable throwable) {
-    public static FieldWriteResult success(String fieldName) {
-        return new FieldWriteResult(fieldName, true, null, null);
+public record DocumentWriteResult(boolean success, Throwable error, List<FieldWriteResult> fieldResults) {
+
+
+    public static DocumentWriteResult ofError(Throwable error) {
+        return new DocumentWriteResult(false, error, Collections.emptyList());
     }
 
-    public static FieldWriteResult error(String fieldName, Throwable throwable) {
-        return new FieldWriteResult(fieldName, false, throwable.getMessage(), throwable);
+    public static DocumentWriteResult ofFieldResults(List<FieldWriteResult> fieldResults) {
+        return new DocumentWriteResult(
+                fieldResults.stream().allMatch(FieldWriteResult::success),
+                null,
+                fieldResults
+        );
     }
 }

@@ -14,17 +14,17 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon;
-
-import es.nachobrito.vulcanodb.core.domain.model.document.Field;
-import es.nachobrito.vulcanodb.core.domain.model.document.FieldValueType;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon;
 
 /**
  * @author nacho
  */
-record FieldIdentity<T>(String fieldName, Class<T> type) {
+public record FieldWriteResult(String fieldName, boolean success, String errorMessage, Throwable throwable) {
+    public static FieldWriteResult success(String fieldName) {
+        return new FieldWriteResult(fieldName, true, null, null);
+    }
 
-    static <V, T extends FieldValueType<V>> FieldIdentity<T> of(Field<V, T> field) {
-        return new FieldIdentity<>(field.key(), field.type());
+    public static FieldWriteResult error(String fieldName, Throwable throwable) {
+        return new FieldWriteResult(fieldName, false, throwable.getMessage(), throwable);
     }
 }

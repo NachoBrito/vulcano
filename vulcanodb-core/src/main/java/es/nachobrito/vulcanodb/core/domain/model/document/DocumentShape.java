@@ -1,0 +1,88 @@
+/*
+ *    Copyright 2025 Nacho Brito
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package es.nachobrito.vulcanodb.core.domain.model.document;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * @author nacho
+ */
+public class DocumentShape {
+    private static final String VALUE_SEPARATOR = ":";
+    private static final String FIELD_SEPARATOR = ";";
+    private final Map<String, Class<? extends FieldValueType<?>>> fields;
+
+    DocumentShape(Map<String, Field<?, ?>> fields) {
+        this.fields = fields.entrySet()
+                .stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        it -> it.getValue().type()
+                ));
+    }
+
+    private DocumentShape() {
+        this.fields = new HashMap<>();
+    }
+
+    /**
+     * Deserializes the string returned by {@link #toString()} into a new DocumentShape instance.
+     *
+     * @param shapeString the string, as returned by {@link #toString()}
+     * @return the deserialized DocumentShape instance
+     */
+    public static DocumentShape from(String shapeString) {
+        var shape = new DocumentShape();
+        var fields = shapeString.split(FIELD_SEPARATOR);
+        for (String field : fields) {
+            var parts = field.split(VALUE_SEPARATOR);
+            var fieldName = parts[0];
+            var fieldType = parts[1];
+            try {
+                //noinspection unchecked
+                shape.fields.put(fieldName, (Class<? extends FieldValueType<?>>) Class.forName(fieldType));
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return shape;
+    }
+
+    /**
+     *
+     * @return a string representation of this document shape.
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        fields.forEach((fieldName, fieldType) -> {
+            sb
+                    .append(fieldName)
+                    .append(VALUE_SEPARATOR)
+                    .append(fieldType.getName())
+                    .append(FIELD_SEPARATOR);
+        });
+        return sb.toString();
+    }
+
+    public Map<String, Class<? extends FieldValueType<?>>> getFields() {
+        return Collections.unmodifiableMap(fields);
+    }
+}

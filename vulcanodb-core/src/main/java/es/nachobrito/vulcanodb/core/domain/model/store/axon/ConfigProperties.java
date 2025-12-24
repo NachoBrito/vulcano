@@ -14,30 +14,11 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.store.kvstore;
+package es.nachobrito.vulcanodb.core.domain.model.store.axon;
 
 /**
  * @author nacho
  */
-enum ValueType {
-    STRING(1),
-    INTEGER(2),
-    FLOAT_ARRAY(3),
-    FLOAT_MATRIX(4);
-
-    final int id;
-
-    ValueType(int id) {
-        this.id = id;
-    }
-
-    static ValueType fromId(int id) {
-        return switch (id) {
-            case 1 -> STRING;
-            case 2 -> INTEGER;
-            case 3 -> FLOAT_ARRAY;
-            case 4 -> FLOAT_MATRIX;
-            default -> throw new IllegalStateException("Unknown type " + id);
-        };
-    }
+public interface ConfigProperties {
+    String PROPERTY_PATH = "vulcanodb.axon.writer.path";
 }

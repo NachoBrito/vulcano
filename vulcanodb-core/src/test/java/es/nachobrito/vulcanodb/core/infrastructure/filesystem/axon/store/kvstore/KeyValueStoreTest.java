@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.store.kvstore;
 
+import es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.kvstore.KeyValueStore;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

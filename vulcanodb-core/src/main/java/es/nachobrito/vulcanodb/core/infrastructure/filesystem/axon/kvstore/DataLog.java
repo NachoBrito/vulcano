@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.store.kvstore;
+package es.nachobrito.vulcanodb.core.infrastructure.filesystem.axon.kvstore;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

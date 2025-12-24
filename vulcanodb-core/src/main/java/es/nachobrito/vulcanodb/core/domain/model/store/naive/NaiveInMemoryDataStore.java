@@ -23,6 +23,7 @@ import es.nachobrito.vulcanodb.core.domain.model.result.Result;
 import es.nachobrito.vulcanodb.core.domain.model.store.DataStore;
 import es.nachobrito.vulcanodb.core.domain.model.store.naive.queryevaluation.QueryOperations;
 
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,6 +51,11 @@ public class NaiveInMemoryDataStore implements DataStore {
     @Override
     public void add(Document document) {
         this.documents.put(document.id(), document);
+    }
+
+    @Override
+    public Optional<Document> get(DocumentId documentId) {
+        return Optional.ofNullable(this.documents.get(documentId));
     }
 
     @Override

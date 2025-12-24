@@ -16,10 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.domain.model.document;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -68,5 +65,24 @@ public class Document {
      */
     public Stream<Field<?, ?>> getfieldsStream() {
         return fields.values().stream();
+    }
+
+    /// Build an unmodifiable map with the shape of this document (field name -> value type)
+    ///
+    /// @return an unmodifiable map of the shape of this document
+    public DocumentShape getShape() {
+        return new DocumentShape(fields);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Document document = (Document) o;
+        return Objects.equals(id, document.id) && Objects.equals(fields, document.fields);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

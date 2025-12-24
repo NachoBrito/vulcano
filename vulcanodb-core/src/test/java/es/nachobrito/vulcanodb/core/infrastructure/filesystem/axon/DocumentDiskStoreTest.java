@@ -22,16 +22,16 @@ import org.junit.jupiter.api.Test;
 import java.time.ZonedDateTime;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author nacho
  */
-class DocumentWriterTest {
+class DocumentDiskStoreTest {
 
     @Test
     void expectDocumentWritten() {
-        try (var writer = new DefaultDocumentWriter()) {
+        try (var store = new DefaultDocumentDiskStore()) {
             var now = ZonedDateTime.now();
             Map<String, Object> fields = Map.of(
                     "integer", 1,
@@ -42,9 +42,15 @@ class DocumentWriterTest {
             );
 
             var document = Document.builder().with(fields).build();
-            var result = writer.write(document).get();
+            var result = store.write(document).get();
 
             assertNotNull(result);
+            assertTrue(result.success());
+            assertEquals(5, result.fieldResults().size());
+
+            var read = store.read(document.id());
+            assertTrue(read.isPresent());
+            assertEquals(document, read.get());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -25,6 +25,7 @@ import java.util.Map;
  */
 public class DocumentBuilder {
     private final List<Field<?, ?>> fields = new ArrayList<>();
+    private DocumentId id;
 
     DocumentBuilder() {
 
@@ -106,9 +107,21 @@ public class DocumentBuilder {
         return this;
     }
 
+    ///
+    /// Sets the id for the new document
+    ///
+    /// @param id the id
+    /// @return this builder
+    public DocumentBuilder withId(DocumentId id) {
+        this.id = id;
+        return this;
+    }
+
 
     public Document build() {
-        var id = DocumentId.newRandomId();
+        if (id == null) {
+            id = DocumentId.newRandomId();
+        }
         return new Document(id, fields);
     }
 

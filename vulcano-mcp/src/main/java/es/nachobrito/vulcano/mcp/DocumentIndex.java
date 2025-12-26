@@ -18,9 +18,9 @@ package es.nachobrito.vulcano.mcp;
 
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
-import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.query.Query;
+import es.nachobrito.vulcanodb.core.VulcanoDb;
+import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.query.Query;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -109,7 +109,7 @@ public class DocumentIndex {
     }
 
     public List<RelevantFile> getRelevantFiles(String query) {
-        log.info("Searching files relevant for the query '{}'", query);
+        log.info("Searching files relevant for the physical '{}'", query);
         init();
         var embeddingModel = getEmbeddingModel();
         var vector = embeddingModel.embed(query).content().vector();

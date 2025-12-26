@@ -16,10 +16,10 @@
 
 package es.nachobrito.vulcanodb.atests;
 
-import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.query.Query;
-import es.nachobrito.vulcanodb.core.domain.model.result.Result;
+import es.nachobrito.vulcanodb.core.VulcanoDb;
+import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.query.Query;
+import es.nachobrito.vulcanodb.core.result.QueryResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -60,7 +60,7 @@ public class BigDbUseCaseTest {
         long maxP95 = 100;
         float maxAvg = 75.0f;
         var measurements = new long[rounds];
-        var results = new Result[rounds];
+        var results = new QueryResult[rounds];
         long start, end;
 
         for (int i = 0; i < measurements.length; i++) {
@@ -70,8 +70,8 @@ public class BigDbUseCaseTest {
             measurements[i] = end - start;
         }
 
-        for (Result result : results) {
-            assertEquals(positiveCount, result.getDocuments().size());
+        for (QueryResult queryResult : results) {
+            assertEquals(positiveCount, queryResult.getDocuments().size());
         }
 
         Arrays.sort(measurements);

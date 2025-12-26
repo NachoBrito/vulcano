@@ -16,9 +16,9 @@
 
 package es.nachobrito.vulcanodb;
 
-import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.query.Query;
+import es.nachobrito.vulcanodb.core.VulcanoDb;
+import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.query.Query;
 
 /**
  * @author nacho

@@ -17,9 +17,9 @@
 package es.nachobrito.vulcanodb;
 
 import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
-import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.query.Query;
+import es.nachobrito.vulcanodb.core.VulcanoDb;
+import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.query.Query;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

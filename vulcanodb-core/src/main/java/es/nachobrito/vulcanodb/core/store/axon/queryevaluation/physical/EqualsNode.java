@@ -1,0 +1,37 @@
+/*
+ *    Copyright 2025 Nacho Brito
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical;
+
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.DocIdSet;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.IndexedField;
+
+/**
+ * @author nacho
+ */
+public record EqualsNode(String fieldName, Object value) implements BitmapOperator {
+
+    public DocIdSet compute(ExecutionContext ctx) {
+        IndexedField col = ctx.getIndexedField(fieldName);
+        if (col != null) {
+            return col.getDocIds(value);
+        } else {
+            // Fallback strategy defined later
+            return ctx.getAllDocs();
+        }
+    }
+}

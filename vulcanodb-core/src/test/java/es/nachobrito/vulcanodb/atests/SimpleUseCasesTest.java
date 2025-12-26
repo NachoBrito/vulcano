@@ -16,10 +16,10 @@
 
 package es.nachobrito.vulcanodb.atests;
 
-import es.nachobrito.vulcanodb.core.domain.model.VulcanoDb;
-import es.nachobrito.vulcanodb.core.domain.model.document.Document;
-import es.nachobrito.vulcanodb.core.domain.model.query.Query;
-import es.nachobrito.vulcanodb.core.domain.model.result.ResultDocument;
+import es.nachobrito.vulcanodb.core.VulcanoDb;
+import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.query.Query;
+import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

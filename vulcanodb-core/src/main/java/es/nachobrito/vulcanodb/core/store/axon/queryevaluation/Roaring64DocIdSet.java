@@ -1,0 +1,137 @@
+/*
+ *    Copyright 2025 Nacho Brito
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
+
+import org.roaringbitmap.longlong.LongIterator;
+import org.roaringbitmap.longlong.Roaring64Bitmap;
+
+import java.io.*;
+
+/**
+ * @author nacho
+ */
+public class Roaring64DocIdSet implements DocIdSet {
+
+    private final Roaring64Bitmap bitmap;
+
+    public Roaring64DocIdSet() {
+        this.bitmap = new Roaring64Bitmap();
+    }
+
+    // Copy constructor for safety during logical operations if needed
+    public Roaring64DocIdSet(Roaring64Bitmap bitmap) {
+        this.bitmap = bitmap;
+    }
+
+    @Override
+    public void add(long docId) {
+        bitmap.addLong(docId);
+    }
+
+    @Override
+    public void remove(long docId) {
+        bitmap.removeLong(docId);
+    }
+
+    @Override
+    public boolean contains(long docId) {
+        return bitmap.contains(docId);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return bitmap.isEmpty();
+    }
+
+    @Override
+    public long getCardinality() {
+        return bitmap.getLongCardinality();
+    }
+
+    @Override
+    public void and(DocIdSet other) {
+        if (other instanceof Roaring64DocIdSet) {
+            // Fast native AND
+            bitmap.and(((Roaring64DocIdSet) other).bitmap);
+        } else {
+            // Fallback for foreign implementations: iterate and intersect
+            // This is slow and should be avoided in the hot path
+            Roaring64Bitmap otherBitmap = new Roaring64Bitmap();
+            LongIterator it = other.iterator();
+            while (it.hasNext()) {
+                long id = it.next();
+                if (this.contains(id)) {
+                    otherBitmap.addLong(id);
+                }
+            }
+            this.bitmap.clear();
+            this.bitmap.or(otherBitmap);
+        }
+    }
+
+    @Override
+    public void or(DocIdSet other) {
+        if (other instanceof Roaring64DocIdSet) {
+            bitmap.or(((Roaring64DocIdSet) other).bitmap);
+        } else {
+            LongIterator it = other.iterator();
+            while (it.hasNext()) {
+                this.add(it.next());
+            }
+        }
+    }
+
+    @Override
+    public void andNot(DocIdSet other) {
+        if (other instanceof Roaring64DocIdSet) {
+            bitmap.andNot(((Roaring64DocIdSet) other).bitmap);
+        } else {
+            LongIterator it = other.iterator();
+            while (it.hasNext()) {
+                this.remove(it.next());
+            }
+        }
+    }
+
+    @Override
+    public LongIterator iterator() {
+        return bitmap.getLongIterator();
+    }
+
+    @Override
+    public byte[] serialize() {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+             DataOutputStream dos = new DataOutputStream(bos)) {
+            bitmap.serialize(dos);
+            return bos.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Serialization failed", e);
+        }
+    }
+
+    // Factory method to deserialize
+    public static Roaring64DocIdSet deserialize(byte[] data) {
+        Roaring64Bitmap rb = new Roaring64Bitmap();
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
+             DataInputStream dis = new DataInputStream(bis)) {
+            rb.deserialize(dis);
+        } catch (IOException e) {
+            throw new RuntimeException("Deserialization failed", e);
+        }
+        return new Roaring64DocIdSet(rb);
+    }
+}

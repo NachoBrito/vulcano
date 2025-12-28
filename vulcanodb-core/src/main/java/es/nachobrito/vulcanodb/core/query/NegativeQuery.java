@@ -16,15 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.query;
 
-import java.util.Objects;
-
 /**
  * @author nacho
  */
-public record IntegerFieldQuery(Integer value, String fieldName, IntegerFieldOperator operator) implements Query {
-    public IntegerFieldQuery {
-        Objects.requireNonNull(value);
-        Objects.requireNonNull(fieldName);
-        Objects.requireNonNull(operator);
-    }
+public record NegativeQuery(Query query) implements Query {
 }

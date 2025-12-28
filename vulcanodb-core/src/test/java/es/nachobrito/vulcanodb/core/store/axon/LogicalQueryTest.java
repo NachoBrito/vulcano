@@ -119,4 +119,25 @@ public class LogicalQueryTest {
         assertTrue(result2.getDocuments().isEmpty());
     }
 
+    @Test
+    public void expectNotQueriesWork() {
+        var query1 = Query
+                .builder()
+                .isLessThan(0, "number1")
+                .isGreaterThanOrEqual(0, "number2")
+                .withOperator(QueryOperator.OR)
+                .build();
+
+        var result1 = axon.search(query1);
+        assertEquals(100, result1.getDocuments().size());
+
+        var query2 = Query
+                .builder()
+                .not(query1)
+                .build();
+
+        var result2 = axon.search(query2);
+        assertTrue(result2.getDocuments().isEmpty());
+    }
+
 }

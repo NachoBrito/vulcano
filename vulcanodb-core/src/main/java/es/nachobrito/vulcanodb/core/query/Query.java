@@ -19,7 +19,7 @@ package es.nachobrito.vulcanodb.core.query;
 /**
  * @author nacho
  */
-public sealed interface Query permits MultiQuery, VectorFieldQuery, IntegerFieldQuery, StringFieldQuery {
+public sealed interface Query permits NegativeQuery, MultiQuery, VectorFieldQuery, IntegerFieldQuery, StringFieldQuery {
 
 
     static QueryBuilder builder() {

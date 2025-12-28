@@ -23,10 +23,7 @@ import java.util.List;
 /**
  * @author nacho
  */
-public final class MultiQuery implements Query {
-    private final List<? extends Query> queries;
-    private final QueryOperator operator;
-
+public record MultiQuery(List<? extends Query> queries, QueryOperator operator) implements Query {
     public MultiQuery(List<? extends Query> queries, QueryOperator operator) {
         if (queries.size() < 2) {
             throw new IllegalArgumentException("Logical operations require at least two operands");
@@ -35,11 +32,8 @@ public final class MultiQuery implements Query {
         this.operator = operator;
     }
 
-    public List<? extends Query> getQueries() {
+    @Override
+    public List<? extends Query> queries() {
         return Collections.unmodifiableList(queries);
-    }
-
-    public QueryOperator getOperator() {
-        return operator;
     }
 }

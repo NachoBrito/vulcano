@@ -42,13 +42,19 @@ public class QueryEvaluator implements BiFunction<Query, Document, Float> {
             case MultiQuery multiQuery -> doApply(multiQuery, document);
             case StringFieldQuery stringFieldQuery -> doApply(stringFieldQuery, document);
             case VectorFieldQuery vectorFieldQuery -> doApply(vectorFieldQuery, document);
+            case NegativeQuery negativeQuery -> doApply(negativeQuery, document);
         };
 
     }
 
+    private Float doApply(NegativeQuery negativeQuery, Document document) {
+        var result = apply(negativeQuery.query(), document);
+        return result == 0.0f ? 1.0f : 0.0f;
+    }
+
     private Float doApply(VectorFieldQuery vectorFieldQuery, Document document) {
-        var fieldName = vectorFieldQuery.getFieldName();
-        var queryVector = vectorFieldQuery.getVector();
+        var fieldName = vectorFieldQuery.fieldName();
+        var queryVector = vectorFieldQuery.vector();
 
         var maybeField = document.field(fieldName);
         if (maybeField.isEmpty()) {
@@ -86,9 +92,9 @@ public class QueryEvaluator implements BiFunction<Query, Document, Float> {
     }
 
     private Float doApply(StringFieldQuery stringFieldQuery, Document document) {
-        var fieldName = stringFieldQuery.getFieldName();
-        var value = stringFieldQuery.getValue();
-        var operator = stringFieldQuery.getOperator();
+        var fieldName = stringFieldQuery.fieldName();
+        var value = stringFieldQuery.value();
+        var operator = stringFieldQuery.operator();
 
         var field = getField(fieldName, document, StringFieldValue.class);
         if (field.isEmpty()) {
@@ -105,8 +111,8 @@ public class QueryEvaluator implements BiFunction<Query, Document, Float> {
     }
 
     private Float doApply(MultiQuery multiQuery, Document document) {
-        var operator = multiQuery.getOperator();
-        var queries = multiQuery.getQueries();
+        var operator = multiQuery.operator();
+        var queries = multiQuery.queries();
         var sum = 0.0f;
         var partial = 0.0f;
         var isAnd = operator.equals(AND);
@@ -121,9 +127,9 @@ public class QueryEvaluator implements BiFunction<Query, Document, Float> {
     }
 
     private Float doApply(IntegerFieldQuery integerFieldQuery, Document document) {
-        var fieldName = integerFieldQuery.getFieldName();
-        var value = integerFieldQuery.getValue();
-        var operator = integerFieldQuery.getOperator();
+        var fieldName = integerFieldQuery.fieldName();
+        var value = integerFieldQuery.value();
+        var operator = integerFieldQuery.operator();
 
         var field = getField(fieldName, document, IntegerFieldValue.class);
         if (field.isEmpty()) {

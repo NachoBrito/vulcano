@@ -21,29 +21,10 @@ import java.util.Objects;
 /**
  * @author nacho
  */
-public final class StringFieldQuery implements Query {
-    private final String value;
-    private final String fieldName;
-    private final StringFieldOperator operator;
-
-    public StringFieldQuery(String value, String fieldName, StringFieldOperator operator) {
+public record StringFieldQuery(String value, String fieldName, StringFieldOperator operator) implements Query {
+    public StringFieldQuery {
         Objects.requireNonNull(value);
         Objects.requireNonNull(fieldName);
         Objects.requireNonNull(operator);
-        this.value = value;
-        this.fieldName = fieldName;
-        this.operator = operator;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public String getFieldName() {
-        return fieldName;
-    }
-
-    public StringFieldOperator getOperator() {
-        return operator;
     }
 }

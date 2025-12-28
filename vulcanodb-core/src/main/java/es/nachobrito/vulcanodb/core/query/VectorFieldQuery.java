@@ -22,11 +22,7 @@ import java.util.Objects;
 /**
  * @author nacho
  */
-public final class VectorFieldQuery implements Query {
-    private final float[] vector;
-    private final String fieldName;
-
-
+public record VectorFieldQuery(float[] vector, String fieldName) implements Query {
     public VectorFieldQuery(float[] vector, String fieldName) {
         Objects.requireNonNull(vector);
         Objects.requireNonNull(fieldName);
@@ -34,11 +30,8 @@ public final class VectorFieldQuery implements Query {
         this.fieldName = fieldName;
     }
 
-    public float[] getVector() {
+    @Override
+    public float[] vector() {
         return Arrays.copyOf(vector, vector.length);
-    }
-
-    public String getFieldName() {
-        return fieldName;
     }
 }

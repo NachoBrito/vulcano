@@ -37,33 +37,38 @@ public sealed interface LogicalNode permits AndNode, OrNode, NotNode, LeafNode, 
             case IntegerFieldQuery integerFieldQuery -> ofIntegerQuery(integerFieldQuery);
             case StringFieldQuery stringFieldQuery -> ofStringQuery(stringFieldQuery);
             case VectorFieldQuery vectorFieldQuery -> ofVectorQuery(vectorFieldQuery);
+            case NegativeQuery negativeQuery -> ofNegativeQuery(negativeQuery);
         };
     }
 
+    static LogicalNode ofNegativeQuery(NegativeQuery negativeQuery) {
+        return new NotNode(of(negativeQuery.query()));
+    }
+
     static LogicalNode ofVectorQuery(VectorFieldQuery vectorFieldQuery) {
-        return new LeafNode(vectorFieldQuery.getFieldName(), Operation.STRING_EQUALS, vectorFieldQuery.getVector());
+        return new LeafNode(vectorFieldQuery.fieldName(), Operation.STRING_EQUALS, vectorFieldQuery.vector());
     }
 
     static LogicalNode ofStringQuery(StringFieldQuery stringFieldQuery) {
-        return new LeafNode(stringFieldQuery.getFieldName(), Operation.of(stringFieldQuery.getOperator()), stringFieldQuery.getValue());
+        return new LeafNode(stringFieldQuery.fieldName(), Operation.of(stringFieldQuery.operator()), stringFieldQuery.value());
     }
 
     static LogicalNode ofIntegerQuery(IntegerFieldQuery integerFieldQuery) {
-        return new LeafNode(integerFieldQuery.getFieldName(), Operation.of(integerFieldQuery.getOperator()), integerFieldQuery.getValue());
+        return new LeafNode(integerFieldQuery.fieldName(), Operation.of(integerFieldQuery.operator()), integerFieldQuery.value());
     }
 
     static LogicalNode ofMultiQuery(MultiQuery multiQuery) {
-        if (multiQuery.getQueries().size() < 2) {
+        if (multiQuery.queries().size() < 2) {
             throw new IllegalArgumentException("Logical operations require at least two operators");
         }
-        return switch (multiQuery.getOperator()) {
+        return switch (multiQuery.operator()) {
             case AND -> andNodeOf(multiQuery);
             case OR -> orNodeOf(multiQuery);
         };
     }
 
     static OrNode orNodeOf(MultiQuery multiQuery) {
-        var queries = multiQuery.getQueries();
+        var queries = multiQuery.queries();
         var node = new OrNode(of(queries.get(0)), of(queries.get(1)));
         if (queries.size() > 2) {
             for (int i = 1; i < queries.size(); i++) {
@@ -74,7 +79,7 @@ public sealed interface LogicalNode permits AndNode, OrNode, NotNode, LeafNode, 
     }
 
     static AndNode andNodeOf(MultiQuery multiQuery) {
-        var queries = multiQuery.getQueries();
+        var queries = multiQuery.queries();
         var node = new AndNode(of(queries.get(0)), of(queries.get(1)));
         if (queries.size() > 2) {
             for (int i = 1; i < queries.size(); i++) {

@@ -47,6 +47,10 @@ public interface DocumentMother {
 
     /**
      * Returns a document with the given shape, having random values in every field.
+     * <ul>
+     * <li>Numeric fields will have random ints between 0 and Integer.MAX_VALUE</li>
+     * <li>String fields will have randomly generated paragraphs</li>
+     * </ul>
      *
      * @param shape the document shape
      * @return the new document
@@ -56,7 +60,7 @@ public interface DocumentMother {
         var faker = Faker.instance();
         shape.getFields().forEach((fieldName, fieldType) -> {
             if (fieldType.equals(IntegerFieldValue.class)) {
-                builder.withIntegerField(fieldName, faker.number().numberBetween(Integer.MIN_VALUE, Integer.MAX_VALUE));
+                builder.withIntegerField(fieldName, faker.number().numberBetween(0, Integer.MAX_VALUE));
                 return;
             }
 

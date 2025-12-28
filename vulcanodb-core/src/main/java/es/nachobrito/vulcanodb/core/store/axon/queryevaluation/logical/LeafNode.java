@@ -26,6 +26,9 @@ public record LeafNode(String fieldName, Operation operator, Object value) imple
     }
 
     public boolean evaluate(Object target) {
+        if (target == null) {
+            return false;
+        }
         operator.validateOperand(target);
         switch (operator) {
             case INT_EQUALS, STRING_EQUALS -> {

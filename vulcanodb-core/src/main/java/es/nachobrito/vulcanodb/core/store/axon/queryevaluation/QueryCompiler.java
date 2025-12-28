@@ -17,10 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.IndexedField;
-import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.AndNode;
-import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
-import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
-import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.MatchAllNode;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.*;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.BitmapOperator;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher;
 
@@ -60,6 +57,7 @@ public class QueryCompiler {
     public DocumentMatcher compileResidual(LogicalNode node) {
         return switch (node) {
             case AndNode andNode -> compileAndNode(andNode);
+            case OrNode orNode -> compileOrNode(orNode);
             case LeafNode leafNode -> compileLeafNode(leafNode);
             default -> throw new UnsupportedOperationException("Unknown node: " + node);
         };
@@ -79,6 +77,14 @@ public class QueryCompiler {
 
         // Short-circuiting execution logic
         return (docId, readers) -> left.matches(docId, readers) && right.matches(docId, readers);
+    }
+
+    private DocumentMatcher compileOrNode(OrNode orNode) {
+        DocumentMatcher left = compileResidual(orNode.left());
+        DocumentMatcher right = compileResidual(orNode.right());
+
+        // Short-circuiting execution logic
+        return (docId, readers) -> left.matches(docId, readers) || right.matches(docId, readers);
     }
 
 }

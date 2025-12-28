@@ -41,7 +41,7 @@ public class QueryBuilder {
     ///
     /// @param vector    the vector to search
     /// @param fieldName the field to compare
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isSimilarTo(float[] vector, String fieldName) {
         return allSimilarTo(vector, List.of(fieldName));
     }
@@ -50,7 +50,7 @@ public class QueryBuilder {
     ///
     /// @param vector     the vector to search
     /// @param fieldNames the field names to compare
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder allSimilarTo(float[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, AND, new CosineSimilarity());
     }
@@ -59,7 +59,7 @@ public class QueryBuilder {
     ///
     /// @param vector     the vector to search
     /// @param fieldNames the field names to compare
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder anySimilarTo(float[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, OR, new CosineSimilarity());
     }
@@ -68,7 +68,7 @@ public class QueryBuilder {
     ///
     /// @param prefix    the prefix to search
     /// @param fieldName the field to search in
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder startsWith(String prefix, String fieldName) {
         queries.add(new StringFieldQuery(prefix, fieldName, StringFieldOperator.STARTS_WITH));
         return this;
@@ -78,7 +78,7 @@ public class QueryBuilder {
     ///
     /// @param suffix    the suffix to search
     /// @param fieldName the field to search in
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder endsWith(String suffix, String fieldName) {
         queries.add(new StringFieldQuery(suffix, fieldName, StringFieldOperator.ENDS_WITH));
         return this;
@@ -88,7 +88,7 @@ public class QueryBuilder {
     ///
     /// @param value     the text to search
     /// @param fieldName the field to search in
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder contains(String value, String fieldName) {
         queries.add(new StringFieldQuery(value, fieldName, StringFieldOperator.CONTAINS));
         return this;
@@ -98,7 +98,7 @@ public class QueryBuilder {
     ///
     /// @param value     the text to search
     /// @param fieldName the field to search in
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isEqual(String value, String fieldName) {
         queries.add(new StringFieldQuery(value, fieldName, StringFieldOperator.EQUALS));
         return this;
@@ -108,7 +108,7 @@ public class QueryBuilder {
     ///
     /// @param value     the integer to compare
     /// @param fieldName the field to compare with
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isEqual(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.EQUALS));
         return this;
@@ -118,7 +118,7 @@ public class QueryBuilder {
     ///
     /// @param value     the integer to compare
     /// @param fieldName the field to compare with
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isLessThan(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.LESS_THAN));
         return this;
@@ -128,7 +128,7 @@ public class QueryBuilder {
     ///
     /// @param value     the integer to compare
     /// @param fieldName the field to compare with
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isLessThanOrEqual(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.LESS_THAN_EQUAL));
         return this;
@@ -138,7 +138,7 @@ public class QueryBuilder {
     ///
     /// @param value     the integer to compare
     /// @param fieldName the field to compare with
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isGreaterThan(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.GREATER_THAN));
         return this;
@@ -148,7 +148,7 @@ public class QueryBuilder {
     ///
     /// @param value     the integer to compare
     /// @param fieldName the field to compare with
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder isGreaterThanOrEqual(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.GREATER_THAN_EQUAL));
         return this;
@@ -160,15 +160,20 @@ public class QueryBuilder {
                 .stream()
                 .map(it -> new VectorFieldQuery(vector, it))
                 .toList();
+        if (fieldQueries.size() == 1) {
+            queries.add(fieldQueries.getFirst());
+            return this;
+        }
+
         queries.add(new MultiQuery(fieldQueries, operator));
         return this;
     }
 
-    ///  Set the operator for this physical, affecting all the conditions added with [#isSimilarTo(float\[\], String)],
+    ///  Set the operator for this query, affecting all the conditions added with [#isSimilarTo(float\[\], String)],
     /// [#allSimilarTo(float\[\], List)], [#anySimilarTo(float\[\], List)]
     ///
     /// @param operator [QueryOperator]
-    /// @return this physical builder
+    /// @return this query builder
     public QueryBuilder withOperator(QueryOperator operator) {
         this.operator = operator;
         return this;

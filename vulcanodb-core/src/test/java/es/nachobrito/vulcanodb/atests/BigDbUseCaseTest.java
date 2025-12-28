@@ -23,7 +23,6 @@ import es.nachobrito.vulcanodb.core.result.QueryResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,7 +39,7 @@ public class BigDbUseCaseTest {
         var db = VulcanoDb.builder().build();
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
-        var query = Query.builder().allSimilarTo(new float[]{1, 0}, List.of("vector")).build();
+        var query = Query.builder().isSimilarTo(new float[]{1, 0}, "vector").build();
 
         for (int i = 0; i < positiveCount; i++) {
             var document = Document.builder()

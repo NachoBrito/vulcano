@@ -46,7 +46,7 @@ public sealed interface LogicalNode permits AndNode, OrNode, NotNode, LeafNode, 
     }
 
     static LogicalNode ofVectorQuery(VectorFieldQuery vectorFieldQuery) {
-        return new LeafNode(vectorFieldQuery.fieldName(), Operation.STRING_EQUALS, vectorFieldQuery.vector());
+        return new LeafNode(vectorFieldQuery.fieldName(), Operation.VECTOR_SIMILAR, vectorFieldQuery.vector());
     }
 
     static LogicalNode ofStringQuery(StringFieldQuery stringFieldQuery) {

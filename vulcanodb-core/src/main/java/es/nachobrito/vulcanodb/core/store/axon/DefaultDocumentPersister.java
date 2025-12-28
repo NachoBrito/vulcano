@@ -112,10 +112,10 @@ public class DefaultDocumentPersister implements DocumentPersister {
         }
 
         var fieldResults = Arrays.stream(fieldCallables).map(CompletableFuture::resultNow).toList();
-        this.dictionary.putString(
+        var internalId = this.dictionary.putString(
                 stringId, document.getShape().toString()
         );
-        return DocumentWriteResult.ofFieldResults(fieldResults);
+        return DocumentWriteResult.ofFieldResults(internalId, fieldResults);
     }
 
     @Override

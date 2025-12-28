@@ -24,7 +24,22 @@ import java.util.List;
  * @author nacho
  */
 public interface IndexHandler<V> extends AutoCloseable {
-    void index(Document document);
+    void index(Long internalId, Document document);
 
     List<IndexMatch> search(V query, int maxResults);
+
+    default List<IndexMatch> search(Object query) {
+        //noinspection unchecked
+        return search((V) query, Integer.MAX_VALUE);
+    }
+
+    default boolean acceptsValue(Object value) {
+        try {
+            @SuppressWarnings("unchecked")
+            var v = (V) value;
+            return true;
+        } catch (ClassCastException classCastException) {
+            return false;
+        }
+    }
 }

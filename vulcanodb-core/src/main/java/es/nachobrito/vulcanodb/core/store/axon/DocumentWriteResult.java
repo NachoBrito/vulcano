@@ -22,15 +22,17 @@ import java.util.List;
 /**
  * @author nacho
  */
-public record DocumentWriteResult(boolean success, Throwable error, List<FieldWriteResult> fieldResults) {
+public record DocumentWriteResult(long internalId, boolean success, Throwable error,
+                                  List<FieldWriteResult> fieldResults) {
 
 
     public static DocumentWriteResult ofError(Throwable error) {
-        return new DocumentWriteResult(false, error, Collections.emptyList());
+        return new DocumentWriteResult(-1, false, error, Collections.emptyList());
     }
 
-    public static DocumentWriteResult ofFieldResults(List<FieldWriteResult> fieldResults) {
+    public static DocumentWriteResult ofFieldResults(long internalId, List<FieldWriteResult> fieldResults) {
         return new DocumentWriteResult(
+                internalId,
                 fieldResults.stream().allMatch(FieldWriteResult::success),
                 null,
                 fieldResults

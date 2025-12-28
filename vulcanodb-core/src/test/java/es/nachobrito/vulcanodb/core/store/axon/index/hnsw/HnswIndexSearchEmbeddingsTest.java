@@ -18,7 +18,8 @@ package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import es.nachobrito.vulcanodb.core.Embedding;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ public class HnswIndexSearchEmbeddingsTest {
 
     @Test
     void expectSearchWorks() {
-        var embeddingModel = new BgeSmallEnV15EmbeddingModel();
+        var embeddingModel = Embedding.MODEL;
         var config = HnswConfig
                 .builder()
                 .withDimensions(embeddingModel.dimension())
@@ -77,7 +78,7 @@ public class HnswIndexSearchEmbeddingsTest {
                         .toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
     }
 
-    private void indexData(HnswIndex index, BgeSmallEnV15EmbeddingModel embeddingModel, float[] queryVector, HashMap<Long, Float> similarities) {
+    private void indexData(HnswIndex index, EmbeddingModel embeddingModel, float[] queryVector, HashMap<Long, Float> similarities) {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         try (InputStream is = classloader.getResourceAsStream("test-data/data-science-interview-qa.csv")) {
             try (CSVReader csvReader = new CSVReader(new InputStreamReader(is))) {

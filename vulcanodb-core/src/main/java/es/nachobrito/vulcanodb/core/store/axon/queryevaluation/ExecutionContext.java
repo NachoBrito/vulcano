@@ -19,22 +19,38 @@ package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.FieldValueType;
 import es.nachobrito.vulcanodb.core.store.axon.DocumentPersister;
+import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.IndexedField;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.ScannableField;
+
+import java.util.Map;
 
 /**
  * @author nacho
  */
 public class ExecutionContext {
     private final DocumentPersister documentPersister;
+    private final Map<String, IndexHandler<?>> indexHandlers;
 
-    public ExecutionContext(DocumentPersister documentPersister) {
+    //todo -> give this class access to indexes
+    public ExecutionContext(DocumentPersister documentPersister, Map<String, IndexHandler<?>> indexHandlers) {
         this.documentPersister = documentPersister;
+        this.indexHandlers = indexHandlers;
     }
 
 
     public IndexedField getIndexedField(String fieldName) {
-        return null;
+        return (value) -> {
+            var docIds = new Roaring64DocIdSet();
+            var handler = indexHandlers.get(fieldName);
+            if (handler == null || !handler.acceptsValue(value)) {
+                return docIds;
+            }
+            handler
+                    .search(value)
+                    .forEach(it -> docIds.add(it.internalId()));
+            return docIds;
+        };
     }
 
     public <T> ScannableField<T> getScannableField(String fieldName, Class<? extends FieldValueType<T>> valueType) {

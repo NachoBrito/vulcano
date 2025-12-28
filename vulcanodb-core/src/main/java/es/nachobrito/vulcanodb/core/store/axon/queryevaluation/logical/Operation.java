@@ -19,6 +19,7 @@ package es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical;
 import es.nachobrito.vulcanodb.core.document.FieldValueType;
 import es.nachobrito.vulcanodb.core.document.IntegerFieldValue;
 import es.nachobrito.vulcanodb.core.document.StringFieldValue;
+import es.nachobrito.vulcanodb.core.document.VectorFieldValue;
 import es.nachobrito.vulcanodb.core.query.IntegerFieldOperator;
 import es.nachobrito.vulcanodb.core.query.StringFieldOperator;
 
@@ -34,7 +35,8 @@ public enum Operation {
     STRING_EQUALS(StringFieldValue.class),
     STRING_STARTS_WITH(StringFieldValue.class),
     STRING_ENDS_WITH(StringFieldValue.class),
-    STRING_CONTAINS(StringFieldValue.class);
+    STRING_CONTAINS(StringFieldValue.class),
+    VECTOR_SIMILAR(VectorFieldValue.class);
 
     private final Class<? extends FieldValueType<?>> operandType;
 

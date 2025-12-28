@@ -31,6 +31,7 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.IndexRegistry;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -39,7 +40,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * The Axon data store provides support for:
  * <ul>
- *     <li>write persistence via {@link DocumentPersister} implementations</li>
+ *     <li>Write persistence via {@link DocumentPersister} implementations</li>
  *     <li>HNSW indexing for vector fields</li>
  * </ul>
  *
@@ -54,7 +55,10 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister) {
         this.indexes = indexes;
         this.documentPersister = documentPersister;
-        this.queryExecutor = new QueryExecutor(new ExecutionContext(documentPersister), this);
+        var ctx = new ExecutionContext(
+                documentPersister,
+                Collections.unmodifiableMap(indexes));
+        this.queryExecutor = new QueryExecutor(ctx, this);
     }
 
     @Override
@@ -88,9 +92,17 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                             if (!result.success()) {
                                 throw new AxonDataStoreException(result.error());
                             }
+                            indexFields(result.internalId(), document);
                         },
                         ExecutorProvider.defaultExecutor()
                 );
+    }
+
+    private void indexFields(long internalId, Document document) {
+        document
+                .getfieldsStream()
+                .filter(field -> isIndexed(field.key()))
+                .forEach(field -> indexes.get(field.key()).index(internalId, document));
     }
 
     @Override

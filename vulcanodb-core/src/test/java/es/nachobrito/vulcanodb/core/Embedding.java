@@ -14,10 +14,18 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.index;
+package es.nachobrito.vulcanodb.core;
+
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
 
 /**
  * @author nacho
  */
-public record IndexMatch(Long internalId, Float score) {
+public interface Embedding {
+    EmbeddingModel MODEL = new BgeSmallEnV15EmbeddingModel();
+
+    static float[] of(String queryText) {
+        return MODEL.embed(queryText).content().vector();
+    }
 }

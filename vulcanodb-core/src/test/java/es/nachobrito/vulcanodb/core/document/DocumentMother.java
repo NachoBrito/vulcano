@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.document;
 
 import com.github.javafaker.Faker;
+import es.nachobrito.vulcanodb.core.Embedding;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -70,12 +71,11 @@ public interface DocumentMother {
             }
 
             if (fieldType.equals(VectorFieldValue.class)) {
-                var length = faker.number().numberBetween(5, 10);
-                var vector = new float[length];
-                for (int i = 0; i < length; i++) {
-                    vector[i] = (float) faker.number().randomDouble(15, 0, 1);
-                }
-                builder.withVectorField(fieldName, vector);
+                var text = faker.resolve("v_for_vendetta.quotes");
+                var vector = Embedding.MODEL.embed(text).content().vector();
+                builder
+                        .withVectorField(fieldName, vector)
+                        .withStringField(fieldName + "_original", text);
                 return;
             }
             if (fieldType.equals(MatrixFieldValue.class)) {
@@ -83,9 +83,7 @@ public interface DocumentMother {
                 var cols = faker.number().numberBetween(5, 10);
                 var vector = new float[rows][cols];
                 for (int i = 0; i < rows; i++) {
-                    for (int j = 0; j < cols; j++) {
-                        vector[i][j] = (float) faker.number().randomDouble(15, 0, 1);
-                    }
+                    vector[i] = Embedding.MODEL.embed(faker.lorem().sentence()).content().vector();
                 }
                 builder.withVectorField(fieldName, vector);
             }

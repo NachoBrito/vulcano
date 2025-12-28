@@ -160,12 +160,14 @@ public final class KeyValueStore implements AutoCloseable {
     }
 
     /**
-     * Saves a string associated to the given key
+     * Saves a string associated to the given key. The stored value can be retrieved by the provided key, or by the
+     * returned offset, using the corresponding {@link #getString(String)} or {@link #getStringAt(long)} methods.
      *
      * @param key   the key
      * @param value the value
+     * @return the offset of the new value.
      */
-    public void putString(String key, String value) {
+    public long putString(String key, String value) {
 
         // 1. Append to data log (returns global offset)
         long dataOffset = dataLog.writeString(key, value);
@@ -178,6 +180,8 @@ public final class KeyValueStore implements AutoCloseable {
                 dataLog.committedOffset(),
                 index.committedOffset()
         );
+
+        return dataOffset;
     }
 
     /**
@@ -195,18 +199,21 @@ public final class KeyValueStore implements AutoCloseable {
     }
 
     /**
-     * Saves an int associated to the given key
+     * Saves an int associated to the given key. The stored value can be retrieved by the provided key, or by the
+     * returned offset, using the corresponding {@link #getInt(String)} or {@link #getIntAt(long)} methods.
      *
      * @param key   the key
      * @param value the value
+     * @return the offset of the new value.
      */
-    public void putInt(String key, int value) {
+    public long putInt(String key, int value) {
         long dataOffset = dataLog.writeInteger(key, value);
         index.put(key, dataOffset);
         metadata.commit(
                 dataLog.committedOffset(),
                 index.committedOffset()
         );
+        return dataOffset;
     }
 
     /**
@@ -225,33 +232,39 @@ public final class KeyValueStore implements AutoCloseable {
     }
 
     /**
-     * Saves a float array associated to the given key
+     * Saves a float array associated to the given key. The stored value can be retrieved by the provided key, or by the
+     * returned offset, using the corresponding {@link #getFloatArray(String)} or {@link #getFloatArrayAt(long)} methods.
      *
      * @param key   the key
      * @param value the value
+     * @return the offset of the new value.
      */
-    public void putFloatArray(String key, float[] value) {
+    public long putFloatArray(String key, float[] value) {
         long dataOffset = dataLog.writeFloatArray(key, value);
         index.put(key, dataOffset);
         metadata.commit(
                 dataLog.committedOffset(),
                 index.committedOffset()
         );
+        return dataOffset;
     }
 
     /**
-     * Saves a float matrix associated to the given key
+     * Saves a float matrix associated to the given key. The stored value can be retrieved by the provided key, or by the
+     * returned offset, using the corresponding {@link #getFloatMatrix(String)} or {@link #getFloatMatrixAt(long)} methods.
      *
      * @param key   the key
      * @param value the value
+     * @return the offset of the new value.
      */
-    public void putFloatMatrix(String key, float[][] value) {
+    public long putFloatMatrix(String key, float[][] value) {
         long dataOffset = dataLog.writeFloatMatrix(key, value);
         index.put(key, dataOffset);
         metadata.commit(
                 dataLog.committedOffset(),
                 index.committedOffset()
         );
+        return dataOffset;
     }
 
     /**

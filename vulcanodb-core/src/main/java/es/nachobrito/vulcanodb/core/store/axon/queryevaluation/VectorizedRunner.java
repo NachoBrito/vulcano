@@ -21,8 +21,6 @@ import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher;
 import org.roaringbitmap.longlong.LongIterator;
 
-import java.util.List;
-
 /**
  * @author nacho
  */
@@ -32,7 +30,6 @@ public class VectorizedRunner {
     public QueryResult run(
             DocIdSet candidates,
             DocumentMatcher residualMatcher,
-            List<String> projectionColumns,
             ExecutionContext ctx
     ) {
         var builder = QueryResult.builder();

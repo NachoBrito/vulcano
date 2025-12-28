@@ -17,7 +17,6 @@
 package es.nachobrito.vulcanodb.core.store.axon.index;
 
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.document.Field;
 import es.nachobrito.vulcanodb.core.document.VectorFieldValue;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
@@ -37,7 +36,7 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     private final HnswIndex index;
     private final String fieldName;
 
-    private final Map<Long, DocumentId> documentIdMap = new HashMap<>();
+    private final Map<Long, Long> documentIdMap = new HashMap<>();
 
     public HnswIndexHandler(String fieldName) {
         this.fieldName = fieldName;
@@ -47,7 +46,7 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
 
 
     @Override
-    public void index(Document document) {
+    public void index(Long internalId, Document document) {
         var mayBeField = document.field(fieldName);
         if (mayBeField.isEmpty()) {
             log.debug("Ignoring document {}, it does not contain field {}", document.id(), fieldName);
@@ -62,7 +61,7 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
 
         @SuppressWarnings("unchecked")
         var newId = index.insert(((Field<float[], VectorFieldValue>) field).value());
-        documentIdMap.put(newId, document.id());
+        documentIdMap.put(newId, internalId);
     }
 
     @Override

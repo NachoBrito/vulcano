@@ -21,8 +21,6 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNo
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.BitmapOperator;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher;
 
-import java.util.List;
-
 /**
  * @author nacho
  */
@@ -56,6 +54,6 @@ public class QueryExecutor {
 
         // Phase 4: Vectorized Scan (Slow IO)
         // Pass the candidates and the residual matcher to the runner
-        return vectorizedRunner.run(candidates, residualOp, List.of(), context);
+        return vectorizedRunner.run(candidates, residualOp, context);
     }
 }

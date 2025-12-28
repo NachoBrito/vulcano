@@ -345,7 +345,7 @@ public class HnswIndex {
         if (connections == null) {
             return new HashSet<>();
         }
-        return connections;
+        return new HashSet<>(connections);
     }
 
 

@@ -60,8 +60,17 @@ public class QueryCompiler {
             case OrNode orNode -> compileOrNode(orNode);
             case LeafNode leafNode -> compileLeafNode(leafNode);
             case NotNode notNode -> compileNotNode(notNode);
-            default -> throw new UnsupportedOperationException("Unknown node: " + node);
+            case MatchAllNode _ -> compileMatchAllNode();
+            case MatchNoneNode _ -> compileMatchNoneNode();
         };
+    }
+
+    private DocumentMatcher compileMatchNoneNode() {
+        return (docId, readers) -> false;
+    }
+
+    private DocumentMatcher compileMatchAllNode() {
+        return (docId, readers) -> true;
     }
 
     private DocumentMatcher compileNotNode(NotNode notNode) {

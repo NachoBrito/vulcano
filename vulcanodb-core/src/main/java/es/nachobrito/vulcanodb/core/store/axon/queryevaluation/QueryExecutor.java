@@ -37,7 +37,7 @@ public class QueryExecutor {
         this.vectorizedRunner = new VectorizedRunner();
     }
 
-    public QueryResult execute(LogicalNode rawQuery) {
+    public QueryResult execute(LogicalNode rawQuery, int maxResults) {
 
         // Phase 1: Optimization (Logical)
         // Split query into "Indexable" vs "Residual"
@@ -54,6 +54,6 @@ public class QueryExecutor {
 
         // Phase 4: Vectorized Scan (Slow IO)
         // Pass the candidates and the residual matcher to the runner
-        return vectorizedRunner.run(candidates, residualOp, context);
+        return vectorizedRunner.run(candidates, residualOp, context, maxResults);
     }
 }

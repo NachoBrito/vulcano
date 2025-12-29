@@ -45,13 +45,24 @@ public interface DataStore extends AutoCloseable {
     Optional<Document> get(DocumentId documentId);
 
     /**
-     * Finds documents matching the provided physical.
+     * Finds documents matching the provided query.
      *
-     * @param query the physical
-     * @return the result containing documents matching the physical
+     * @param query the query
+     * @return the result containing documents matching the query
      */
-    QueryResult search(Query query);
+    default QueryResult search(Query query) {
+        return search(query, Integer.MAX_VALUE);
+    }
 
+
+    /**
+     * Finds documents matching the provided query.
+     *
+     * @param query      the query
+     * @param maxResults the maximum number of documents to return
+     * @return the result containing documents matching the query
+     */
+    QueryResult search(Query query, int maxResults);
 
     /**
      * Asynchronous version of the {@link #add(Document)} method.
@@ -76,16 +87,5 @@ public interface DataStore extends AutoCloseable {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    /**
-     * Asynchronous version of the {@link #search(Query)} method
-     * <p>
-     * Finds documents matching the provided physical.
-     *
-     * @param query the physical
-     * @return the result containing documents matching the physical
-     */
-    default CompletableFuture<QueryResult> searchAsync(Query query) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
 
 }

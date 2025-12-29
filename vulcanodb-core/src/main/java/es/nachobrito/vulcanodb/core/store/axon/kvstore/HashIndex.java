@@ -255,7 +255,8 @@ final class HashIndex implements AutoCloseable {
      */
     public Stream<Long> valueOffsets() {
         var spliterator = new LiveOffsetSpliterator(segments, 0, bucketCount);
-        return StreamSupport.stream(spliterator, true); // parallel stream
+
+        return StreamSupport.stream(spliterator, false);
     }
 
     // ======================================================

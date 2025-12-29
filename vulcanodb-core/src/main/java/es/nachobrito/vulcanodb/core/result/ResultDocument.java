@@ -21,5 +21,15 @@ import es.nachobrito.vulcanodb.core.document.Document;
 /**
  * @author nacho
  */
-public record ResultDocument(Document document, Float score) {
+public record ResultDocument(Document document, Float score) implements Comparable<ResultDocument> {
+    /**
+     * Result documents are sorted by reverse relevance
+     *
+     * @param o the object to be compared.
+     * @return the result of comparing both scores (descending)
+     */
+    @Override
+    public int compareTo(ResultDocument o) {
+        return o.score.compareTo(this.score);
+    }
 }

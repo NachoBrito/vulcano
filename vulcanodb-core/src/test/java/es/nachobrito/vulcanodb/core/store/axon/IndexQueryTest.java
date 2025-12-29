@@ -20,11 +20,13 @@ import es.nachobrito.vulcanodb.core.Embedding;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentMother;
 import es.nachobrito.vulcanodb.core.query.Query;
+import es.nachobrito.vulcanodb.core.query.similarity.VectorSimilarity;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import es.nachobrito.vulcanodb.core.util.TypedProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,6 +35,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
@@ -73,19 +76,38 @@ public class IndexQueryTest {
         var docs = DocumentMother.random(shape, 100);
         var futures = docs.stream().map(axon::addAsync).toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
+        LoggerFactory.getLogger(IndexQueryTest.class).info("*** {} documents indexed.", docs.size());
         return axon;
     }
 
     @Test
-    void expectIndexIsUsed() {
-        var queryVector1 = Embedding.of("Java");
+    void expectIndexIsUsed() throws InterruptedException {
+        var txt = """
+                Computers need step-by-step instructions to operate. These instructions come through programs that 
+                represent the algorithms that the computer needs to follow. Similar to the routines and patterns in 
+                real-life, there is an order of steps with decisions and repeated patterns.
+                """;
+        var txtEmbedding = Embedding.of(txt);
+        var doc = Document.builder()
+                .withVectorField("indexedVector", txtEmbedding)
+                .withStringField("indexedVector_original", txt)
+                .build();
+        axon.add(doc);
+
+        var queryVector1 = Embedding.of("What is an algorithm?");
+        var querySimilarity = VectorSimilarity.getDefault().between(txtEmbedding, queryVector1);
+
+        // the score is calculated as the average of all the matching query nodes. In this case there is one
+        // HNSW index that will produce querySimilarity, plus one match-all node that will produce a 1.0 score. The
+        // average of those two values is the expected score for the best result.
+        var expectedScore = (1.0f + querySimilarity) / 2.0f;
+
         var query1 = Query.builder().isSimilarTo(queryVector1, "indexedVector").build();
         var result1 = axon.search(query1);
+        //give logs time to flush
+        Thread.sleep(250);
         assertFalse(result1.getDocuments().isEmpty());
-
-        var queryVector2 = Embedding.of("revolutionary dance");
-        var query2 = Query.builder().isSimilarTo(queryVector2, "indexedVector").build();
-        var result2 = axon.search(query2);
-        assertFalse(result2.getDocuments().isEmpty());
+        assertEquals(doc, result1.getDocuments().getFirst().document());
+        assertEquals(expectedScore, result1.getDocuments().getFirst().score());
     }
 }

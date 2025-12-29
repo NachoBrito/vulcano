@@ -16,6 +16,9 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
  * @author nacho
  */
 public class HnswIndex {
+    private final Logger log = LoggerFactory.getLogger(getClass());
     private final HnswConfig config;
     private final PagedVectorIndex layer0;
     private final PagedGraphIndex layer0Connections;
@@ -72,7 +76,9 @@ public class HnswIndex {
 
         //2. Add vector to layer 0
         long newId = layer0.addVector(newVector);
-
+        if (log.isDebugEnabled()) {
+            log.debug("Vector {} will have max layer {}", newId, vectorMaxLayer);
+        }
         //3. Zoom down from Top Layer to vectorMaxLayer+1 (Greedy search, ef=1)
         for (int l = globalMaxLayer; l > vectorMaxLayer; l--) {
             currentId = searchLayerGreedy(newVector, currentId, l);
@@ -82,6 +88,9 @@ public class HnswIndex {
         for (int layer = Math.min(vectorMaxLayer, maxL); layer >= 0; layer--) {
             // Search layer with efConstruction
             var neighborCandidates = searchLayer(newVector, currentId, layer, config.efConstruction());
+            if (log.isDebugEnabled()) {
+                log.debug("Vector {} has {} neighbor candidates in layer {}", newId, neighborCandidates.size(), layer);
+            }
             if (neighborCandidates.isEmpty()) {
                 continue;
             }
@@ -91,7 +100,9 @@ public class HnswIndex {
 
             // Select neighbors using heuristic
             var neighbors = selectNeighborsHeuristic(neighborCandidates);
-
+            if (log.isDebugEnabled()) {
+                log.debug("Vector {} has {} neighbors in layer {}", newId, neighbors.size(), layer);
+            }
             // Add connections bidirectional
             for (long neighborId : neighbors) {
                 // Register connection bidirectionally. Not both connections are guaranteed to be stored,
@@ -119,6 +130,9 @@ public class HnswIndex {
      * @param layer     the layer index
      */
     private void addConnection(long vectorId1, long vectorId2, int layer) {
+        if (log.isDebugEnabled()) {
+            log.debug("Adding vector {} as connection of vector {} in layer {}", vectorId2, vectorId1, layer);
+        }
         var connections = getConnections(vectorId1, layer);
         var currentCount = connections.size();
 
@@ -358,22 +372,32 @@ public class HnswIndex {
      */
     public List<NodeSimilarity> search(float[] queryVector, int k) {
         long currObj = globalEnterPoint;
-
+        if (log.isDebugEnabled()) {
+            log.debug("Starting search at vector {}", currObj);
+        }
         // 1. Zoom-in Phase: Fast greedy search through upper layers
         // We use ef=1 for speed as we just need a good entry point for the next layer
         for (int l = globalMaxLayer; l >= 1; l--) {
             currObj = searchLayerGreedy(queryVector, currObj, l);
+            if (log.isDebugEnabled()) {
+                log.debug("Zoom in: Layer {} -> vector {}", l, currObj);
+            }
         }
 
         // 2. Fine Search Phase: Comprehensive search at the ground layer (Layer 0)
         // W is a Max-Heap that keeps track of the 'ef' best candidates
         PriorityQueue<NodeSimilarity> w = searchLayer(queryVector, currObj, 0, config.efSearch());
-
+        if (log.isDebugEnabled()) {
+            log.debug("Found {} candidates in layer 0", w.size());
+        }
         // 3. Return top K results from the candidates found in Layer 0
         List<NodeSimilarity> results = new ArrayList<>();
         // W is a max-heap; we want the closest K, so we might need to sort or poll
         while (w.size() > k) {
-            w.poll(); // Remove furthest until we have K
+            var o = w.poll(); // Remove furthest until we have K
+            if (log.isDebugEnabled() && o != null) {
+                log.debug("Purge vector {} ({})", o.vectorId(), o.similarity());
+            }
         }
         while (!w.isEmpty()) {
             results.add(w.poll());

@@ -30,13 +30,14 @@ public class VectorizedRunner {
     public QueryResult run(
             DocIdSet candidates,
             DocumentMatcher residualMatcher,
-            ExecutionContext ctx
-    ) {
+            ExecutionContext ctx,
+            int maxResults) {
         var builder = QueryResult.builder();
         LongIterator it = candidates.iterator();
 
         long[] batchIds = new long[BATCH_SIZE];
 
+        //todo -> handle maxResults
         while (it.hasNext()) {
             // 1. Fill a batch with candidate IDs from the Bitmap
             int count = 0;
@@ -53,8 +54,12 @@ public class VectorizedRunner {
                 long docId = batchIds[i];
                 // Note: residualMatcher still works row-by-row here,
                 // but it's only called for indexed candidates.
-                survivingIds[survivingCount++] = residualMatcher.matches(docId, ctx) ? docId : -1;
-
+                long survivingId = -1;
+                if (residualMatcher.matches(docId, ctx)) {
+                    ctx.saveVectorScore(docId, 1.0f);
+                    survivingId = docId;
+                }
+                survivingIds[survivingCount++] = survivingId;
             }
 
             // 3. Late Materialization (The expensive part)
@@ -62,8 +67,9 @@ public class VectorizedRunner {
             for (long survivingId : survivingIds) {
                 if (survivingId >= 0) {
                     var document = ctx.loadDocument(survivingId);
+                    var score = ctx.getAverageScore(survivingId);
                     builder
-                            .addDocument(new ResultDocument(document, 1.0f));
+                            .addDocument(new ResultDocument(document, score));
                 }
             }
         }

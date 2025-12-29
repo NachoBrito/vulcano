@@ -36,7 +36,7 @@ public class NaiveInMemoryDataStore implements DataStore {
     private final ConcurrentHashMap<DocumentId, Document> documents = new ConcurrentHashMap<>();
 
     @Override
-    public QueryResult search(Query query) {
+    public QueryResult search(Query query, int maxResults) {
         var evaluator = QueryOperations.of(query);
         return this.documents
                 .values()
@@ -45,6 +45,7 @@ public class NaiveInMemoryDataStore implements DataStore {
                 .map(evaluator.mapper())
                 .filter(evaluator.predicate())
                 .sorted(evaluator.comparator())
+                .limit(maxResults)
                 .collect(evaluator.collector());
     }
 

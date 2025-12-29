@@ -70,6 +70,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         if (!result.success()) {
             throw new AxonDataStoreException(result.error());
         }
+        indexFields(result.internalId(), document);
     }
 
     @Override
@@ -78,9 +79,9 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     }
 
     @Override
-    public QueryResult search(Query query) {
+    public QueryResult search(Query query, int maxResults) {
         var logicalQueryRoot = LogicalNode.of(query);
-        return queryExecutor.execute(logicalQueryRoot);
+        return queryExecutor.execute(logicalQueryRoot, maxResults);
     }
 
     @Override
@@ -111,11 +112,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                 () -> documentPersister.read(documentId), ExecutorProvider.defaultExecutor());
     }
 
-    @Override
-    public CompletableFuture<QueryResult> searchAsync(Query query) {
-        return CompletableFuture.supplyAsync(
-                () -> search(query), ExecutorProvider.defaultExecutor());
-    }
 
     @Override
     public void close() throws Exception {

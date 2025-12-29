@@ -95,7 +95,6 @@ class AxonDataStoreTest {
         return AxonDataStore
                 .builder()
                 .withDocumentWriter(new DefaultDocumentPersister(new TypedProperties(properties)))
-                .withVectorIndex("vector1")
                 .build();
     }
 }

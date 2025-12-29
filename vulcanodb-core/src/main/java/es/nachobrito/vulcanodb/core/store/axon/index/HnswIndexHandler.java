@@ -27,6 +27,8 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * @author nacho
@@ -49,7 +51,9 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     public void index(Long internalId, Document document) {
         var mayBeField = document.field(fieldName);
         if (mayBeField.isEmpty()) {
-            log.debug("Ignoring document {}, it does not contain field {}", document.id(), fieldName);
+            if (log.isDebugEnabled()) {
+                log.debug("Ignoring document {}, it does not contain field {}", document.id(), fieldName);
+            }
             return;
         }
         var field = mayBeField.get();
@@ -62,11 +66,17 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
         @SuppressWarnings("unchecked")
         var newId = index.insert(((Field<float[], VectorFieldValue>) field).value());
         documentIdMap.put(newId, internalId);
+        if (log.isDebugEnabled()) {
+            log.debug("Indexed document {}, with internal id {} -> new id: {}", document.id(), internalId, newId);
+        }
     }
 
     @Override
     public List<IndexMatch> search(float[] query, int maxResults) {
         var hits = index.search(query, maxResults);
+        if (log.isDebugEnabled()) {
+            log.debug("Search returned {} hits: {}", hits.size(), hits.stream().map(Objects::toString).collect(Collectors.joining(", ")));
+        }
         return hits
                 .stream()
                 .map(hit -> new IndexMatch(documentIdMap.get(hit.vectorId()), hit.similarity()))

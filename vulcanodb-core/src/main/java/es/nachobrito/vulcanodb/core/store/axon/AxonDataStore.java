@@ -30,6 +30,8 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.IndexRegistry;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,10 +49,11 @@ import java.util.concurrent.CompletableFuture;
  * @author nacho
  */
 public class AxonDataStore implements DataStore, IndexRegistry {
-
+    private final Logger log = LoggerFactory.getLogger(getClass());
     private final Map<String, IndexHandler<?>> indexes;
     private final DocumentPersister documentPersister;
     private final QueryExecutor queryExecutor;
+    private boolean initializaed = false;
 
     private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister) {
         this.indexes = indexes;
@@ -59,6 +62,32 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                 documentPersister,
                 Collections.unmodifiableMap(indexes));
         this.queryExecutor = new QueryExecutor(ctx, this);
+        log.info("Axon Datastore created.");
+    }
+
+    @Override
+    public CompletableFuture<Void> initialize() {
+        if (this.initializaed) {
+            log.info("Axon Datastore already initialized, skipping initialization call.");
+            return CompletableFuture.completedFuture(null);
+        }
+        return CompletableFuture.runAsync(() -> {
+            log.info("Starting initialization process, indexing current documents");
+            documentPersister
+                    .internalIds()
+                    .forEach(internalId -> {
+                        var document = documentPersister.read(internalId);
+                        if (document.isEmpty()) {
+                            return;
+                        }
+                        if (log.isDebugEnabled()) {
+                            log.debug("Indexing document {}", internalId);
+                        }
+                        indexFields(internalId, document.get());
+                    });
+            initializaed = true;
+            log.info("Initialization complete");
+        });
     }
 
     @Override
@@ -115,18 +144,23 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     @Override
     public void close() throws Exception {
+        log.info("Closing Axon Datastore...");
         documentPersister.close();
-        var errors = new HashMap<IndexHandler<?>, Exception>();
-        for (IndexHandler<?> indexHandler : indexes.values()) {
+        log.info("Document persister closed.");
+        var errors = new HashMap<String, Exception>();
+        for (var entry : indexes.entrySet()) {
             try {
-                indexHandler.close();
+                entry.getValue().close();
+                log.info("Index '{}' closed.", entry.getKey());
             } catch (Exception exception) {
-                errors.put(indexHandler, exception);
+                errors.put(entry.getKey(), exception);
             }
         }
         if (!errors.isEmpty()) {
+            log.error("Could not close datastore.");
             throw new AxonDataStoreCloseException("Some Index Handlers could not  be closed", errors);
         }
+        log.info("Axon Datastore closed successfully.");
     }
 
     public static Builder builder() {

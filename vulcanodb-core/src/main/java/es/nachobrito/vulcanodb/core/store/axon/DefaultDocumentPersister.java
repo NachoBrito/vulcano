@@ -147,14 +147,21 @@ public class DefaultDocumentPersister implements DocumentPersister {
     }
 
     @Override
-    public Document read(long internalId) {
-        var shape = DocumentShape.from(dictionary.getStringAt(internalId));
+    public Optional<Document> read(long internalId) {
+        String shapeString;
+        try {
+            shapeString = dictionary.getStringAt(internalId);
+        } catch (Throwable throwable) {
+            logger.error("Couldn't read document by its internal id: {}", internalId, throwable);
+            return Optional.empty();
+        }
+        var shape = DocumentShape.from(shapeString);
         var values = fieldDiskStore.readFields(shape);
-        return Document
+        return Optional.of(Document
                 .builder()
                 .withId(shape.getDocumentId())
                 .with(values)
-                .build();
+                .build());
     }
 
 

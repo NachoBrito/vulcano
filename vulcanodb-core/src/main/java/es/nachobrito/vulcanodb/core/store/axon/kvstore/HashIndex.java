@@ -24,6 +24,7 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.VarHandle;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
@@ -57,9 +58,9 @@ final class HashIndex implements AutoCloseable {
             Path basePath,
             int bucketCount,
             long segmentSize,
-            long[] recoveredCommittedOffsets,
+            long committedIndexOffset,
             DataLog dataLog
-    ) {
+    ) throws IOException {
         this.basePath = basePath;
         this.bucketCount = bucketCount;
         this.segmentSize = segmentSize;
@@ -69,11 +70,90 @@ final class HashIndex implements AutoCloseable {
         this.reserved = new AtomicLong[bucketCount];
         this.committed = new AtomicLong[bucketCount];
 
+        long[] recoveredIndexOffsets = recoverIndexOffsets(
+                basePath,
+                bucketCount,
+                committedIndexOffset
+        );
+
         for (int i = 0; i < bucketCount; i++) {
             segments[i] = new ArrayList<>();
-            reserved[i] = new AtomicLong(recoveredCommittedOffsets[i]);
-            committed[i] = new AtomicLong(recoveredCommittedOffsets[i]);
+            reserved[i] = new AtomicLong(recoveredIndexOffsets[i]);
+            committed[i] = new AtomicLong(recoveredIndexOffsets[i]);
         }
+    }
+
+    /**
+     * Recovers the persisted state.
+     *
+     * @param indexDir                   the path where the files are stored
+     * @param bucketCount                the number of buckets
+     * @param globalCommittedIndexOffset the global offset
+     * @return the offsets, as a long array
+     * @throws IOException if the data cannot be read
+     */
+    private long[] recoverIndexOffsets(
+            Path indexDir,
+            int bucketCount,
+            long globalCommittedIndexOffset
+    ) throws IOException {
+
+        long[] committed = new long[bucketCount];
+
+        if (!Files.exists(indexDir)) {
+            return committed; // all zeros
+        }
+
+        for (int bucket = 0; bucket < bucketCount; bucket++) {
+
+            long offset = 0;
+            long remaining = globalCommittedIndexOffset;
+
+            int segmentIndex = 0;
+
+            while (remaining > 0) {
+                Path segPath = getSetmentPath(bucket, segmentIndex);
+                if (!Files.exists(segPath)) {
+                    break;
+                }
+
+                try (FileChannel ch = FileChannel.open(
+                        segPath,
+                        StandardOpenOption.READ)) {
+
+                    long segSize = ch.size();
+                    long scanLimit = Math.min(segSize, remaining);
+
+                    Arena arena = Arena.ofConfined();
+                    MemorySegment seg =
+                            ch.map(FileChannel.MapMode.READ_ONLY, 0, segSize, arena);
+
+                    long p = 0;
+                    while (p + 4 <= scanLimit) {
+                        int entryLen = seg.get(ValueLayout.JAVA_INT, p);
+
+                        if (entryLen <= 0) {
+                            break;
+                        }
+
+                        if (p + entryLen > scanLimit) {
+                            break;
+                        }
+
+                        p += entryLen;
+                    }
+
+                    offset += p;
+                    remaining -= p;
+                }
+
+                segmentIndex++;
+            }
+
+            committed[bucket] = offset;
+        }
+
+        return committed;
     }
 
     void put(String key, long dataOffset) {
@@ -206,8 +286,7 @@ final class HashIndex implements AutoCloseable {
      */
     private Segment createSegment(int bucket, long index) {
         try {
-            Path path = basePath.resolve(
-                    "index-b" + bucket + "-seg" + index + ".idx");
+            Path path = getSetmentPath(bucket, index);
 
             FileChannel ch = FileChannel.open(
                     path,
@@ -226,6 +305,11 @@ final class HashIndex implements AutoCloseable {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private Path getSetmentPath(int bucket, long index) {
+        return basePath.resolve(
+                "index-b" + bucket + "-seg" + index + ".idx");
     }
 
     public long committedOffset() {

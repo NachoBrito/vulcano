@@ -30,6 +30,14 @@ import java.util.concurrent.CompletableFuture;
 public interface DataStore extends AutoCloseable {
 
     /**
+     * Some DataStore implementations will need to perform an initialization process, like building in-memory
+     * data structures used at runtime. Implementations of this method will execute such operations asynchronously.
+     *
+     * @return the CompletableFuture for this initialization process
+     */
+    CompletableFuture<Void> initialize();
+
+    /**
      * Adds a new document to the store. If a document with the same id exists, it will be replaced by this one.
      *
      * @param document the document to add

@@ -67,9 +67,12 @@ public class VectorizedRunner {
             for (long survivingId : survivingIds) {
                 if (survivingId >= 0) {
                     var document = ctx.loadDocument(survivingId);
+                    if (document.isEmpty()) {
+                        continue;
+                    }
                     var score = ctx.getAverageScore(survivingId);
                     builder
-                            .addDocument(new ResultDocument(document, score));
+                            .addDocument(new ResultDocument(document.get(), score));
                 }
             }
         }

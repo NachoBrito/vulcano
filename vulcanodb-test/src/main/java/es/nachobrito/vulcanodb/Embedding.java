@@ -14,22 +14,18 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.error;
+package es.nachobrito.vulcanodb;
 
-import java.util.Map;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
 
 /**
  * @author nacho
  */
-public class AxonDataStoreCloseException extends Exception {
-    private final Map<String, Exception> errors;
+public interface Embedding {
+    EmbeddingModel MODEL = new BgeSmallEnV15EmbeddingModel();
 
-    public AxonDataStoreCloseException(String message, Map<String, Exception> errors) {
-        super(message);
-        this.errors = errors;
-    }
-
-    public Map<String, Exception> getErrors() {
-        return errors;
+    static float[] of(String queryText) {
+        return MODEL.embed(queryText).content().vector();
     }
 }

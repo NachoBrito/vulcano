@@ -24,6 +24,7 @@ import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.naive.queryevaluation.QueryOperations;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -47,6 +48,11 @@ public class NaiveInMemoryDataStore implements DataStore {
                 .sorted(evaluator.comparator())
                 .limit(maxResults)
                 .collect(evaluator.collector());
+    }
+
+    @Override
+    public CompletableFuture<Void> initialize() {
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

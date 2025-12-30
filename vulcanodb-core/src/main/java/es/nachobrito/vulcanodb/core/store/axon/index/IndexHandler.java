@@ -24,6 +24,8 @@ import java.util.List;
  * @author nacho
  */
 public interface IndexHandler<V> extends AutoCloseable {
+
+
     void index(Long internalId, Document document);
 
     List<IndexMatch> search(V query, int maxResults);

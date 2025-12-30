@@ -371,6 +371,10 @@ public class HnswIndex {
      * @return a list of {@link NodeSimilarity} instances representing the search results.
      */
     public List<NodeSimilarity> search(float[] queryVector, int k) {
+        if (layer0.getVectorCount() == 0) {
+            return Collections.emptyList();
+        }
+
         long currObj = globalEnterPoint;
         if (log.isDebugEnabled()) {
             log.debug("Starting search at vector {}", currObj);

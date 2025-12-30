@@ -359,6 +359,7 @@ final class DataLog implements AutoCloseable {
          */
         int len = m.get(INT, p);
         if (len <= 0) throw new IllegalStateException();
+        if (len <= 0) throw new IllegalStateException();
 
         ValueType t = ValueType.fromId(m.get(INT, p + 4));
         if (t != ValueType.STRING)

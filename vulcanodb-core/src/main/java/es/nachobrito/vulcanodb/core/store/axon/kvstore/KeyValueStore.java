@@ -17,13 +17,8 @@
 package es.nachobrito.vulcanodb.core.store.axon.kvstore;
 
 import java.io.IOException;
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -69,95 +64,15 @@ public final class KeyValueStore implements AutoCloseable {
         int bucketCount = 1 << 16;     // 65k buckets
         long segmentSize = 16L * 1024 * 1024;
 
-        long[] recoveredIndexOffsets = recoverIndexOffsets(
-                baseDir.resolve("index"),
-                bucketCount,
-                committedIndexOffset
-        );
-
         index = new HashIndex(
                 baseDir.resolve("index"),
                 bucketCount,
                 segmentSize,
-                recoveredIndexOffsets,
+                committedIndexOffset,
                 dataLog
         );
     }
 
-    /**
-     * Recovers the persisted state.
-     *
-     * @param indexDir                   the path where the files are stored
-     * @param bucketCount                the number of buckets
-     * @param globalCommittedIndexOffset the global offset
-     * @return the offsets, as a long array
-     * @throws IOException if the data cannot be read
-     */
-    private static long[] recoverIndexOffsets(
-            Path indexDir,
-            int bucketCount,
-            long globalCommittedIndexOffset
-    ) throws IOException {
-
-        long[] committed = new long[bucketCount];
-
-        if (!Files.exists(indexDir)) {
-            return committed; // all zeros
-        }
-
-        for (int bucket = 0; bucket < bucketCount; bucket++) {
-
-            long offset = 0;
-            long remaining = globalCommittedIndexOffset;
-
-            int segmentIndex = 0;
-
-            while (remaining > 0) {
-                Path segPath = indexDir.resolve(
-                        "index-b" + bucket + "-seg" + segmentIndex + ".idx");
-
-                if (!Files.exists(segPath)) {
-                    break;
-                }
-
-                try (FileChannel ch = FileChannel.open(
-                        segPath,
-                        StandardOpenOption.READ)) {
-
-                    long segSize = ch.size();
-                    long scanLimit = Math.min(segSize, remaining);
-
-                    Arena arena = Arena.ofConfined();
-                    MemorySegment seg =
-                            ch.map(FileChannel.MapMode.READ_ONLY, 0, segSize, arena);
-
-                    long p = 0;
-                    while (p + 4 <= scanLimit) {
-                        int entryLen = seg.get(ValueLayout.JAVA_INT, p);
-
-                        if (entryLen <= 0) {
-                            break;
-                        }
-
-                        if (p + entryLen > scanLimit) {
-                            break;
-                        }
-
-                        p += entryLen;
-                    }
-
-                    offset += p;
-                    remaining -= p;
-                }
-
-                segmentIndex++;
-            }
-
-            committed[bucket] = offset;
-        }
-
-        return committed;
-    }
 
     /**
      * Saves a string associated to the given key. The stored value can be retrieved by the provided key, or by the

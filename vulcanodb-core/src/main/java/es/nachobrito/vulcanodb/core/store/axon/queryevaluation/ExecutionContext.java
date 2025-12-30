@@ -25,6 +25,7 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.ScannableFi
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -73,7 +74,7 @@ public class ExecutionContext {
         return set;
     }
 
-    public Document loadDocument(long id) {
+    public Optional<Document> loadDocument(long id) {
         return documentPersister.read(id);
     }
 

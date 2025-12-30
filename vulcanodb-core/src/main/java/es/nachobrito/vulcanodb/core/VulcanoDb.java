@@ -89,7 +89,9 @@ public class VulcanoDb implements AutoCloseable {
         }
 
         public VulcanoDb build() {
-            return new VulcanoDb(dataStore);
+            var vulcanoDb = new VulcanoDb(dataStore);
+            vulcanoDb.dataStore.initialize().join();
+            return vulcanoDb;
         }
 
     }

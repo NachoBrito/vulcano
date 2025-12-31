@@ -28,4 +28,9 @@ public interface QueryResult {
     static QueryResultBuilder builder() {
         return new QueryResultBuilder();
     }
+
+    default boolean isEmpty() {
+        var documents = getDocuments();
+        return documents == null || documents.isEmpty();
+    }
 }

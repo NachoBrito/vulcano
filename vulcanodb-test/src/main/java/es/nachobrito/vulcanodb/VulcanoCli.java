@@ -19,6 +19,7 @@ package es.nachobrito.vulcanodb;
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.query.Query;
+import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
 import es.nachobrito.vulcanodb.core.store.axon.ConfigProperties;
 import es.nachobrito.vulcanodb.core.store.axon.DefaultDocumentPersister;
@@ -37,20 +38,25 @@ import java.util.stream.Stream;
 public class VulcanoCli {
 
     private static final String EXIT = "exit";
+    private static final String LOAD = "load";
+    private static final int MAX_RESULTS = 10;
+
     private static final String PATTERN = "[VulcanoCli] %s";
 
     static void main(String[] args) throws Exception {
-        Path vulcanoDataPath = getPath(args);
+        Path vulcanoDataPath = getVulcanoDataPath(args);
         try (var vulcanoDb = buildVulcanoDB(vulcanoDataPath)) {
-            if (dataLoadRequired(vulcanoDataPath)) {
+            if (!vulcanoDataPath.toFile().isDirectory()) {
                 loadData(vulcanoDb);
             }
-
             IO.println(PATTERN.formatted("Enter your query, I'll find relevant documents within the provided folder."));
+            IO.println(PATTERN.formatted("You can also use the following commands:"));
+            IO.println(PATTERN.formatted("- load -> to load documents from a folder."));
+            IO.println(PATTERN.formatted("- exit -> to close VulcanoDB."));
             String input = null;
             while (!EXIT.equals(input)) {
                 input = IO.readln();
-                IO.println(processInput(input, vulcanoDb));
+                processInput(input, vulcanoDb);
             }
 
             IO.println(PATTERN.formatted("Thanks for testing VulcanoDB!"));
@@ -58,15 +64,8 @@ public class VulcanoCli {
 
     }
 
-    private static boolean dataLoadRequired(Path dataPath) {
-        if (!dataPath.toFile().isDirectory()) {
-            return true;
-        }
-        var answer = IO.readln(PATTERN.formatted("Do you want to index new content? (y/n): "));
-        return answer.toLowerCase().startsWith("y");
-    }
 
-    private static Path getPath(String[] args) throws IOException {
+    private static Path getVulcanoDataPath(String[] args) throws IOException {
         if (args.length > 0) {
             return Path.of(args[0]);
         }
@@ -143,20 +142,49 @@ public class VulcanoCli {
 
     }
 
-    private static String processInput(String input, VulcanoDb vulcanoDb) {
+    private static void processInput(String input, VulcanoDb vulcanoDb) throws IOException {
 
-        var embedding = Embedding.of(input);
+        switch (input) {
+            case LOAD:
+                loadData(vulcanoDb);
+            default:
+                processQuery(input, vulcanoDb);
+        }
+
+    }
+
+    private static void processQuery(String queryText, VulcanoDb vulcanoDb) {
+        var t0 = System.currentTimeMillis();
+        var embedding = Embedding.of(queryText);
+        var embeddingTime = System.currentTimeMillis() - t0;
+
         var query = Query.builder().isSimilarTo(embedding, "embedding").build();
-        var results = vulcanoDb.search(query);
 
-        StringBuilder sb = new StringBuilder("Results for the query: %d".formatted(results.getDocuments().size())).append("\n");
+        t0 = System.currentTimeMillis();
+        var results = vulcanoDb.search(query, MAX_RESULTS);
+        var queryTime = System.currentTimeMillis() - t0;
+
+        var message = results.isEmpty() ?
+                "No results found for '%s'".formatted(queryText) :
+                "Top %d results:".formatted(results.getDocuments().size());
+        IO.println(PATTERN.formatted(message));
         results
                 .getDocuments()
-                .forEach(doc -> sb
-                        .append("%.2f -> %s".formatted(doc.score(), doc.document().field("path")))
-                        .append("\n")
-                );
-        sb.append("\n---\n");
-        return PATTERN.formatted(sb.toString());
+                .stream()
+                .map(VulcanoCli::toResultString)
+                .forEach(IO::println);
+        IO.println("---");
+        IO.println(PATTERN.formatted("Embedding time: %d ms. Query time: %d ms.".formatted(embeddingTime, queryTime)));
+    }
+
+    private static String toResultString(ResultDocument result) {
+        var document = result.document();
+        var path = document
+                .field("path")
+                .map(it -> it.content().value())
+                .map(Object::toString)
+                .orElse("???");
+
+        return PATTERN.formatted("%.2f -> %s".formatted(result.score(), path));
     }
 }

@@ -53,6 +53,8 @@ final class HashIndex implements AutoCloseable {
 
     private final DataLog dataLog;
 
+    private boolean initialized = false;
+
     @SuppressWarnings("unchecked")
     HashIndex(
             Path basePath,
@@ -70,17 +72,12 @@ final class HashIndex implements AutoCloseable {
         this.reserved = new AtomicLong[bucketCount];
         this.committed = new AtomicLong[bucketCount];
 
-        long[] recoveredIndexOffsets = recoverIndexOffsets(
+        recoverIndexOffsets(
                 basePath,
                 bucketCount,
                 committedIndexOffset
         );
 
-        for (int i = 0; i < bucketCount; i++) {
-            segments[i] = new ArrayList<>();
-            reserved[i] = new AtomicLong(recoveredIndexOffsets[i]);
-            committed[i] = new AtomicLong(recoveredIndexOffsets[i]);
-        }
     }
 
     /**
@@ -89,26 +86,29 @@ final class HashIndex implements AutoCloseable {
      * @param indexDir                   the path where the files are stored
      * @param bucketCount                the number of buckets
      * @param globalCommittedIndexOffset the global offset
-     * @return the offsets, as a long array
      * @throws IOException if the data cannot be read
      */
-    private long[] recoverIndexOffsets(
+    private void recoverIndexOffsets(
             Path indexDir,
             int bucketCount,
             long globalCommittedIndexOffset
     ) throws IOException {
-
-        long[] committed = new long[bucketCount];
-
+        if (this.initialized) {
+            throw new IllegalStateException("Do not call recoverIndexOffsets if the instance is already initialized!");
+        }
         if (!Files.exists(indexDir)) {
-            return committed; // all zeros
+            for (int i = 0; i < bucketCount; i++) {
+                reserved[i] = new AtomicLong(0);
+                committed[i] = new AtomicLong(0);
+            }
+            return; // all zeros
         }
 
         for (int bucket = 0; bucket < bucketCount; bucket++) {
+            segments[bucket] = new ArrayList<>();
 
             long offset = 0;
             long remaining = globalCommittedIndexOffset;
-
             int segmentIndex = 0;
 
             while (remaining > 0) {
@@ -116,44 +116,35 @@ final class HashIndex implements AutoCloseable {
                 if (!Files.exists(segPath)) {
                     break;
                 }
+                var segment = getOrCreateSegment(bucket, segmentIndex);
+                var channel = segment.channel();
 
-                try (FileChannel ch = FileChannel.open(
-                        segPath,
-                        StandardOpenOption.READ)) {
+                long segSize = channel.size();
+                long scanLimit = Math.min(segSize, remaining);
 
-                    long segSize = ch.size();
-                    long scanLimit = Math.min(segSize, remaining);
-
-                    Arena arena = Arena.ofConfined();
-                    MemorySegment seg =
-                            ch.map(FileChannel.MapMode.READ_ONLY, 0, segSize, arena);
-
-                    long p = 0;
-                    while (p + 4 <= scanLimit) {
-                        int entryLen = seg.get(ValueLayout.JAVA_INT, p);
-
-                        if (entryLen <= 0) {
-                            break;
-                        }
-
-                        if (p + entryLen > scanLimit) {
-                            break;
-                        }
-
-                        p += entryLen;
+                Arena arena = Arena.ofConfined();
+                MemorySegment seg =
+                        channel.map(FileChannel.MapMode.READ_ONLY, 0, segSize, arena);
+                long p = 0;
+                while (p + 4 <= scanLimit) {
+                    int entryLen = seg.get(ValueLayout.JAVA_INT, p);
+                    if (entryLen <= 0) {
+                        break;
                     }
-
-                    offset += p;
-                    remaining -= p;
+                    if (p + entryLen > scanLimit) {
+                        break;
+                    }
+                    p += entryLen;
                 }
+                offset += p;
+                remaining -= p;
 
                 segmentIndex++;
             }
-
-            committed[bucket] = offset;
+            reserved[bucket] = new AtomicLong(offset);
+            committed[bucket] = new AtomicLong(offset);
         }
-
-        return committed;
+        initialized = true;
     }
 
     void put(String key, long dataOffset) {
@@ -262,9 +253,20 @@ final class HashIndex implements AutoCloseable {
      * @return the corresponding Segment instance
      */
     private Segment segmentFor(int bucket, long globalOffset) {
-        List<Segment> list = segments[bucket];
         long segmentIndex = globalOffset / segmentSize;
+        return getOrCreateSegment(bucket, segmentIndex);
+    }
 
+    /**
+     * Gets the corresponding segment inside the provided bucket. Will create all the required segments up to the
+     * given index.
+     *
+     * @param bucket       the bucket index
+     * @param segmentIndex the segment index
+     * @return the (maybe new) Segment
+     */
+    private Segment getOrCreateSegment(int bucket, long segmentIndex) {
+        List<Segment> list = segments[bucket];
         if (segmentIndex < list.size()) {
             return list.get((int) segmentIndex);
         }

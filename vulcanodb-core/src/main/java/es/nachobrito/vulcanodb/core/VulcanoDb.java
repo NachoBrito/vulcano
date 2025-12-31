@@ -67,6 +67,17 @@ public class VulcanoDb implements AutoCloseable {
     }
 
     /**
+     * Finds documents relevant for the provided physical
+     *
+     * @param query      the physical to filter stored documents
+     * @param maxResults the maximum number of documents to return
+     * @return the result containing relevant documents
+     */
+    public QueryResult search(Query query, int maxResults) {
+        return dataStore.search(query, maxResults);
+    }
+
+    /**
      * Gets a new builder instance
      *
      * @return a new builder for VulcanoDb objects

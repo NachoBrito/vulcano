@@ -22,12 +22,19 @@ import java.util.List;
 /**
  * @author nacho
  */
-public record DocumentWriteResult(long internalId, boolean success, Throwable error,
+public record DocumentWriteResult(long internalId, boolean success, String error,
                                   List<FieldWriteResult> fieldResults) {
 
 
+    public DocumentWriteResult(long internalId, boolean success, String error, List<FieldWriteResult> fieldResults) {
+        this.internalId = internalId;
+        this.success = success;
+        this.error = error;
+        this.fieldResults = List.copyOf(fieldResults);
+    }
+
     public static DocumentWriteResult ofError(Throwable error) {
-        return new DocumentWriteResult(-1, false, error, Collections.emptyList());
+        return new DocumentWriteResult(-1, false, error.getMessage(), Collections.emptyList());
     }
 
     public static DocumentWriteResult ofFieldResults(long internalId, List<FieldWriteResult> fieldResults) {

@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import es.nachobrito.vulcanodb.core.document.Document;
 
 import java.util.List;
@@ -35,9 +36,11 @@ public interface IndexHandler<V> extends AutoCloseable {
         return search((V) query, Integer.MAX_VALUE);
     }
 
+    @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
     default boolean acceptsValue(Object value) {
         try {
             @SuppressWarnings("unchecked")
+
             var v = (V) value;
             return true;
         } catch (ClassCastException classCastException) {

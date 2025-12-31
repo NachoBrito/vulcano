@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.FieldValueType;
 import es.nachobrito.vulcanodb.core.store.axon.DocumentPersister;
@@ -38,6 +39,9 @@ public class ExecutionContext {
 
     private final Map<Long, Collection<Float>> scores = new ConcurrentHashMap<>();
 
+    @SuppressFBWarnings(
+            value = "EI_EXPOSE_REP2",
+            justification = "DocumentPersister is not ext. mutable, it is ok if indexHandlers is modified outside.")
     public ExecutionContext(DocumentPersister documentPersister, Map<String, IndexHandler<?>> indexHandlers) {
         this.documentPersister = documentPersister;
         this.indexHandlers = indexHandlers;

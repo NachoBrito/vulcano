@@ -486,15 +486,13 @@ final class HashIndex implements AutoCloseable {
 
         @Override
         public boolean equals(Object other) {
-            if (!(other instanceof KeyView(
-                    MemorySegment otherSegment, long otherPosition, int otherLength
-            )) || otherLength != length) {
+            if (!(other instanceof KeyView otherKeyView) || otherKeyView.length != length) {
                 return false;
             }
 
             for (int i = 0; i < length; i++) {
                 byte a = segment.get(ValueLayout.JAVA_BYTE, position + i);
-                byte b = otherSegment.get(ValueLayout.JAVA_BYTE, otherPosition + i);
+                byte b = otherKeyView.segment.get(ValueLayout.JAVA_BYTE, otherKeyView.position + i);
                 if (a != b) return false;
             }
             return true;

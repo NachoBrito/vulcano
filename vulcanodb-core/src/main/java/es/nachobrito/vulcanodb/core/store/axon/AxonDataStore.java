@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.store.axon;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.query.Query;
@@ -189,6 +190,9 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             return this;
         }
 
+        @SuppressFBWarnings(
+                value = "EI_EXPOSE_REP2",
+                justification = "DocumentPersister is mistakenly interpreted as externally mutable")
         public Builder withDocumentWriter(DocumentPersister documentPersister) {
             this.documentPersister = documentPersister;
             return this;

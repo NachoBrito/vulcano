@@ -24,12 +24,8 @@ import java.util.Properties;
 public class TypedProperties {
     private final Properties properties;
 
-    public TypedProperties() {
-        this.properties = new Properties();
-    }
-
     public TypedProperties(Properties properties) {
-        this.properties = properties;
+        this.properties = new Properties(properties);
     }
 
     public String getString(String key, String defValue) {

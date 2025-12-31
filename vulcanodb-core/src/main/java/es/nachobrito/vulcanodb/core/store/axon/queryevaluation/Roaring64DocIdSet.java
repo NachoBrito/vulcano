@@ -19,7 +19,9 @@ package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 import org.roaringbitmap.longlong.LongIterator;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * @author nacho
@@ -30,11 +32,6 @@ public class Roaring64DocIdSet implements DocIdSet {
 
     public Roaring64DocIdSet() {
         this.bitmap = new Roaring64Bitmap();
-    }
-
-    // Copy constructor for safety during logical operations if needed
-    public Roaring64DocIdSet(Roaring64Bitmap bitmap) {
-        this.bitmap = bitmap;
     }
 
     @Override
@@ -121,17 +118,5 @@ public class Roaring64DocIdSet implements DocIdSet {
         } catch (IOException e) {
             throw new RuntimeException("Serialization failed", e);
         }
-    }
-
-    // Factory method to deserialize
-    public static Roaring64DocIdSet deserialize(byte[] data) {
-        Roaring64Bitmap rb = new Roaring64Bitmap();
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
-             DataInputStream dis = new DataInputStream(bis)) {
-            rb.deserialize(dis);
-        } catch (IOException e) {
-            throw new RuntimeException("Deserialization failed", e);
-        }
-        return new Roaring64DocIdSet(rb);
     }
 }

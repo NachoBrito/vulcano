@@ -27,6 +27,10 @@ import java.util.List;
  */
 public record AndNode(List<BitmapOperator> children) implements BitmapOperator {
 
+    public AndNode(List<BitmapOperator> children) {
+        this.children = List.copyOf(children);
+    }
+
     @Override
     public DocIdSet compute(ExecutionContext ctx) {
         // Optimization: Sort children by cost!

@@ -28,9 +28,12 @@ public interface FileUtils {
 
     static void deleteRecursively(File fileOrDirectory) {
         if (fileOrDirectory.isDirectory()) {
-            // Recursively delete contents of the directory
-            for (File child : fileOrDirectory.listFiles()) {
-                deleteRecursively(child);
+            var files = fileOrDirectory.listFiles();
+            if (files != null) {
+                // Recursively delete contents of the directory
+                for (File child : files) {
+                    deleteRecursively(child);
+                }
             }
         }
         // Delete the file or empty directory

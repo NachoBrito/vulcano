@@ -26,7 +26,8 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -56,7 +57,7 @@ final class DataLog implements AutoCloseable {
     private static final ValueLayout.OfFloat FLOAT = ValueLayout.JAVA_FLOAT;
 
     private final long segmentSize;
-    private final CopyOnWriteArrayList<Segment> segments = new CopyOnWriteArrayList<>();
+    private final List<Segment> segments = new ArrayList<>();
     private final AtomicLong reserved;
     private final AtomicLong committed;
     private final Path basePath;
@@ -358,7 +359,6 @@ final class DataLog implements AutoCloseable {
         [data byes]
          */
         int len = m.get(INT, p);
-        if (len <= 0) throw new IllegalStateException();
         if (len <= 0) throw new IllegalStateException();
 
         ValueType t = ValueType.fromId(m.get(INT, p + 4));

@@ -26,7 +26,7 @@ public class AxonDataStoreCloseException extends Exception {
 
     public AxonDataStoreCloseException(String message, Map<String, Exception> errors) {
         super(message);
-        this.errors = errors;
+        this.errors = Map.copyOf(errors);
     }
 
     public Map<String, Exception> getErrors() {

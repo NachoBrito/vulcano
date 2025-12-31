@@ -19,12 +19,12 @@ package es.nachobrito.vulcanodb.core.store.axon;
 /**
  * @author nacho
  */
-public record FieldWriteResult(String fieldName, boolean success, String errorMessage, Throwable throwable) {
+public record FieldWriteResult(String fieldName, boolean success, String errorMessage) {
     public static FieldWriteResult success(String fieldName) {
-        return new FieldWriteResult(fieldName, true, null, null);
+        return new FieldWriteResult(fieldName, true, null);
     }
 
     public static FieldWriteResult error(String fieldName, Throwable throwable) {
-        return new FieldWriteResult(fieldName, false, throwable.getMessage(), throwable);
+        return new FieldWriteResult(fieldName, false, throwable.getMessage());
     }
 }

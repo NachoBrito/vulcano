@@ -42,9 +42,9 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 /**
  * @author nacho
  */
-public class DefaultDocumentPersister implements DocumentPersister {
+public final class DefaultDocumentPersister implements DocumentPersister {
 
-    private static final String DEFAULT_PATH = System.getenv("HOME") + "/.vulcanoDb";
+    private static final String DEFAULT_PATH = System.getProperty("user.home") + "/.vulcanoDb";
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final FieldDiskStore fieldDiskStore;

@@ -77,9 +77,11 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
         if (log.isDebugEnabled()) {
             log.debug("Search returned {} hits: {}", hits.size(), hits.stream().map(Objects::toString).collect(Collectors.joining(", ")));
         }
+
         return hits
                 .stream()
                 .map(hit -> new IndexMatch(documentIdMap.get(hit.vectorId()), hit.similarity()))
+                .sorted()
                 .toList();
     }
 

@@ -18,6 +18,8 @@ package es.nachobrito.vulcanodb.core.result;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 
+import java.util.Objects;
+
 /**
  * @author nacho
  */
@@ -31,5 +33,17 @@ public record ResultDocument(Document document, Float score) implements Comparab
     @Override
     public int compareTo(ResultDocument o) {
         return o.score.compareTo(this.score);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        ResultDocument that = (ResultDocument) o;
+        return Objects.equals(document(), that.document());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(document());
     }
 }

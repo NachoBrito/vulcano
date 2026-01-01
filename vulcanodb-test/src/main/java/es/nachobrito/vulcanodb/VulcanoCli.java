@@ -143,12 +143,15 @@ public class VulcanoCli {
     }
 
     private static void processInput(String input, VulcanoDb vulcanoDb) throws IOException {
-        if (input.equals(LOAD)) {
-            loadData(vulcanoDb);
-            return;
+        switch (input) {
+            case LOAD:
+                loadData(vulcanoDb);
+                break;
+            case EXIT:
+                break;
+            default:
+                processQuery(input, vulcanoDb);
         }
-        processQuery(input, vulcanoDb);
-
     }
 
     private static void processQuery(String queryText, VulcanoDb vulcanoDb) {

@@ -16,7 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.result;
 
-import java.util.PriorityQueue;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author nacho
@@ -26,7 +27,8 @@ public class QueryResultBuilder {
     QueryResultBuilder() {
     }
 
-    private final PriorityQueue<ResultDocument> documents = new PriorityQueue<>();
+    private final List<ResultDocument> documents = new ArrayList<>();
+
 
     /**
      * Adds a document to the result collection. Documents will be automatically sorted by score.
@@ -40,7 +42,7 @@ public class QueryResultBuilder {
     }
 
     public QueryResult build() {
-        return new DocumentCollection(documents.stream().toList());
+        return new DocumentCollection(documents);
     }
 
     /**
@@ -53,5 +55,4 @@ public class QueryResultBuilder {
         this.documents.addAll(other.documents);
         return this;
     }
-
 }

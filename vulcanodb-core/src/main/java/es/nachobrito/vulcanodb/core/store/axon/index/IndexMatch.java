@@ -19,5 +19,9 @@ package es.nachobrito.vulcanodb.core.store.axon.index;
 /**
  * @author nacho
  */
-public record IndexMatch(Long internalId, Float score) {
+public record IndexMatch(Long internalId, Float score) implements Comparable<IndexMatch> {
+    @Override
+    public int compareTo(IndexMatch o) {
+        return o.score.compareTo(this.score);
+    }
 }

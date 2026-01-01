@@ -16,7 +16,6 @@
 
 package es.nachobrito.vulcanodb.core.result;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -27,11 +26,11 @@ public class DocumentCollection implements QueryResult {
 
 
     DocumentCollection(List<ResultDocument> documents) {
-        this.documents = documents;
+        this.documents = List.copyOf(documents);
     }
 
     @Override
     public List<ResultDocument> getDocuments() {
-        return Collections.unmodifiableList(this.documents);
+        return this.documents;
     }
 }

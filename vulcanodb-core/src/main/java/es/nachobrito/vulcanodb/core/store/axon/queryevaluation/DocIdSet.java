@@ -16,7 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 
-import org.roaringbitmap.longlong.LongIterator;
+import java.util.stream.LongStream;
 
 /**
  * @author nacho
@@ -40,8 +40,7 @@ public interface DocIdSet {
 
     void andNot(DocIdSet other);
 
-    // Iterator for scanning
-    LongIterator iterator();
+    LongStream stream();
 
     // Serialization support
     byte[] serialize();

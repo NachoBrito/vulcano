@@ -18,8 +18,10 @@ package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 
 import es.nachobrito.vulcanodb.core.result.QueryResult;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
+import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher;
-import org.roaringbitmap.longlong.LongIterator;
+
+import java.util.Arrays;
 
 /**
  * @author nacho
@@ -28,54 +30,57 @@ public class VectorizedRunner {
     private static final int BATCH_SIZE = 1024; // Fits well in L1/L2 cache
 
     public QueryResult run(
-            DocIdSet candidates,
+            long[] candidates,
             DocumentMatcher residualMatcher,
             ExecutionContext ctx,
             int maxResults) {
         var builder = QueryResult.builder();
-        LongIterator it = candidates.iterator();
 
         long[] batchIds = new long[BATCH_SIZE];
-
-        //todo -> handle maxResults
-        while (it.hasNext()) {
-            // 1. Fill a batch with candidate IDs from the Bitmap
-            int count = 0;
-            while (count < BATCH_SIZE && it.hasNext()) {
-                batchIds[count++] = it.next();
-            }
-
-            // 2. Apply Residual Filtering
-            // We only keep IDs that pass the scan-based predicates
-            int survivingCount = 0;
-            long[] survivingIds = new long[count];
-
-            for (int i = 0; i < count; i++) {
-                long docId = batchIds[i];
-                // Note: residualMatcher still works row-by-row here,
-                // but it's only called for indexed candidates.
-                long survivingId = -1;
-                if (residualMatcher.matches(docId, ctx)) {
-                    ctx.saveVectorScore(docId, 1.0f);
-                    survivingId = docId;
-                }
-                survivingIds[survivingCount++] = survivingId;
-            }
-
-            // 3. Late Materialization (The expensive part)
-            // Only fetch the requested columns for rows that passed ALL filters
-            for (long survivingId : survivingIds) {
-                if (survivingId >= 0) {
-                    var document = ctx.loadDocument(survivingId);
-                    if (document.isEmpty()) {
-                        continue;
+        int count = 0;
+        int survivingCount = 0;
+        long[] survivingIds = new long[Math.min(maxResults, candidates.length)];
+        int lastIndex = candidates.length - 1;
+        for (int candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+            long candidateId = candidates[candidateIndex];
+            batchIds[count++] = candidateId;
+            if (count == BATCH_SIZE || candidateIndex == lastIndex) {
+                //PROCESS BATCH:
+                // Apply Residual Filtering
+                // We only keep IDs that pass the scan-based predicates
+                for (int i = 0; i < count; i++) {
+                    long docId = batchIds[i];
+                    // Note: residualMatcher still works row-by-row here,
+                    // but it's only called for indexed candidates.
+                    if (residualMatcher.matches(docId, ctx)) {
+                        ctx.saveVectorScore(docId, 1.0f);
+                        survivingIds[survivingCount++] = docId;
+                        if (survivingCount == survivingIds.length) {
+                            break;
+                        }
                     }
-                    var score = ctx.getAverageScore(survivingId);
-                    builder
-                            .addDocument(new ResultDocument(document.get(), score));
                 }
+                count = 0;
+            }
+            if (survivingCount == survivingIds.length) {
+                break;
             }
         }
+
+        if (survivingCount > 0) {
+            Arrays.stream(survivingIds)
+                    .limit(survivingCount)
+                    .mapToObj(id -> {
+                        var score = ctx.getAverageScore(id);
+                        var document = ctx.loadDocument(id)
+                                .orElseThrow(
+                                        () -> new AxonDataStoreException("Could not load document with internal id " + id));
+                        return new ResultDocument(document, score);
+                    })
+                    .sorted()
+                    .forEach(builder::addDocument);
+        }
+
 
         return builder.build();
     }

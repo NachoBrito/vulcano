@@ -50,7 +50,10 @@ public class QueryExecutor {
 
         // Phase 3: Index Execution (Fast Set Math)
         // Fetch candidate DocIDs using RoaringBitmaps
-        DocIdSet candidates = indexOp.compute(context);
+        var candidates = indexOp
+                .compute(context)
+                .stream()
+                .toArray();
 
         // Phase 4: Vectorized Scan (Slow IO)
         // Pass the candidates and the residual matcher to the runner

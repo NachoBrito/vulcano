@@ -16,12 +16,12 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation;
 
-import org.roaringbitmap.longlong.LongIterator;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.stream.LongStream;
 
 /**
  * @author nacho
@@ -68,13 +68,9 @@ public class Roaring64DocIdSet implements DocIdSet {
             // Fallback for foreign implementations: iterate and intersect
             // This is slow and should be avoided in the hot path
             Roaring64Bitmap otherBitmap = new Roaring64Bitmap();
-            LongIterator it = other.iterator();
-            while (it.hasNext()) {
-                long id = it.next();
-                if (this.contains(id)) {
-                    otherBitmap.addLong(id);
-                }
-            }
+            other.stream()
+                    .filter(this::contains)
+                    .forEach(otherBitmap::addLong);
             this.bitmap.clear();
             this.bitmap.or(otherBitmap);
         }
@@ -85,10 +81,9 @@ public class Roaring64DocIdSet implements DocIdSet {
         if (other instanceof Roaring64DocIdSet) {
             bitmap.or(((Roaring64DocIdSet) other).bitmap);
         } else {
-            LongIterator it = other.iterator();
-            while (it.hasNext()) {
-                this.add(it.next());
-            }
+            other
+                    .stream()
+                    .forEach(this::add);
         }
     }
 
@@ -97,17 +92,16 @@ public class Roaring64DocIdSet implements DocIdSet {
         if (other instanceof Roaring64DocIdSet) {
             bitmap.andNot(((Roaring64DocIdSet) other).bitmap);
         } else {
-            LongIterator it = other.iterator();
-            while (it.hasNext()) {
-                this.remove(it.next());
-            }
+            other.stream()
+                    .forEach(this::remove);
         }
     }
 
     @Override
-    public LongIterator iterator() {
-        return bitmap.getLongIterator();
+    public LongStream stream() {
+        return bitmap.stream();
     }
+
 
     @Override
     public byte[] serialize() {

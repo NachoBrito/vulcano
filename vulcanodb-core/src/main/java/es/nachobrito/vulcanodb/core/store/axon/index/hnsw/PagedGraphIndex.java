@@ -36,7 +36,7 @@ final public class PagedGraphIndex {
     private final int maxConnections;
 
     // Size of one node's connection data in bytes:
-    // 4 bytes (count) + (mMax0 * 4 bytes)
+    // 4 bytes (count) + (mMax0 * 8 bytes)
     private final int slotSizeBytes;
 
     private final int blockSize; // Nodes per page

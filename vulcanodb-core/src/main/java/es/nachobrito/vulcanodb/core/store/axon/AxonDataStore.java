@@ -27,6 +27,7 @@ import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreCloseException
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.index.HnswIndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
+import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.IndexRegistry;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
@@ -187,6 +188,11 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
         public Builder withVectorIndex(String fieldName) {
             this.indexes.put(fieldName, new HnswIndexHandler(fieldName));
+            return this;
+        }
+
+        public Builder withVectorIndex(String fieldName, HnswConfig hnswConfig) {
+            this.indexes.put(fieldName, new HnswIndexHandler(fieldName, hnswConfig));
             return this;
         }
 

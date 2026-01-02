@@ -16,6 +16,11 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical;
 
+import es.nachobrito.vulcanodb.core.query.similarity.VectorSimilarity;
+
+import static es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher.MATCH_MAX;
+import static es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher.MATCH_MIN;
+
 /**
  * @author nacho
  */
@@ -25,37 +30,40 @@ public record LeafNode(String fieldName, Operation operator, Object value) imple
         operator.validateOperand(value);
     }
 
-    public boolean evaluate(Object target) {
+    public float evaluate(Object target) {
         if (target == null) {
-            return false;
+            return MATCH_MIN;
         }
         operator.validateOperand(target);
         switch (operator) {
             case INT_EQUALS, STRING_EQUALS -> {
-                return target.equals(value);
+                return target.equals(value) ? MATCH_MAX : MATCH_MIN;
             }
             case INT_LESS_THAN -> {
-                return (Integer) target < (Integer) value;
+                return (Integer) target < (Integer) value ? MATCH_MAX : MATCH_MIN;
             }
             case INT_LESS_THAN_EQUAL -> {
-                return (Integer) target <= (Integer) value;
+                return (Integer) target <= (Integer) value ? MATCH_MAX : MATCH_MIN;
             }
             case INT_GREATER_THAN -> {
-                return (Integer) target > (Integer) value;
+                return (Integer) target > (Integer) value ? MATCH_MAX : MATCH_MIN;
             }
             case INT_GREATER_THAN_EQUAL -> {
-                return (Integer) target >= (Integer) value;
+                return (Integer) target >= (Integer) value ? MATCH_MAX : MATCH_MIN;
             }
             case STRING_STARTS_WITH -> {
-                return ((String) target).startsWith((String) value);
+                return ((String) target).startsWith((String) value) ? MATCH_MAX : MATCH_MIN;
             }
             case STRING_ENDS_WITH -> {
-                return ((String) target).endsWith((String) value);
+                return ((String) target).endsWith((String) value) ? MATCH_MAX : MATCH_MIN;
             }
             case STRING_CONTAINS -> {
-                return ((String) target).contains((String) value);
+                return ((String) target).contains((String) value) ? MATCH_MAX : MATCH_MIN;
+            }
+            case VECTOR_SIMILAR -> {
+                return VectorSimilarity.getDefault().between((float[]) target, (float[]) value);
             }
         }
-        return false;
+        return MATCH_MIN;
     }
 }

@@ -16,11 +16,18 @@
 
 package es.nachobrito.vulcanodb.core.document;
 
+import java.util.Objects;
+
 /**
  * @author nacho
  */
 public record Field<V, T extends FieldValueType<V>>(String key, Class<T> type, T content) {
     public V value() {
         return content.value();
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toString(content);
     }
 }

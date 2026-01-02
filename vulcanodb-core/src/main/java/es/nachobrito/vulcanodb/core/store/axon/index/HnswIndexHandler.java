@@ -46,6 +46,11 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
         this.index = new HnswIndex(config);
     }
 
+    public HnswIndexHandler(String fieldName, HnswConfig hnswConfig) {
+        this.fieldName = fieldName;
+        this.index = new HnswIndex(hnswConfig);
+    }
+
 
     @Override
     public void index(Long internalId, Document document) {

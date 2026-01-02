@@ -66,23 +66,23 @@ public class QueryCompiler {
     }
 
     private DocumentMatcher compileMatchNoneNode() {
-        return (docId, readers) -> false;
+        return (docId, readers) -> DocumentMatcher.Score.of(false);
     }
 
     private DocumentMatcher compileMatchAllNode() {
-        return (docId, readers) -> true;
+        return (docId, readers) -> DocumentMatcher.Score.of(true);
     }
 
     private DocumentMatcher compileNotNode(NotNode notNode) {
         var negated = compileResidual(notNode.child());
-        return (docId, readers) -> !negated.matches(docId, readers);
+        return (docId, readers) -> negated.matches(docId, readers).negate();
     }
 
     private DocumentMatcher compileLeafNode(LeafNode leafNode) {
         return (docId, readers) -> {
             var col = readers.getScannableField(leafNode.fieldName(), leafNode.operator().getOperandType());
             Object val = col.getValue(docId);
-            return leafNode.evaluate(val);
+            return DocumentMatcher.Score.of(leafNode.evaluate(val));
         };
     }
 
@@ -91,7 +91,7 @@ public class QueryCompiler {
         DocumentMatcher right = compileResidual(andNode.right());
 
         // Short-circuiting execution logic
-        return (docId, readers) -> left.matches(docId, readers) && right.matches(docId, readers);
+        return (docId, readers) -> left.matches(docId, readers).and(right.matches(docId, readers));
     }
 
     private DocumentMatcher compileOrNode(OrNode orNode) {
@@ -99,7 +99,7 @@ public class QueryCompiler {
         DocumentMatcher right = compileResidual(orNode.right());
 
         // Short-circuiting execution logic
-        return (docId, readers) -> left.matches(docId, readers) || right.matches(docId, readers);
+        return (docId, readers) -> left.matches(docId, readers).or(right.matches(docId, readers));
     }
 
 }

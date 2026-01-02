@@ -22,6 +22,7 @@ import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher;
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  * @author nacho
@@ -39,7 +40,13 @@ public class VectorizedRunner {
         long[] batchIds = new long[BATCH_SIZE];
         int count = 0;
         int survivingCount = 0;
-        long[] survivingIds = new long[Math.min(maxResults, candidates.length)];
+        long[] survivingIds = new long[candidates.length];
+        Arrays.fill(survivingIds, -1);
+
+        /*
+        Go over all the candidates, evaluate the residual matcher for every one so they can be sorted by score to
+        take the top <maxResult>
+         */
         int lastIndex = candidates.length - 1;
         for (int candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
             long candidateId = candidates[candidateIndex];
@@ -52,32 +59,34 @@ public class VectorizedRunner {
                     long docId = batchIds[i];
                     // Note: residualMatcher still works row-by-row here,
                     // but it's only called for indexed candidates.
-                    if (residualMatcher.matches(docId, ctx)) {
-                        ctx.saveVectorScore(docId, 1.0f);
+                    var match = residualMatcher.matches(docId, ctx);
+                    if (match.matches()) {
+                        ctx.saveVectorScore(docId, match.score());
                         survivingIds[survivingCount++] = docId;
-                        if (survivingCount == survivingIds.length) {
-                            break;
-                        }
                     }
                 }
                 count = 0;
-            }
-            if (survivingCount == survivingIds.length) {
-                break;
             }
         }
 
         if (survivingCount > 0) {
             Arrays.stream(survivingIds)
-                    .limit(survivingCount)
-                    .mapToObj(id -> {
+                    //keep only positions that contain a valid id
+                    .filter(id -> id >= 0)
+                    //wrap as Long objects to sort them by score
+                    .boxed()
+                    .sorted(Comparator.comparingDouble(ctx::getAverageScore).reversed())
+                    //keep only the top <maxResult> items
+                    .limit(maxResults)
+                    //load full documents for selected ids
+                    .map(id -> {
                         var score = ctx.getAverageScore(id);
                         var document = ctx.loadDocument(id)
                                 .orElseThrow(
                                         () -> new AxonDataStoreException("Could not load document with internal id " + id));
                         return new ResultDocument(document, score);
                     })
-                    .sorted()
+                    //add to the result
                     .forEach(builder::addDocument);
         }
 

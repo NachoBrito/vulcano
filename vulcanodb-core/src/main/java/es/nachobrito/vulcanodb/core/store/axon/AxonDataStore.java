@@ -55,7 +55,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private final Map<String, IndexHandler<?>> indexes;
     private final DocumentPersister documentPersister;
     private final QueryExecutor queryExecutor;
-    private boolean initializaed = false;
+    private boolean initialized = false;
 
     private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister) {
         this.indexes = indexes;
@@ -69,7 +69,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     @Override
     public CompletableFuture<Void> initialize() {
-        if (this.initializaed) {
+        if (this.initialized) {
             log.info("Axon Datastore already initialized, skipping initialization call.");
             return CompletableFuture.completedFuture(null);
         }
@@ -87,7 +87,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                         }
                         indexFields(internalId, document.get());
                     });
-            initializaed = true;
+            initialized = true;
             log.info("Initialization complete");
         });
     }

@@ -21,3 +21,9 @@ in [this article](https://www.nachobrito.es/artificial-intelligence/project-vulc
 ## Sample applications
 
 You can find some example applications in the [vulcanodb-test](./vulcanodb-test) module.
+
+## AI-Generated project documentation
+
+You can find an AI-generated wiki about VulcanoDb
+at [deepwiki.com/NachoBrito/vulcano](https://deepwiki.com/NachoBrito/vulcano), covering the project architecture and
+main workflows.

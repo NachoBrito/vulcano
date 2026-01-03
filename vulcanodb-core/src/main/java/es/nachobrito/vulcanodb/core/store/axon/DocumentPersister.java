@@ -74,4 +74,10 @@ public interface DocumentPersister extends AutoCloseable {
      */
     <T> Optional<T> readDocumentField(long internalId, String fieldName, Class<? extends FieldValueType<T>> valueType);
 
+    /**
+     * Removes the document associated to the given id
+     *
+     * @param documentId the document id to remove
+     */
+    void remove(DocumentId documentId);
 }

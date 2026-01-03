@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
+ * Objects of this class describe the shape of a document, i.e. the schema (field types and names) plus its Id.
+ *
  * @author nacho
  */
 public class DocumentShape {

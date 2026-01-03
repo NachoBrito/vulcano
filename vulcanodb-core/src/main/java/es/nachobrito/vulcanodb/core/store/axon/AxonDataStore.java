@@ -143,6 +143,11 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                 () -> documentPersister.read(documentId), ExecutorProvider.defaultExecutor());
     }
 
+    @Override
+    public void remove(DocumentId documentId) {
+        this.documentPersister.remove(documentId);
+    }
+
 
     @Override
     public void close() throws Exception {

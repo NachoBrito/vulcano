@@ -89,6 +89,28 @@ class AxonDataStoreTest {
                 });
     }
 
+    @Test
+    public void expectDeletesDocuments() {
+        var now = ZonedDateTime.now();
+        Map<String, Object> fields = Map.of(
+                "integer", 1,
+                "string", "a string",
+                "vector1", new float[]{1.0f, 2.0f},
+                "vector2", new Float[]{1.0f, 2.0f},
+                "matrix", new float[][]{{1, 2}, {3, 4}},
+                "date", now
+        );
+
+        var document = Document.builder().with(fields).build();
+        axon.add(document);
+        var read = axon.get(document.id());
+        assertTrue(read.isPresent());
+        assertEquals(document, read.get());
+
+        axon.remove(document.id());
+        assertTrue(axon.get(document.id()).isEmpty());
+    }
+
     private AxonDataStore buildAxonStore() {
         var properties = new Properties();
         properties.setProperty(ConfigProperties.PROPERTY_PATH, path.toString());

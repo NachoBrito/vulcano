@@ -147,6 +147,20 @@ public final class DefaultDocumentPersister implements DocumentPersister {
     }
 
     @Override
+    public void remove(DocumentId documentId) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Removing document {}", documentId);
+        }
+        var shapeString = this.dictionary.getString(documentId.toString());
+        if (shapeString.isEmpty()) {
+            return;
+        }
+        var shape = DocumentShape.from(shapeString.get());
+        fieldDiskStore.removeFields(shape);
+        this.dictionary.remove(documentId.toString());
+    }
+
+    @Override
     public Optional<Document> read(long internalId) {
         String shapeString;
         try {

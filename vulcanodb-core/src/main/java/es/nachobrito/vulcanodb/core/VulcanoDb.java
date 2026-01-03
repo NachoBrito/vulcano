@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core;
 
 import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
 import es.nachobrito.vulcanodb.core.store.DataStore;
@@ -54,6 +55,10 @@ public class VulcanoDb implements AutoCloseable {
      */
     public void add(Document... documents) {
         Arrays.stream(documents).forEach(this::add);
+    }
+
+    public void remove(DocumentId documentId) {
+        this.dataStore.remove(documentId);
     }
 
     /**

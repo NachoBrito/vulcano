@@ -23,8 +23,8 @@ import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.similarity.VectorSimilarity;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import es.nachobrito.vulcanodb.core.util.TypedProperties;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +35,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author nacho
@@ -45,14 +44,14 @@ public class IndexQueryTest {
     private static Path path;
     private static AxonDataStore axon;
 
-    @BeforeAll
-    static void setup() throws IOException {
+    @BeforeEach
+    void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test");
         axon = buildAxonStore();
     }
 
-    @AfterAll
-    static void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         if (axon != null) {
             axon.close();
         }
@@ -109,5 +108,26 @@ public class IndexQueryTest {
         assertFalse(result1.getDocuments().isEmpty());
         assertEquals(doc, result1.getDocuments().getFirst().document());
         assertEquals(expectedScore, result1.getDocuments().getFirst().score());
+    }
+
+    @Test
+    void expectDeletedDocumentsNotReturned() throws InterruptedException {
+        var txt = """
+                Computers need step-by-step instructions to operate. These instructions come through programs that 
+                represent the algorithms that the computer needs to follow. Similar to the routines and patterns in 
+                real-life, there is an order of steps with decisions and repeated patterns.
+                """;
+        var txtEmbedding = Embedding.of(txt);
+        var doc = Document.builder()
+                .withVectorField("indexedVector", txtEmbedding)
+                .build();
+        axon.add(doc);
+
+        var queryVector1 = Embedding.of("What is an algorithm?");
+        var query1 = Query.builder().isSimilarTo(queryVector1, "indexedVector").build();
+        assertTrue(axon.search(query1).getDocuments().stream().anyMatch(it -> it.document().equals(doc)));
+
+        axon.remove(doc.id());
+        assertFalse(axon.search(query1).getDocuments().stream().anyMatch(it -> it.document().equals(doc)));
     }
 }

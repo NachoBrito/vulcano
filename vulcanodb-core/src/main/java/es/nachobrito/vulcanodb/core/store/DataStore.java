@@ -96,4 +96,10 @@ public interface DataStore extends AutoCloseable {
     }
 
 
+    /**
+     * Removes the document associated to the provided id
+     *
+     * @param documentId the document id to remove.
+     */
+    void remove(DocumentId documentId);
 }

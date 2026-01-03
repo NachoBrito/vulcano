@@ -51,6 +51,11 @@ public class NaiveInMemoryDataStore implements DataStore {
     }
 
     @Override
+    public void remove(DocumentId documentId) {
+        this.documents.remove(documentId);
+    }
+
+    @Override
     public CompletableFuture<Void> initialize() {
         return CompletableFuture.completedFuture(null);
     }

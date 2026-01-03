@@ -411,8 +411,6 @@ final class HashIndex implements AutoCloseable {
                         long aligned = align8(keyEnd);
                         long dataOffset = m.get(LONG, aligned);
 
-                        // skip tombstones
-
                         // key is deduped by content, not object identity
                         KeyView key = new KeyView(m, keyStart, keyLen);
                         lastOffsets.put(key, dataOffset);
@@ -425,7 +423,7 @@ final class HashIndex implements AutoCloseable {
                 currentBucketOffsets = lastOffsets
                         .values()
                         .stream()
-                        .filter(it -> it >= 0)
+                        .filter(it -> it >= 0) // remove tombstones
                         .iterator();
             }
         }

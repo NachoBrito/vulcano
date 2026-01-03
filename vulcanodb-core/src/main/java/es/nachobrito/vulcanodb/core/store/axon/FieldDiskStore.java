@@ -42,6 +42,15 @@ class FieldDiskStore implements AutoCloseable {
         this.dataFolder = dataFolder;
     }
 
+    /**
+     * Writes the field value to the corresponding store.
+     *
+     * @param documentId the document id
+     * @param field      the document field
+     * @param <V>        the value type
+     * @param <T>        the FieldValueType
+     * @return the result of this operation
+     */
     public <V, T extends FieldValueType<V>> FieldWriteResult writeField(String documentId, Field<V, T> field) {
         var fieldIdentity = FieldIdentity.of(field);
         var store = stores.computeIfAbsent(fieldIdentity, this::createValueStore);
@@ -115,24 +124,39 @@ class FieldDiskStore implements AutoCloseable {
         var identity = new FieldIdentity<>(fieldName, type);
         var store = stores.computeIfAbsent(identity, this::createValueStore);
         if (type.equals(IntegerFieldValue.class)) {
-            values.put(fieldName, store.getInt(id).orElseThrow());
+            store.getInt(id).ifPresent(integer -> values.put(fieldName, integer));
             return;
         }
         if (type.equals(MatrixFieldValue.class)) {
-            values.put(fieldName, store.getFloatMatrix(id).orElseThrow());
+            store
+                    .getFloatMatrix(id)
+                    .ifPresent(value -> values.put(fieldName, value));
             return;
         }
         if (type.equals(StringFieldValue.class)) {
-            values.put(fieldName, store.getString(id).orElseThrow());
+            store
+                    .getString(id)
+                    .ifPresent(value -> values.put(fieldName, value));
             return;
         }
         if (type.equals(VectorFieldValue.class)) {
-            values.put(fieldName, store.getFloatArray(id).orElseThrow());
+            store
+                    .getFloatArray(id)
+                    .ifPresent(value -> values.put(fieldName, value));
             return;
         }
         throw new IllegalStateException("Unknown field type: " + type);
     }
 
+    /**
+     * Reads the provided field from the document with the corresponding id
+     *
+     * @param documentId the document id
+     * @param fieldName  the field name
+     * @param valueType  the value type
+     * @param <T>        the type of the field value
+     * @return the value, if it is found
+     */
     @SuppressWarnings("unchecked")
     public <T> Optional<T> readDocumentField(String documentId, String fieldName, Class<? extends FieldValueType<T>> valueType) {
         if (log.isDebugEnabled()) {
@@ -154,5 +178,25 @@ class FieldDiskStore implements AutoCloseable {
             return (Optional<T>) store.getFloatArray(documentId);
         }
         throw new IllegalStateException("Unknown field type: " + valueType);
+    }
+
+    /**
+     * Removes all the field values associated to the document represented by the received shape.
+     *
+     * @param shape the document shape
+     */
+    public void removeFields(DocumentShape shape) {
+        var id = shape.getDocumentId().toString();
+        shape
+                .getFields()
+                .entrySet()
+                .parallelStream()
+                .forEach(entry -> removeField(entry.getKey(), entry.getValue(), id));
+    }
+
+    private void removeField(String fieldName, Class<? extends FieldValueType<?>> type, String documentId) {
+        var identity = new FieldIdentity<>(fieldName, type);
+        var store = stores.computeIfAbsent(identity, this::createValueStore);
+        store.remove(documentId);
     }
 }

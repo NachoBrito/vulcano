@@ -17,8 +17,14 @@
 package es.nachobrito.vulcanodb.core.store.axon;
 
 import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.util.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.Map;
 
@@ -28,10 +34,23 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author nacho
  */
 class DocumentPersisterTest {
+    private Path path;
+
+    @BeforeEach
+    void setup() throws IOException {
+        path = Files.createTempDirectory("vulcanodb-test");
+
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+
+        FileUtils.deleteRecursively(path.toFile());
+    }
 
     @Test
     void expectDocumentWritten() {
-        try (var store = new DefaultDocumentPersister()) {
+        try (var store = new DefaultDocumentPersister(path)) {
             var now = ZonedDateTime.now();
             Map<String, Object> fields = Map.of(
                     "integer", 1,

@@ -21,7 +21,6 @@ import es.nachobrito.vulcanodb.core.document.DocumentMother;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
-import es.nachobrito.vulcanodb.core.util.TypedProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -90,11 +88,9 @@ public class LeafQueryTest {
     }
 
     private static AxonDataStore buildAxonStore() {
-        var properties = new Properties();
-        properties.setProperty(ConfigProperties.PROPERTY_PATH, path.toString());
         var axon = AxonDataStore
                 .builder()
-                .withDocumentWriter(new DefaultDocumentPersister(new TypedProperties(properties)))
+                .withDataFolder(path)
                 .build();
         var exampleDoc = Document.builder()
                 .with(Map.of(

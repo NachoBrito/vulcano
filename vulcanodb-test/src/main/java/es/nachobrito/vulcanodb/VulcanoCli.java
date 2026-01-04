@@ -21,14 +21,10 @@ import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
-import es.nachobrito.vulcanodb.core.store.axon.ConfigProperties;
-import es.nachobrito.vulcanodb.core.store.axon.DefaultDocumentPersister;
-import es.nachobrito.vulcanodb.core.util.TypedProperties;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -74,14 +70,10 @@ public class VulcanoCli {
 
     private static VulcanoDb buildVulcanoDB(Path path) throws IOException {
         IO.println((PATTERN.formatted("Creating VulcanoDB instance witn data folder: " + path.toAbsolutePath())));
-
-        var properties = new Properties();
-        properties.setProperty(ConfigProperties.PROPERTY_PATH, path.toString());
-
         var axon = AxonDataStore
                 .builder()
                 .withVectorIndex("embedding")
-                .withDocumentWriter(new DefaultDocumentPersister(new TypedProperties(properties)))
+                .withDataFolder(path)
                 .build();
         return VulcanoDb
                 .builder()

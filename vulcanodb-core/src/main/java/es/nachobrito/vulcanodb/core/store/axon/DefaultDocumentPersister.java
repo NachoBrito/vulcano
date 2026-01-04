@@ -23,7 +23,6 @@ import es.nachobrito.vulcanodb.core.document.FieldValueType;
 import es.nachobrito.vulcanodb.core.store.axon.concurrent.ExecutorProvider;
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
-import es.nachobrito.vulcanodb.core.util.TypedProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +34,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static es.nachobrito.vulcanodb.core.store.axon.ConfigProperties.PROPERTY_PATH;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
@@ -43,22 +41,9 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
  * @author nacho
  */
 public final class DefaultDocumentPersister implements DocumentPersister {
-
-    private static final String DEFAULT_PATH = System.getProperty("user.home") + "/.vulcanoDb";
-
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final FieldDiskStore fieldDiskStore;
     private final KeyValueStore dictionary;
-
-    public DefaultDocumentPersister(TypedProperties config) {
-        var path = Path.of(config.getString(PROPERTY_PATH, DEFAULT_PATH));
-        this(path);
-    }
-
-    public DefaultDocumentPersister() {
-        var path = Path.of(DEFAULT_PATH);
-        this(path);
-    }
 
     public DefaultDocumentPersister(Path dataFolder) {
         this.fieldDiskStore = new FieldDiskStore(dataFolder);

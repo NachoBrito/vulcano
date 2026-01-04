@@ -21,11 +21,8 @@ import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
-import es.nachobrito.vulcanodb.core.store.axon.ConfigProperties;
-import es.nachobrito.vulcanodb.core.store.axon.DefaultDocumentPersister;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
-import es.nachobrito.vulcanodb.core.util.TypedProperties;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -33,7 +30,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * @author nacho
@@ -114,15 +110,13 @@ public class HnswIndexPerformance {
 
 
     private static VulcanoDb createVulcanoDB() {
-        var properties = new Properties();
-        properties.setProperty(ConfigProperties.PROPERTY_PATH, path.toString());
         var hnswConfig = HnswConfig.builder()
                 .withEfConstruction(500) // max recall
                 .withEfSearch(500) // max recall
                 .build();
         var axon = AxonDataStore
                 .builder()
-                .withDocumentWriter(new DefaultDocumentPersister(new TypedProperties(properties)))
+                .withDataFolder(path)
                 .withVectorIndex("indexedVector", hnswConfig)
                 .build();
 

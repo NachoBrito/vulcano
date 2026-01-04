@@ -18,7 +18,6 @@ package es.nachobrito.vulcanodb.core.store.axon;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
-import es.nachobrito.vulcanodb.core.util.TypedProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.Map;
-import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,11 +110,9 @@ class AxonDataStoreTest {
     }
 
     private AxonDataStore buildAxonStore() {
-        var properties = new Properties();
-        properties.setProperty(ConfigProperties.PROPERTY_PATH, path.toString());
         return AxonDataStore
                 .builder()
-                .withDocumentWriter(new DefaultDocumentPersister(new TypedProperties(properties)))
+                .withDataFolder(path)
                 .build();
     }
 }

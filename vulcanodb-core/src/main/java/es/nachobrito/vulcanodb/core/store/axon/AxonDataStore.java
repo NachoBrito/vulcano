@@ -16,7 +16,6 @@
 
 package es.nachobrito.vulcanodb.core.store.axon;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.query.Query;
@@ -35,6 +34,7 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNo
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -181,13 +181,12 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
 
     public static class Builder {
+        private Path dataFolder = Path.of(System.getProperty("user.home") + "/.vulcanoDb/Axon");
+
         private final Map<String, IndexHandler<?>> indexes = new HashMap<>();
-        private DocumentPersister documentPersister;
 
         public AxonDataStore build() {
-            if (documentPersister == null) {
-                throw new AxonDataStoreException("No DocumentPersister provided");
-            }
+            var documentPersister = new DefaultDocumentPersister(dataFolder);
             return new AxonDataStore(indexes, documentPersister);
         }
 
@@ -201,11 +200,11 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             return this;
         }
 
-        @SuppressFBWarnings(
-                value = "EI_EXPOSE_REP2",
-                justification = "DocumentPersister is mistakenly interpreted as externally mutable")
-        public Builder withDocumentWriter(DocumentPersister documentPersister) {
-            this.documentPersister = documentPersister;
+        public Builder withDataFolder(Path dataFolder) {
+            if (!dataFolder.toFile().isDirectory() && !dataFolder.toFile().mkdirs()) {
+                throw new IllegalArgumentException("Could not create data folder %s".formatted(dataFolder));
+            }
+            this.dataFolder = dataFolder;
             return this;
         }
 

@@ -24,7 +24,7 @@ You can find some example applications in the [vulcanodb-test](./vulcanodb-test)
 
 ## User documentation
 
-Read [here](./doc/INTRODUCTION.md) about how to use VulcanoDb in your projects.
+Read [here](doc/user-guide/INTRODUCTION.md) about how to use VulcanoDb in your projects.
 
 ## Technical documentation
 

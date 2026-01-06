@@ -210,6 +210,24 @@ public final class KeyValueStore implements AutoCloseable {
         return Optional.of(dataLog.readFloatMatrix(offset));
     }
 
+    public long putBytes(String key, byte[] value) {
+        long dataOffset = dataLog.writeBytes(key, value);
+        index.put(key, dataOffset);
+        metadata.commit(
+                dataLog.committedOffset(),
+                index.committedOffset()
+        );
+        return dataOffset;
+    }
+
+    public Optional<byte[]> getBytes(String key) {
+        long offset = index.get(key);
+        if (offset < 0) {
+            return Optional.empty();
+        }
+        return Optional.of(dataLog.readBytes(offset));
+    }
+
     /**
      * Removes the value associated to the provided key
      *
@@ -261,5 +279,9 @@ public final class KeyValueStore implements AutoCloseable {
 
     public float[][] getFloatMatrixAt(long offset) {
         return dataLog.readFloatMatrix(offset);
+    }
+
+    public byte[] getBytesAt(long offset) {
+        return dataLog.readBytes(offset);
     }
 }

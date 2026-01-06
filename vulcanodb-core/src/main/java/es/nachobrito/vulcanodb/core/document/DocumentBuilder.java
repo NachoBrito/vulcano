@@ -117,6 +117,20 @@ public class DocumentBuilder {
         return this;
     }
 
+    /**
+     *
+     * @param key   the field name
+     * @param value the field value
+     * @return
+     */
+    public DocumentBuilder withField(String key, FieldValueType<?> value) {
+        return switch (value) {
+            case StringFieldValue sf -> withStringField(key, sf.value());
+            case IntegerFieldValue ifv -> withIntegerField(key, ifv.value());
+            case VectorFieldValue vf -> withVectorField(key, vf.value());
+            case MatrixFieldValue mf -> withVectorField(key, mf.value());
+        };
+    }
 
     public Document build() {
         if (id == null) {

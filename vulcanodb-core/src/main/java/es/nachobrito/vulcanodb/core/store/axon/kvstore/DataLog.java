@@ -77,8 +77,15 @@ final class DataLog implements AutoCloseable {
     }
 
     long writeString(String key, String value) {
+        return writeBytes(key, value.getBytes(StandardCharsets.UTF_8), ValueType.STRING);
+    }
+
+    long writeBytes(String key, byte[] bytes) {
+        return writeBytes(key, bytes, ValueType.BYTES);
+    }
+
+    private long writeBytes(String key, byte[] vb, ValueType type) {
         byte[] kb = key.getBytes(StandardCharsets.UTF_8);
-        byte[] vb = value.getBytes(StandardCharsets.UTF_8);
 
         /*
         [int entryLen]
@@ -96,7 +103,7 @@ final class DataLog implements AutoCloseable {
         MemorySegment m = s.memory();
         long p = offset % segmentSize;
 
-        m.set(INT, p + 4, ValueType.STRING.id);
+        m.set(INT, p + 4, type.id);
         m.set(INT, p + 8, kb.length);
         m.asSlice(p + 12, kb.length).copyFrom(MemorySegment.ofArray(kb));
 
@@ -348,6 +355,15 @@ final class DataLog implements AutoCloseable {
     }
 
     String readString(long offset) {
+        byte[] bytes = readBytes(offset, ValueType.STRING);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    byte[] readBytes(long offset) {
+        return readBytes(offset, ValueType.BYTES);
+    }
+
+    private byte[] readBytes(long offset, ValueType expectedType) {
         MemorySegment m = segmentFor(offset).memory();
         long p = offset % segmentSize;
         /*
@@ -362,16 +378,15 @@ final class DataLog implements AutoCloseable {
         if (len <= 0) throw new IllegalStateException();
 
         ValueType t = ValueType.fromId(m.get(INT, p + 4));
-        if (t != ValueType.STRING)
-            throw new ClassCastException();
+        if (t != expectedType)
+            throw new ClassCastException("Expected " + expectedType + " but found " + t + " at offset " + offset);
 
         int klen = m.get(INT, p + 8);
         int vlen = len - 12 - klen;
 
         long payloadOffset = p + 12 + klen;
         long alignedPayloadOffset = align(payloadOffset, 8);
-        byte[] vb = m.asSlice(alignedPayloadOffset, vlen).toArray(ValueLayout.JAVA_BYTE);
-        return new String(vb, StandardCharsets.UTF_8);
+        return m.asSlice(alignedPayloadOffset, vlen).toArray(ValueLayout.JAVA_BYTE);
     }
 
 

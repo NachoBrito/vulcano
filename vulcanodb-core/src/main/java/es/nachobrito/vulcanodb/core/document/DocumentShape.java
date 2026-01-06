@@ -62,6 +62,9 @@ public class DocumentShape {
         var shape = new DocumentShape(documentId);
         var fields = shapeString.split(FIELD_SEPARATOR);
         for (String field : fields) {
+            if (field.isBlank()) {
+                break;
+            }
             var parts = field.split(VALUE_SEPARATOR);
             var fieldName = parts[0];
             var fieldType = parts[1];

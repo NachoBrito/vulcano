@@ -31,15 +31,20 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.IndexRegistry;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
+import es.nachobrito.vulcanodb.core.store.axon.wal.DefaultWalManager;
+import es.nachobrito.vulcanodb.core.store.axon.wal.WalManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+
+import static es.nachobrito.vulcanodb.core.store.axon.wal.WalEntry.Type;
 
 /**
  * The Axon data store provides support for:
@@ -55,11 +60,13 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private final Map<String, IndexHandler<?>> indexes;
     private final DocumentPersister documentPersister;
     private final QueryExecutor queryExecutor;
+    private final WalManager walManager;
     private boolean initialized = false;
 
-    private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister) {
+    private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister, WalManager walManager) {
         this.indexes = indexes;
         this.documentPersister = documentPersister;
+        this.walManager = walManager;
         var ctx = new ExecutionContext(
                 documentPersister,
                 Collections.unmodifiableMap(indexes));
@@ -74,7 +81,11 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             return CompletableFuture.completedFuture(null);
         }
         return CompletableFuture.runAsync(() -> {
-            log.info("Starting initialization process, indexing current documents");
+            log.info("Starting initialization process, recovering from WAL if needed");
+
+            recoverUncommitedOperations();
+
+            log.info("Indexing current documents");
             documentPersister
                     .internalIds()
                     .forEach(internalId -> {
@@ -92,8 +103,42 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         });
     }
 
+    private void recoverUncommitedOperations() {
+        try {
+            var uncommitted = walManager.readUncommitted();
+            if (!uncommitted.isEmpty()) {
+                log.info("Found {} uncommitted transactions in WAL. Recovering...", uncommitted.size());
+                for (var entry : uncommitted) {
+                    try {
+                        if (entry.type() == Type.ADD) {
+                            entry.document().ifPresent(this::addInternal);
+                        } else if (entry.type() == Type.REMOVE) {
+                            entry.documentId().ifPresent(id -> this.remove(DocumentId.of(id)));
+                        }
+                        walManager.commit(entry.txId());
+                    } catch (Exception e) {
+                        log.error("Failed to recover WAL entry {}", entry.txId(), e);
+                    }
+                }
+                log.info("Recovery complete.");
+            }
+        } catch (IOException e) {
+            log.error("Could not read WAL during initialization", e);
+        }
+    }
+
     @Override
     public void add(Document document) {
+        try {
+            long txId = walManager.recordAdd(document);
+            addInternal(document);
+            walManager.commit(txId);
+        } catch (IOException e) {
+            throw new AxonDataStoreException(e);
+        }
+    }
+
+    private void addInternal(Document document) {
         var result = documentPersister
                 .write(document)
                 .join();
@@ -145,13 +190,20 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     @Override
     public void remove(DocumentId documentId) {
-        this.documentPersister.remove(documentId);
+        try {
+            long txId = walManager.recordRemove(documentId.toString());
+            this.documentPersister.remove(documentId);
+            walManager.commit(txId);
+        } catch (IOException e) {
+            throw new AxonDataStoreException(e);
+        }
     }
 
 
     @Override
     public void close() throws Exception {
         log.info("Closing Axon Datastore...");
+        walManager.close();
         documentPersister.close();
         log.info("Document persister closed.");
         var errors = new HashMap<String, Exception>();
@@ -181,13 +233,18 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
 
     public static class Builder {
-        private Path dataFolder = Path.of(System.getProperty("user.home") + "/.vulcanoDb/Axon");
+        private Path dataFolder = Path.of(System.getProperty("user.home") + "/.VulcanoDB/AxonDS");
 
         private final Map<String, IndexHandler<?>> indexes = new HashMap<>();
 
         public AxonDataStore build() {
             var documentPersister = new DefaultDocumentPersister(dataFolder);
-            return new AxonDataStore(indexes, documentPersister);
+            try {
+                var walManager = new DefaultWalManager(dataFolder.resolve("wal"));
+                return new AxonDataStore(indexes, documentPersister, walManager);
+            } catch (IOException e) {
+                throw new AxonDataStoreException(e);
+            }
         }
 
         public Builder withVectorIndex(String fieldName) {

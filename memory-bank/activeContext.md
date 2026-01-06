@@ -1,22 +1,31 @@
 # Active Context
 
 ## Current work focus
-Initializing the memory bank by creating and populating core documentation files.
+Integrating and optimizing the Write-Ahead Log (WAL) for `AxonDataStore` to ensure data safety and atomicity.
 
 ## Recent changes
-- Created `productContext.md`.
+- Implemented `WalManager` and `WalEntry` in `es.nachobrito.vulcanodb.core.store.axon.wal`.
+- Created `WalSerializer` for high-performance **binary serialization** of documents and transaction data.
+- Updated `KeyValueStore`, `DataLog`, and `ValueType` to support raw `byte[]` storage (`BYTES` type).
+- Refactored `DefaultWalManager` to use binary serialization instead of fragile string formatting.
+- Integrated WAL into `AxonDataStore` with automatic crash recovery in `initialize()`.
+- Enhanced `WalManagerTest` to verify complex types (vectors/matrices) in the log.
 
 ## Next steps
-- Create remaining core memory bank files: `systemPatterns.md`, `techContext.md`, `progress.md`.
-- Read all created memory bank files to establish initial context.
-- Summarize the initial memory bank content.
+- Verify the implementation with tests (currently blocked by environment issues with `mvn`/`java`).
+- Proceed with the RAG-focused iteration:
+    - Implement `Collection` and `Schema` API.
+    - Integrate `Embedder` abstractions for automatic vectorization.
+    - Enhance `AxonDataStore` with metadata persistence improvements.
+    - Implement hybrid search optimization.
 
 ## Active decisions and considerations
-- Ensure all core memory bank files are present and contain relevant initial information.
-- The initial content for these files is derived from the `projectbrief.md` and general understanding of a database project.
+- **Binary Format**: Using `DataOutputStream` for binary WAL entries provides a robust, fast, and type-safe way to record all document types, including large vectors.
+- **KVStore Re-use**: Leveraging `KeyValueStore` for the WAL provides persistent, crash-consistent storage for log entries with minimal new infrastructure.
 
 ## Important patterns and preferences
-- Adhere to the established memory bank structure and content guidelines.
+- TDD (Test-Driven Development) for critical recovery logic.
+- High-performance binary I/O for system-level data.
 
 ## Learnings and project insights
-- The project is a vector database, so documentation should reflect this focus.
+- The `DataLog` architecture is flexible enough to support raw bytes, which is essential for specialized logs like the WAL.

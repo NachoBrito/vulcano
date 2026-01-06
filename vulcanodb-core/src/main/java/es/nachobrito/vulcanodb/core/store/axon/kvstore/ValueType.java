@@ -23,7 +23,8 @@ enum ValueType {
     STRING(1),
     INTEGER(2),
     FLOAT_ARRAY(3),
-    FLOAT_MATRIX(4);
+    FLOAT_MATRIX(4),
+    BYTES(5);
 
     final int id;
 
@@ -37,6 +38,7 @@ enum ValueType {
             case 2 -> INTEGER;
             case 3 -> FLOAT_ARRAY;
             case 4 -> FLOAT_MATRIX;
+            case 5 -> BYTES;
             default -> throw new IllegalStateException("Unknown type " + id);
         };
     }

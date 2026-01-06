@@ -1,33 +1,30 @@
 [![Apache 2](http://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
-# VulcanoDb - An in-process light-weight vector database
+# VulcanoDB: A Lightweight, In-Process Vector Database
 
-VulcanoDb is a minimalistic vector database, to be used when a full-featured system is too much. The project is open
-source, published under the Apache2.0 license.
+VulcanoDB is a minimalistic vector database designed for cases where a full-scale, distributed system is overkill. It is open source and released under the Apache 2.0 license.
 
-## In-Process execution
+## In-Process Execution
 
-This vector database is aimed at projects that require semantic search but would prefer not to connect to external
-systems. As long as you don’t need any advanced feature like multi-user, cluster deployment, etc., having
-your data in the same process as your application will be the most convenient approach, and will provide the best
-performance.
+VulcanoDB is built for projects that need semantic search capabilities without the overhead of connecting to external systems. If you don't require advanced features like multi-user support or cluster deployments, keeping your data within the same process as your application is the most convenient approach—and often provides the best performance.
 
-VulcanoDb can be installed as a standard project dependency in any Java-based system. It is written entirely in Java
-and has no transitive dependencies.
+### Key Benefits:
+- **Zero External Dependencies**: VulcanoDB is written entirely in Java and has no transitive dependencies.
+- **Easy Integration**: It can be installed as a standard project dependency in any Java-based system.
+- **High Performance**: Minimal latency by avoiding network hops and leveraging in-process memory.
 
-You can read more about this project
-in [this article](https://www.nachobrito.es/artificial-intelligence/project-vulcano/).
+You can learn more about the project's origins and goals in [this article](https://www.nachobrito.es/artificial-intelligence/project-vulcano/).
 
-## Sample applications
+## Sample Applications
 
-You can find some example applications in the [vulcanodb-test](./vulcanodb-test) module.
+Explore example applications and performance benchmarks in the [vulcanodb-test](./vulcanodb-test) module.
 
-## User documentation
+## Getting Started
 
-Read [here](doc/user-guide/INTRODUCTION.md) about how to use VulcanoDb in your projects.
+Check out the [User Documentation](doc/user-guide/INTRODUCTION.md) to learn how to integrate VulcanoDB into your project.
 
-## Technical documentation
+## Technical Details
 
-You can find an AI-generated wiki about VulcanoDb
-at [deepwiki.com/NachoBrito/vulcano](https://deepwiki.com/NachoBrito/vulcano), covering the project architecture and
-main workflows.
+For a deep dive into the internal architecture, including indexing strategies and storage layout, refer to the [Low-Level Design (LLD)](doc/lld/LLD.md) document.
+
+Additional project architecture details and workflows can be found on the AI-generated wiki at [deepwiki.com/NachoBrito/vulcano](https://deepwiki.com/NachoBrito/vulcano).

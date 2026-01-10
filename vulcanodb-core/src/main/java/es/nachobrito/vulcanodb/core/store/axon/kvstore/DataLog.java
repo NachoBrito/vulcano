@@ -105,11 +105,11 @@ final class DataLog implements AutoCloseable {
 
         m.set(INT, p + 4, type.id);
         m.set(INT, p + 8, kb.length);
-        m.asSlice(p + 12, kb.length).copyFrom(MemorySegment.ofArray(kb));
+        MemorySegment.copy(MemorySegment.ofArray(kb), 0, m, p + 12, kb.length);
 
         long payloadOffset = p + 12 + kb.length;
         long alignedPayloadOffset = align(payloadOffset, 8);
-        m.asSlice(alignedPayloadOffset, vb.length).copyFrom(MemorySegment.ofArray(vb));
+        MemorySegment.copy(MemorySegment.ofArray(vb), 0, m, alignedPayloadOffset, vb.length);
 
         VarHandle.releaseFence();
         m.set(INT, p, rawSize);
@@ -131,8 +131,7 @@ final class DataLog implements AutoCloseable {
 
         m.set(INT, p + 4, ValueType.INTEGER.id);
         m.set(INT, p + 8, kb.length);
-        m.asSlice(p + 12, kb.length)
-                .copyFrom(MemorySegment.ofArray(kb));
+        MemorySegment.copy(MemorySegment.ofArray(kb), 0, m, p + 12, kb.length);
 
         long alignedDataOffset = align(p + 12 + kb.length, 8);
         m.set(INT, alignedDataOffset, value);
@@ -167,15 +166,10 @@ final class DataLog implements AutoCloseable {
         m.set(INT, p + 4, ValueType.FLOAT_ARRAY.id);
         m.set(INT, p + 8, kb.length);
         m.set(INT, p + 12, values.length);
-        m.asSlice(p + 16, kb.length).copyFrom(MemorySegment.ofArray(kb));
+        MemorySegment.copy(MemorySegment.ofArray(kb), 0, m, p + 16, kb.length);
 
         long dataAlignedOffset = align(p + 16 + kb.length, 8);
-        MemorySegment floats =
-                m.asSlice(dataAlignedOffset, floatsSize)
-                        .reinterpret(floatsSize);
-        for (int i = 0; i < values.length; i++) {
-            floats.setAtIndex(FLOAT, i, values[i]);
-        }
+        MemorySegment.copy(MemorySegment.ofArray(values), 0, m, dataAlignedOffset, (long) values.length * 4);
 
         VarHandle.releaseFence();
         m.set(INT, p, rawSize);
@@ -197,10 +191,11 @@ final class DataLog implements AutoCloseable {
 
         byte[] kb = key.getBytes(StandardCharsets.UTF_8);
 
-        int rowsSize = values.length * 4;
-        int colsSize = rowsSize > 0 ? values[0].length * 4 : 0;
+        int rowCount = values.length;
+        int colCount = rowCount > 0 ? values[0].length : 0;
+        int floatsSize = rowCount * colCount * 4;
 
-        int rawSize = 12 + kb.length + 4 + rowsSize * colsSize;
+        int rawSize = 20 + kb.length + floatsSize;
         long size = align(rawSize, 8);
 
         long offset = reserved.getAndAdd(size);
@@ -219,19 +214,13 @@ final class DataLog implements AutoCloseable {
          */
         m.set(INT, p + 4, ValueType.FLOAT_MATRIX.id);
         m.set(INT, p + 8, kb.length);
-        m.set(INT, p + 12, values.length);
-        m.set(INT, p + 16, values.length > 0 ? values[0].length : 0);
-        m.asSlice(p + 20, kb.length).copyFrom(MemorySegment.ofArray(kb));
+        m.set(INT, p + 12, rowCount);
+        m.set(INT, p + 16, colCount);
+        MemorySegment.copy(MemorySegment.ofArray(kb), 0, m, p + 20, kb.length);
 
         long dataAlignedOffset = align(p + 20 + kb.length, 8);
-        MemorySegment floats =
-                m.asSlice(dataAlignedOffset, (long) rowsSize * colsSize)
-                        .reinterpret((long) rowsSize * colsSize);
-        int pos = 0;
-        for (float[] value : values) {
-            for (float v : value) {
-                floats.setAtIndex(FLOAT, pos++, v);
-            }
+        for (int i = 0; i < rowCount; i++) {
+            MemorySegment.copy(MemorySegment.ofArray(values[i]), 0, m, dataAlignedOffset + (long) i * colCount * 4, (long) colCount * 4);
         }
 
         VarHandle.releaseFence();
@@ -305,14 +294,8 @@ final class DataLog implements AutoCloseable {
         }
 
         long alignedFloatsOffset = align(p + 20 + klen, 8);
-        MemorySegment floats =
-                m.asSlice(alignedFloatsOffset, (long) rowCount * colCount * 4)
-                        .reinterpret((long) rowCount * colCount * 4);
-        int pos = 0;
         for (int i = 0; i < rowCount; i++) {
-            for (int j = 0; j < colCount; j++) {
-                out[i][j] = floats.getAtIndex(FLOAT, pos++);
-            }
+            MemorySegment.copy(m, alignedFloatsOffset + (long) i * colCount * 4, MemorySegment.ofArray(out[i]), 0, (long) colCount * 4);
         }
         return out;
     }
@@ -345,12 +328,7 @@ final class DataLog implements AutoCloseable {
         }
 
         long alignedFloatsOffset = align(p + 16 + klen, 8);
-        MemorySegment floats =
-                m.asSlice(alignedFloatsOffset, count * 4L)
-                        .reinterpret(count * 4L);
-        for (int i = 0; i < count; i++) {
-            out[i] = floats.getAtIndex(FLOAT, i);
-        }
+        MemorySegment.copy(m, alignedFloatsOffset, MemorySegment.ofArray(out), 0, (long) count * 4);
         return out;
     }
 
@@ -382,11 +360,18 @@ final class DataLog implements AutoCloseable {
             throw new ClassCastException("Expected " + expectedType + " but found " + t + " at offset " + offset);
 
         int klen = m.get(INT, p + 8);
-        int vlen = len - 12 - klen;
 
         long payloadOffset = p + 12 + klen;
         long alignedPayloadOffset = align(payloadOffset, 8);
-        return m.asSlice(alignedPayloadOffset, vlen).toArray(ValueLayout.JAVA_BYTE);
+
+        // We still need the length of the payload. 
+        // In writeBytes, rawSize = 12 + kb.length + vb.length
+        // So vb.length = rawSize - 12 - kb.length
+        int vlen = len - 12 - klen;
+
+        byte[] out = new byte[vlen];
+        MemorySegment.copy(m, alignedPayloadOffset, MemorySegment.ofArray(out), 0, vlen);
+        return out;
     }
 
 

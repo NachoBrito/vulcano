@@ -16,36 +16,80 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  *
  * @author nacho
  */
-public class HnswIndex {
+public final class HnswIndex implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final HnswConfig config;
     private final PagedVectorIndex layer0;
-    private final PagedGraphIndex layer0Connections;
-
-    /*
-    Only ~5% of the nodes exist in Layer 1, and ~0.25% in Layer 2. The memory overhead of Java objects here is
-    negligible compared to the massive Layer 0.
-     */
-    private final Map<Integer, Map<Long, Set<Long>>> upperLayerConnections = new HashMap<>();
+    private final Map<Integer, PagedGraphIndex> graphs = new ConcurrentHashMap<>();
+    private final Path basePath;
+    private final KeyValueStore metadataStore;
 
     private int globalMaxLayer = 0;
     private long globalEnterPoint = 0;
 
-    public HnswIndex(HnswConfig config) {
+    public HnswIndex(HnswConfig config, Path basePath) {
         this.config = config;
-        layer0 = new PagedVectorIndex(config.blockSize(), config.dimensions());
-        layer0Connections = new PagedGraphIndex(config.mMax0(), config.blockSize());
+        this.basePath = basePath;
+
+        if (basePath == null) {
+            throw new IllegalArgumentException("basePath cannot be null");
+        }
+
+        try {
+            Files.createDirectories(basePath);
+            this.metadataStore = new KeyValueStore(basePath.resolve("metadata"));
+            loadMetadata();
+            this.layer0 = new PagedVectorIndex(config.blockSize(), config.dimensions(), basePath.resolve("vectors"));
+            loadExistingGraphs();
+        } catch (IOException e) {
+            throw new AxonDataStoreException(e);
+        }
+    }
+
+    private void loadMetadata() {
+        metadataStore.getInt("maxLayer").ifPresent(val -> globalMaxLayer = val);
+        metadataStore.getInt("enterPoint").ifPresent(val -> globalEnterPoint = (long) val);
+    }
+
+    private void loadExistingGraphs() throws IOException {
+        // Layer 0 graph is mandatory and usually exists or is created
+        graphs.put(0, new PagedGraphIndex(config.mMax0(), config.blockSize(), basePath.resolve("graph_layer_0")));
+
+        // Load upper layer graphs based on globalMaxLayer
+        for (int i = 1; i <= globalMaxLayer; i++) {
+            Path graphPath = basePath.resolve("graph_layer_" + i);
+            if (Files.exists(graphPath)) {
+                graphs.put(i, new PagedGraphIndex(config.mMax(), config.blockSize(), graphPath));
+            }
+        }
+    }
+
+    private void persistMetadata() {
+        metadataStore.putInt("maxLayer", globalMaxLayer);
+        metadataStore.putInt("enterPoint", (int) globalEnterPoint);
+    }
+
+    private PagedGraphIndex getGraph(int layer) {
+        return graphs.computeIfAbsent(layer, l -> {
+            int mMax = (l == 0) ? config.mMax0() : config.mMax();
+            return new PagedGraphIndex(mMax, config.blockSize(), basePath.resolve("graph_layer_" + l));
+        });
     }
 
     /**
@@ -116,60 +160,50 @@ public class HnswIndex {
         if (vectorMaxLayer > globalMaxLayer) {
             globalMaxLayer = vectorMaxLayer;
             globalEnterPoint = newId;
+            persistMetadata();
         }
         return newId;
     }
 
     /**
      * Adds vector 2 as connection to vector 1 in layer.
-     * <p>
-     * If neighborId's connection list exceeds M_max, shrink it using the heuristic
-     *
-     * @param vectorId1 the vector 1 id
-     * @param vectorId2 the vector 2 id
-     * @param layer     the layer index
      */
     private void addConnection(long vectorId1, long vectorId2, int layer) {
         if (log.isDebugEnabled()) {
             log.debug("Adding vector {} as connection of vector {} in layer {}", vectorId2, vectorId1, layer);
         }
         var connections = getConnections(vectorId1, layer);
-        var currentCount = connections.size();
+        var currentCount = connections.length;
 
-        connections.add(vectorId2);
+        // Note: we can't easily add to primitive array, but PagedGraphIndex.addConnection handles it
+        var graph = getGraph(layer);
 
-        if (currentCount >= config.mMax()) {
-            connections = shrinkConnections(vectorId1, connections);
+        // We need to check if we need to shrink before adding or after. 
+        // Existing logic used setConnections with a Set for shrinking.
+        if (currentCount >= (layer == 0 ? config.mMax0() : config.mMax())) {
+            Set<Long> connectionSet = new HashSet<>();
+            for (long c : connections) connectionSet.add(c);
+            connectionSet.add(vectorId2);
+            var shrunk = shrinkConnections(vectorId1, connectionSet, layer);
+            graph.setConnections(vectorId1, shrunk);
+        } else {
+            graph.addConnection(vectorId1, vectorId2);
         }
-
-        if (layer == 0) {
-            layer0Connections.setConnections(vectorId1, connections);
-            return;
-        }
-
-        var layerConnections = upperLayerConnections.computeIfAbsent(layer, k -> new HashMap<>());
-        layerConnections.put(vectorId1, connections);
     }
 
     /**
      * Uses the neighbor selection heuristic to shrink the number of connections of a vector
-     *
-     * @param vectorId           the vector id
-     * @param currentConnections the current connections
-     * @return the new list of connections
      */
-    private Set<Long> shrinkConnections(long vectorId, Set<Long> currentConnections) {
+    private Set<Long> shrinkConnections(long vectorId, Set<Long> currentConnections, int layer) {
         var vector = layer0.getVector(vectorId);
         var similarity = config.vectorSimilarity();
         var candidates = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity).reversed());
 
-        currentConnections
-                .stream()
-                .map(id -> new NodeSimilarity(id, similarity.between(vector, layer0.getVector(id))))
-                .forEach(candidates::add);
+        for (long id : currentConnections) {
+            candidates.add(new NodeSimilarity(id, similarity.between(vector, layer0.getVector(id))));
+        }
 
         return selectNeighborsHeuristic(candidates);
-
     }
 
     /**
@@ -196,28 +230,20 @@ public class HnswIndex {
      * Ci (prune it).</li>
      * </ul>
      * </p>
-     *
-     * @param candidates the efConstruction closest nodes
-     * @return the list of selected neighbors
      */
     private Set<Long> selectNeighborsHeuristic(PriorityQueue<NodeSimilarity> candidates) {
         Set<Long> neighbors = new HashSet<>();
-
-        // candidates is a min-queue (closest first)
         while (!candidates.isEmpty() && neighbors.size() < config.m()) {
             var current = candidates.poll();
             var candidateId = current.vectorId();
             var candidate = layer0.getVector(candidateId);
-            // Distance between candidate and Query
             var candidateToQuery = current.similarity();
 
             var isCloserToQ = true;
             var similarity = config.vectorSimilarity();
             for (long neighborId : neighbors) {
                 var neighbor = layer0.getVector(neighborId);
-                // Distance between candidate and already selected neighbor
                 var candidateToNeighbor = similarity.between(candidate, neighbor);
-                // If current is closer to an existing neighbor r than to q, skip it (diversity check)
                 if (candidateToNeighbor > candidateToQuery) {
                     isCloserToQ = false;
                     break;
@@ -239,35 +265,21 @@ public class HnswIndex {
         // As a result, l is a random number between 0 and mL, but values close to 0
         // are much more probable.
         var random = ThreadLocalRandom.current().nextDouble();
-        var log = -Math.log(random);
-        var value = log * config.mL();
-        var maxLayer = (int) Math.round(value);
-        return maxLayer;
+        var logVal = -Math.log(random);
+        var value = logVal * config.mL();
+        return (int) Math.round(value);
     }
 
 
     /**
      * Find vectors similar to the one provided within a layer
-     *
-     * @param vector       the vector to compare with
-     * @param enterPointId the initial entry point
-     * @param layer        the layer index
-     * @param ef           Number of candidates to explore ("exploration factor")
-     * @return a PriorityQueue with the top closest vectors
      */
     private PriorityQueue<NodeSimilarity> searchLayer(float[] vector, long enterPointId, int layer, int ef) {
         var similarity = config.vectorSimilarity();
-
-        // Visited set to avoid loops
         Set<Long> visited = new HashSet<>();
         visited.add(enterPointId);
 
-        // 1. Candidates (Min-Heap): Order by best similarity (highest score first)
-        // Uses NodeSimilarity's natural ordering (which orders by sim DESC)
         PriorityQueue<NodeSimilarity> candidates = new PriorityQueue<>();
-
-        // 2. Nearest Neighbors (Max-Heap): Order by worst similarity (lowest score at the top)
-        // Used to track the FURTHEST element in the result set W, which is the SMALLEST similarity.
         PriorityQueue<NodeSimilarity> nearestNeighbors = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity));
 
         var entryPoint = layer0.getVector(enterPointId);
@@ -301,13 +313,11 @@ public class HnswIndex {
                     NodeSimilarity nodeSimilarity = new NodeSimilarity(neighborId, neighborSim);
                     candidates.add(nodeSimilarity);
                     nearestNeighbors.add(nodeSimilarity);
-
                     if (nearestNeighbors.size() > ef) {
                         // Remove the element with the lowest similarity (worst result)
                         nearestNeighbors.poll();
                     }
                 }
-
             }
         }
         return nearestNeighbors;
@@ -315,11 +325,6 @@ public class HnswIndex {
 
     /**
      * Simple greedy search for a single closest neighbor (ef=1)
-     *
-     * @param query      the physical vector
-     * @param entryPoint the id of the entry point vector
-     * @param layer      the layer
-     * @return the id of the closest node to q in the given layer
      */
     private long searchLayerGreedy(float[] query, long entryPoint, int layer) {
         var similarity = config.vectorSimilarity();
@@ -342,33 +347,14 @@ public class HnswIndex {
         return bestNode;
     }
 
-    private Set<Long> getConnections(long currentId, int layer) {
-        if (layer == 0) {
-            var connections = layer0Connections.getConnections(currentId);
-            return Arrays.stream(connections)
-                    .boxed()
-                    .collect(Collectors.toCollection(HashSet::new));
-        }
-
-        var layerConnections = upperLayerConnections.get(layer);
-        if (layerConnections == null) {
-            return new HashSet<>();
-        }
-
-        var connections = layerConnections.get(currentId);
-        if (connections == null) {
-            return new HashSet<>();
-        }
-        return new HashSet<>(connections);
+    private long[] getConnections(long currentId, int layer) {
+        var graph = getGraph(layer);
+        return graph.getConnections(currentId);
     }
 
 
     /**
      * Returns the K-Nearest Neighbors of queryVector
-     *
-     * @param queryVector the physical vector
-     * @param k           the number of vectors to return
-     * @return a list of {@link NodeSimilarity} instances representing the search results.
      */
     public List<NodeSimilarity> search(float[] queryVector, int k) {
         if (layer0.getVectorCount() == 0) {
@@ -383,25 +369,16 @@ public class HnswIndex {
         // We use ef=1 for speed as we just need a good entry point for the next layer
         for (int l = globalMaxLayer; l >= 1; l--) {
             currObj = searchLayerGreedy(queryVector, currObj, l);
-            if (log.isDebugEnabled()) {
-                log.debug("Zoom in: Layer {} -> vector {}", l, currObj);
-            }
         }
 
         // 2. Fine Search Phase: Comprehensive search at the ground layer (Layer 0)
         // W is a Max-Heap that keeps track of the 'ef' best candidates
         PriorityQueue<NodeSimilarity> w = searchLayer(queryVector, currObj, 0, config.efSearch());
-        if (log.isDebugEnabled()) {
-            log.debug("Found {} candidates in layer 0", w.size());
-        }
+
         // 3. Return top K results from the candidates found in Layer 0
         List<NodeSimilarity> results = new ArrayList<>();
-        // W is a max-heap; we want the closest K, so we might need to sort or poll
         while (w.size() > k) {
-            var o = w.poll(); // Remove furthest until we have K
-            if (log.isDebugEnabled() && o != null) {
-                log.debug("Purge vector {} ({})", o.vectorId(), o.similarity());
-            }
+            w.poll();
         }
         while (!w.isEmpty()) {
             results.add(w.poll());
@@ -412,14 +389,19 @@ public class HnswIndex {
 
     /**
      * Returns the vector stored with the given id, if present.
-     *
-     * @param id the id to search
-     * @return the vector associated to that id, or .
      */
     public Optional<float[]> get(long id) {
-        if (id < 0 || id > this.layer0.getVectorCount()) {
+        if (id < 0 || id >= this.layer0.getVectorCount()) {
             return Optional.empty();
         }
         return Optional.of(layer0.getVector(id));
+    }
+
+    @Override
+    public void close() throws Exception {
+        persistMetadata();
+        metadataStore.close();
+        layer0.close();
+        for (var g : graphs.values()) g.close();
     }
 }

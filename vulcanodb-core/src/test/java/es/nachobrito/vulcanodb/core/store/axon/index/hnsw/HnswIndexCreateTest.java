@@ -16,8 +16,14 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.util.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,41 +35,54 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class HnswIndexCreateTest {
 
+    private Path path;
 
-    @Test
-    void expectBoundaryChecks() {
-        var config = HnswConfig.builder().withDimensions(2).build();
-        var index = new HnswIndex(config);
-        assertThrows(IllegalArgumentException.class, () -> {
-            index.insert(new float[]{1});
-        });
-        assertThrows(IllegalArgumentException.class, () -> {
-            index.insert(new float[]{1, 2, 3});
-        });
+    @BeforeEach
+    void setup() throws IOException {
+        path = Files.createTempDirectory("vulcanodb-test-hnsw-create");
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        FileUtils.deleteRecursively(path.toFile());
     }
 
     @Test
-    void expectIndexCreated() {
+    void expectBoundaryChecks() throws Exception {
+        var config = HnswConfig.builder().withDimensions(2).build();
+        try (var index = new HnswIndex(config, path)) {
+            assertThrows(IllegalArgumentException.class, () -> {
+                index.insert(new float[]{1});
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                index.insert(new float[]{1, 2, 3});
+            });
+        }
+    }
+
+    @Test
+    void expectIndexCreated() throws Exception {
         var config = HnswConfig.builder().build();
-        var index = new HnswIndex(config);
-        assertNotNull(index);
+        try (var index = new HnswIndex(config, path)) {
+            assertNotNull(index);
 
-        var vectorCount = 1000;
-        var vectors = createRandomVectors(vectorCount, config);
-        var vectorIds = Arrays
-                .stream(vectors)
-                .map(index::insert)
-                .toArray(Long[]::new);
+            var vectorCount = 1000;
+            var vectors = createRandomVectors(vectorCount, config);
+            var vectorIds = Arrays
+                    .stream(vectors)
+                    .map(index::insert)
+                    .toArray(Long[]::new);
 
-        var storedVectors = Arrays
-                .stream(vectorIds)
-                .sorted()
-                .map(index::get)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .toArray(float[][]::new);
+            var storedVectors = Arrays
+                    .stream(vectorIds)
+                    .sorted()
+                    .map(index::get)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .toArray(float[][]::new);
 
-        assertArrayEquals(vectors, storedVectors);
+            assertArrayEquals(vectors, storedVectors);
+        }
     }
 
     private float[][] createRandomVectors(int count, HnswConfig config) {

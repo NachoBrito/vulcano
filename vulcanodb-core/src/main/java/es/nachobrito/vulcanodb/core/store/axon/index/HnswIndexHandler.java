@@ -25,6 +25,7 @@ import es.nachobrito.vulcanodb.core.util.PagedLongArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -36,18 +37,16 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final HnswIndex index;
     private final String fieldName;
+    private final PagedLongArray documentIdMap;
 
-    private final PagedLongArray documentIdMap = new PagedLongArray();
-
-    public HnswIndexHandler(String fieldName) {
-        this.fieldName = fieldName;
-        var config = HnswConfig.builder().build();
-        this.index = new HnswIndex(config);
+    public HnswIndexHandler(String fieldName, Path basePath) {
+        this(fieldName, HnswConfig.builder().build(), basePath);
     }
 
-    public HnswIndexHandler(String fieldName, HnswConfig hnswConfig) {
+    public HnswIndexHandler(String fieldName, HnswConfig hnswConfig, Path basePath) {
         this.fieldName = fieldName;
-        this.index = new HnswIndex(hnswConfig);
+        this.index = new HnswIndex(hnswConfig, basePath);
+        this.documentIdMap = new PagedLongArray(4096, basePath.resolve("id_map"));
     }
 
 
@@ -91,6 +90,7 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
 
     @Override
     public void close() throws Exception {
-        //nothing to do
+        index.close();
+        documentIdMap.close();
     }
 }

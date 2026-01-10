@@ -16,7 +16,14 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.util.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,26 +32,38 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class HnswIndexSearchTest {
 
+    private Path path;
+
+    @BeforeEach
+    void setup() throws IOException {
+        path = Files.createTempDirectory("vulcanodb-test-hnsw-search");
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        FileUtils.deleteRecursively(path.toFile());
+    }
+
     @Test
-    void expectVectorSearch() {
+    void expectVectorSearch() throws Exception {
         var config = HnswConfig.builder()
                 .withDimensions(2)
                 .withEfSearch(500) //max recall
                 .withEfConstruction(500) // max recall
                 .withML(0)//single layer
                 .build();
-        var index = new HnswIndex(config);
+        try (var index = new HnswIndex(config, path)) {
+            index.insert(new float[]{0.5f, 1});
+            index.insert(new float[]{1, 0.5f});
+            index.insert(new float[]{1, 1});
+            index.insert(new float[]{.5f, .5f});
 
-        index.insert(new float[]{0.5f, 1});
-        index.insert(new float[]{1, 0.5f});
-        index.insert(new float[]{1, 1});
-        index.insert(new float[]{.5f, .5f});
-
-        var result = index.search(new float[]{.5f, .5f}, 5);
-        assertNotNull(result);
-        assertTrue(result.size() <= 5);
-        assertFalse(result.isEmpty());
-        assertTrue(result.contains(new NodeSimilarity(2, 1.0f)));
-        assertTrue(result.contains(new NodeSimilarity(3, 1.0f)));
+            var result = index.search(new float[]{.5f, .5f}, 5);
+            assertNotNull(result);
+            assertTrue(result.size() <= 5);
+            assertFalse(result.isEmpty());
+            assertTrue(result.contains(new NodeSimilarity(2, 1.0f)));
+            assertTrue(result.contains(new NodeSimilarity(3, 1.0f)));
+        }
     }
 }

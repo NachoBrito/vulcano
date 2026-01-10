@@ -20,11 +20,16 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import es.nachobrito.vulcanodb.core.Embedding;
+import es.nachobrito.vulcanodb.core.util.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,8 +42,20 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class HnswIndexSearchEmbeddingsTest {
 
+    private Path path;
+
+    @BeforeEach
+    void setup() throws IOException {
+        path = Files.createTempDirectory("vulcanodb-test-hnsw-embeddings");
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        FileUtils.deleteRecursively(path.toFile());
+    }
+
     @Test
-    void expectSearchWorks() {
+    void expectSearchWorks() throws Exception {
         var embeddingModel = Embedding.MODEL;
         var config = HnswConfig
                 .builder()
@@ -46,26 +63,27 @@ public class HnswIndexSearchEmbeddingsTest {
                 .withEfConstruction(500) // max recall
                 .withEfSearch(500) // max recall
                 .build();
-        var index = new HnswIndex(config);
-        var query = "how word embeddings work";
-        var queryVector = embeddingModel.embed(query).content().vector();
-        var similarities = new HashMap<Long, Float>();
-        indexData(index, embeddingModel, queryVector, similarities);
-        final var sortedSimilarities = sortSimilarities(similarities);
+        try (var index = new HnswIndex(config, path)) {
+            var query = "how word embeddings work";
+            var queryVector = embeddingModel.embed(query).content().vector();
+            var similarities = new HashMap<Long, Float>();
+            indexData(index, embeddingModel, queryVector, similarities);
+            final var sortedSimilarities = sortSimilarities(similarities);
 
-        var results = index.search(queryVector, 5);
-        assertNotNull(results);
-        assertFalse(results.isEmpty());
-        assertTrue(results.size() == 5);
+            var results = index.search(queryVector, 5);
+            assertNotNull(results);
+            assertFalse(results.isEmpty());
+            assertTrue(results.size() == 5);
 
-        int i = 0;
-        for (var entry : sortedSimilarities.entrySet()) {
-            if (i >= results.size()) {
-                break;
+            int i = 0;
+            for (var entry : sortedSimilarities.entrySet()) {
+                if (i >= results.size()) {
+                    break;
+                }
+                assertEquals(entry.getKey(), results.get(i).vectorId());
+                assertEquals(entry.getValue(), results.get(i).similarity());
+                i++;
             }
-            assertEquals(entry.getKey(), results.get(i).vectorId());
-            assertEquals(entry.getValue(), results.get(i).similarity());
-            i++;
         }
     }
 

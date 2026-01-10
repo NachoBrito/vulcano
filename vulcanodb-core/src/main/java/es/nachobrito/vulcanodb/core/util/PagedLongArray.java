@@ -16,39 +16,73 @@
 
 package es.nachobrito.vulcanodb.core.util;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * A thread-safe, paged array of primitive longs that avoids boxing and provides lock-free reads.
- * It uses VarHandles to ensure memory visibility and atomic operations on the underlying primitive arrays.
+ * It uses memory-mapped files for persistence and VarHandles for memory visibility.
  *
  * @author nacho
  */
-public final class PagedLongArray {
+public final class PagedLongArray implements AutoCloseable {
     private static final int DEFAULT_PAGE_SIZE = 4096;
-    private static final VarHandle LONG_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(long[].class);
 
     private final int pageSize;
     private final int pageShift;
     private final int pageMask;
 
-    private volatile long[][] pages;
+    private volatile MemorySegment[] pages;
+    private final List<Arena> arenas = new ArrayList<>();
     private final Object expansionLock = new Object();
 
-    public PagedLongArray() {
-        this(DEFAULT_PAGE_SIZE);
+    private final Path basePath;
+
+    public PagedLongArray(Path basePath) {
+        this(DEFAULT_PAGE_SIZE, basePath);
     }
 
-    public PagedLongArray(int pageSize) {
+    public PagedLongArray(int pageSize, Path basePath) {
         if (Integer.bitCount(pageSize) != 1) {
             throw new IllegalArgumentException("pageSize must be a power of 2");
+        }
+        if (basePath == null) {
+            throw new IllegalArgumentException("basePath cannot be null");
         }
         this.pageSize = pageSize;
         this.pageShift = Integer.numberOfTrailingZeros(pageSize);
         this.pageMask = pageSize - 1;
-        this.pages = new long[0][];
+        this.basePath = basePath;
+        this.pages = new MemorySegment[0];
+
+        try {
+            Files.createDirectories(basePath);
+            loadExistingPages();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void loadExistingPages() throws IOException {
+        int pageIdx = 0;
+        while (true) {
+            Path pagePath = basePath.resolve("long-page-" + pageIdx + ".dat");
+            if (!Files.exists(pagePath)) {
+                break;
+            }
+            openPage(pageIdx, pagePath);
+            pageIdx++;
+        }
     }
 
     /**
@@ -60,8 +94,8 @@ public final class PagedLongArray {
         int elementIndex = (int) (index & pageMask);
 
         ensureCapacity(pageIndex);
-        long[] page = pages[pageIndex];
-        LONG_ARRAY_HANDLE.setRelease(page, elementIndex, value);
+        MemorySegment page = pages[pageIndex];
+        page.set(ValueLayout.JAVA_LONG_UNALIGNED, (long) elementIndex * Long.BYTES, value);
     }
 
     /**
@@ -71,27 +105,33 @@ public final class PagedLongArray {
         int pageIndex = (int) (index >> pageShift);
         int elementIndex = (int) (index & pageMask);
 
-        long[][] currentPages = this.pages; // Read volatile once
+        MemorySegment[] currentPages = this.pages; // Read volatile once
         if (pageIndex >= currentPages.length) {
             return 0;
         }
 
-        long[] page = currentPages[pageIndex];
+        MemorySegment page = currentPages[pageIndex];
         if (page == null) {
             return 0;
         }
 
-        return (long) LONG_ARRAY_HANDLE.getAcquire(page, elementIndex);
+        return page.get(ValueLayout.JAVA_LONG_UNALIGNED, (long) elementIndex * Long.BYTES);
     }
 
     private void ensureCapacity(int pageIndex) {
         if (pageIndex >= pages.length) {
             synchronized (expansionLock) {
-                if (pageIndex >= pages.length) {
+                while (pageIndex >= pages.length) {
                     int newLength = Math.max(pageIndex + 1, pages.length * 2);
-                    long[][] newPages = Arrays.copyOf(pages, newLength);
+                    if (newLength == 0) newLength = 1;
+                    MemorySegment[] newPages = Arrays.copyOf(pages, newLength);
                     for (int i = pages.length; i < newLength; i++) {
-                        newPages[i] = new long[pageSize];
+                        Path pagePath = basePath.resolve("long-page-" + i + ".dat");
+                        try {
+                            newPages[i] = createMappedPage(pagePath);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
                     }
                     this.pages = newPages; // Volatile write
                 }
@@ -99,10 +139,43 @@ public final class PagedLongArray {
         }
     }
 
+    private void openPage(int pageIdx, Path path) throws IOException {
+        synchronized (expansionLock) {
+            if (pageIdx >= pages.length) {
+                pages = Arrays.copyOf(pages, pageIdx + 1);
+            }
+            pages[pageIdx] = createMappedPage(path);
+        }
+    }
+
+    private MemorySegment createMappedPage(Path path) throws IOException {
+        long byteSize = (long) pageSize * Long.BYTES;
+        FileChannel ch = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        if (ch.size() < byteSize) {
+            ch.truncate(byteSize);
+        }
+        Arena arena = Arena.ofShared();
+        MemorySegment page = ch.map(FileChannel.MapMode.READ_WRITE, 0, byteSize, arena);
+        arenas.add(arena);
+        return page;
+    }
+
     /**
      * Returns the total capacity of the array (number of elements that can be stored in current pages).
      */
     public long capacity() {
         return (long) pages.length * pageSize;
+    }
+
+    @Override
+    public void close() {
+        synchronized (expansionLock) {
+            for (Arena arena : arenas) {
+                if (arena.scope().isAlive()) {
+                    arena.close();
+                }
+            }
+            arenas.clear();
+        }
     }
 }

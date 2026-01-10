@@ -17,36 +17,48 @@
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A Vector index that uses Chunking to scale. Vector components are stored in off-heap memory segments.
+ * A Vector index that uses Chunking to scale. Vector components are stored in off-heap memory segments, backed by
+ * memory-mapped files.
  * <br>
  * Thread safety:
  * This class should be safe for multiple threads access.
  *
  * @author nacho
  */
-final class PagedVectorIndex {
+final class PagedVectorIndex implements AutoCloseable {
     // List of memory segments (pages)
     private final List<MemorySegment> pages = new ArrayList<>();
+    private final List<Arena> arenas = new ArrayList<>();
     private final AtomicLong currentCount = new AtomicLong(0);
     private final int blockSize;
     private final int dimensions;
+    private final Path basePath;
 
     /**
+     * Creates a paged vector index backed by memory-mapped files.
      *
      * @param blockSize  how many vectors per page
      * @param dimensions how many elements per vector
+     * @param basePath   the base directory for persistence
      */
-    public PagedVectorIndex(int blockSize, int dimensions) {
+    public PagedVectorIndex(int blockSize, int dimensions, Path basePath) {
         this.blockSize = blockSize;
         this.dimensions = dimensions;
+        this.basePath = basePath;
 
         if (blockSize < 1) {
             throw new IllegalArgumentException("Invalid block size, must be > 0");
@@ -54,15 +66,71 @@ final class PagedVectorIndex {
         if (dimensions < 1) {
             throw new IllegalArgumentException("Invalid dimensions, must be > 0");
         }
-        // Start with one page
-        addPage();
+
+        try {
+            Files.createDirectories(basePath);
+            loadExistingPages();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void loadExistingPages() throws IOException {
+        int pageIdx = 0;
+        while (true) {
+            Path pagePath = basePath.resolve("vector-page-" + pageIdx + ".dat");
+            if (!Files.exists(pagePath)) {
+                break;
+            }
+            openPage(pageIdx, pagePath);
+            pageIdx++;
+        }
+        if (pageIdx > 0) {
+            currentCount.set((long) pageIdx * blockSize);
+        } else {
+            addPage();
+        }
     }
 
     private void addPage() {
-        // Allocate off-heap memory for 1 block of vectors
+        int pageIdx = pages.size();
+        Path pagePath = basePath.resolve("vector-page-" + pageIdx + ".dat");
+        try {
+            openPage(pageIdx, pagePath);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void openPage(int pageIdx, Path path) throws IOException {
         long byteSize = (long) blockSize * dimensions * Float.BYTES;
-        MemorySegment newPage = Arena.ofAuto().allocate(byteSize);
-        pages.add(newPage);
+        FileChannel ch = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        if (ch.size() < byteSize) {
+            ch.truncate(byteSize);
+        }
+        Arena arena = Arena.ofShared();
+        MemorySegment page = ch.map(FileChannel.MapMode.READ_WRITE, 0, byteSize, arena);
+        arenas.add(arena);
+        pages.add(page);
+    }
+
+    /**
+     * Sets the actual vector count, used during recovery/loading.
+     */
+    void setVectorCount(long count) {
+        this.currentCount.set(count);
+        ensureCapacity(count > 0 ? count - 1 : 0);
+    }
+
+    private void ensureCapacity(long vectorId) {
+        int requiredPages = (int) (vectorId / blockSize) + 1;
+        while (pages.size() < requiredPages) {
+            synchronized (this) {
+                if (pages.size() < requiredPages) {
+                    addPage();
+                }
+            }
+        }
     }
 
     /**
@@ -73,23 +141,13 @@ final class PagedVectorIndex {
      */
     public long addVector(float[] vector) {
         long internalId = currentCount.getAndIncrement(); // Atomic, gives unique ID
-
-        // 1. Check if we need a new page
-        if (internalId % blockSize == 0 && internalId > 0) {
-            // Synchronize only the slow, array-modifying operation
-            synchronized (this) {
-                // Double-check lock: check again in case another thread already added the page
-                if (pages.size() <= internalId / blockSize) {
-                    addPage();
-                }
-            }
-        }
+        ensureCapacity(internalId);
 
         // 2. Calculate location
         int pageIdx = (int) (internalId / blockSize);
         long offset = (internalId % blockSize) * dimensions * Float.BYTES;
 
-        // 3. Write data (MemorySegment is generally thread-safe for disjoint writes)
+        // 3. Write data
         MemorySegment.copy(vector, 0, pages.get(pageIdx), ValueLayout.JAVA_FLOAT, offset, dimensions);
 
         return internalId;
@@ -130,10 +188,10 @@ final class PagedVectorIndex {
         }
         int pageIdx = (int) (id / blockSize);
         long pageOffset = (id % blockSize) * dimensions * Float.BYTES;
-        var sliceSize = dimensions * Float.BYTES;
 
-        var slice = pages.get(pageIdx).asSlice(pageOffset, sliceSize);
-        return slice.toArray(ValueLayout.JAVA_FLOAT);
+        float[] result = new float[dimensions];
+        MemorySegment.copy(pages.get(pageIdx), ValueLayout.JAVA_FLOAT, pageOffset, result, 0, dimensions);
+        return result;
     }
 
     /**
@@ -146,5 +204,14 @@ final class PagedVectorIndex {
 
     long getVectorCount() {
         return this.currentCount.get();
+    }
+
+    @Override
+    public void close() {
+        for (Arena arena : arenas) {
+            if (arena.scope().isAlive()) {
+                arena.close();
+            }
+        }
     }
 }

@@ -16,9 +16,15 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -26,38 +32,91 @@ import java.util.Set;
 /**
  * <pre>
  * [ Node 0 Data ........................ ] [ ... ]
- * | Count (int)  | N1 | N2 | ... | N_max | | ... |
+ * | Count (long) | N1 | N2 | ... | N_max | | ... |
  * </pre>
  *
  * @author nacho
  */
-final public class PagedGraphIndex {
+final public class PagedGraphIndex implements AutoCloseable {
     // Max neighbors for Layer 0 (usually 2 * M)
     private final int maxConnections;
 
     // Size of one node's connection data in bytes:
-    // 4 bytes (count) + (mMax0 * 8 bytes)
+    // 8 bytes (count) + (mMax0 * 8 bytes)
+    // We use a long for count to ensure 8-byte alignment for the neighbors array
     private final int slotSizeBytes;
 
     private final int blockSize; // Nodes per page
     private final List<MemorySegment> pages = new ArrayList<>();
+    private final List<Arena> arenas = new ArrayList<>();
+    private final Path basePath;
 
-    public PagedGraphIndex(int maxConnections, int blockSize) {
+    /**
+     * Creates a paged graph index backed by memory-mapped files.
+     *
+     * @param maxConnections max neighbors per node
+     * @param blockSize      nodes per page
+     * @param basePath       the base directory for persistence
+     */
+    public PagedGraphIndex(int maxConnections, int blockSize, Path basePath) {
         this.maxConnections = maxConnections;
-        this.slotSizeBytes = Integer.BYTES + (maxConnections * Long.BYTES);
+        this.slotSizeBytes = Long.BYTES + (maxConnections * Long.BYTES);
         this.blockSize = blockSize;
-        addPage();
+        this.basePath = basePath;
+
+        try {
+            Files.createDirectories(basePath);
+            loadExistingPages();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void loadExistingPages() throws IOException {
+        int pageIdx = 0;
+        while (true) {
+            Path pagePath = basePath.resolve("graph-page-" + pageIdx + ".dat");
+            if (!Files.exists(pagePath)) {
+                break;
+            }
+            openPage(pageIdx, pagePath);
+            pageIdx++;
+        }
+        if (pageIdx == 0) {
+            addPage();
+        }
     }
 
     private void addPage() {
+        int pageIdx = pages.size();
+        Path pagePath = basePath.resolve("graph-page-" + pageIdx + ".dat");
+        try {
+            openPage(pageIdx, pagePath);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void openPage(int pageIdx, Path path) throws IOException {
         long totalBytes = (long) blockSize * slotSizeBytes;
-        pages.add(Arena.ofAuto().allocate(totalBytes));
+        FileChannel ch = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        if (ch.size() < totalBytes) {
+            ch.truncate(totalBytes);
+        }
+        Arena arena = Arena.ofShared();
+        MemorySegment page = ch.map(FileChannel.MapMode.READ_WRITE, 0, totalBytes, arena);
+        arenas.add(arena);
+        pages.add(page);
     }
 
     private void ensureCapacity(long vectorId) {
         int pageIdx = (int) (vectorId / blockSize);
         while (pages.size() <= pageIdx) {
-            addPage();
+            synchronized (this) {
+                if (pages.size() <= pageIdx) {
+                    addPage();
+                }
+            }
         }
     }
 
@@ -88,11 +147,11 @@ final public class PagedGraphIndex {
         MemorySegment page = pages.get(pageIdx);
 
         // 2. Write Count
-        page.set(ValueLayout.JAVA_INT, pageStart, neighbors.length);
+        page.set(ValueLayout.JAVA_LONG, pageStart, (long) neighbors.length);
 
         // 3. Write Neighbors
-        // We skip 4 bytes (the count) to find the start of the neighbor array
-        long neighborArrayOffset = pageStart + Integer.BYTES;
+        // We skip 8 bytes (the count) to find the start of the neighbor array
+        long neighborArrayOffset = pageStart + Long.BYTES;
 
         MemorySegment.copy(
                 MemorySegment.ofArray(neighbors), 0,
@@ -116,11 +175,12 @@ final public class PagedGraphIndex {
         MemorySegment page = pages.get(pageIdx);
 
         // 1. Read Count
-        int count = page.get(ValueLayout.JAVA_INT, pageStart);
+        int count = (int) page.get(ValueLayout.JAVA_LONG, pageStart);
+        if (count == 0) return new long[0];
         var buffer = new long[count];
 
         // 2. Read Neighbors
-        long neighborArrayOffset = pageStart + Integer.BYTES;
+        long neighborArrayOffset = pageStart + Long.BYTES;
         MemorySegment.copy(
                 page, neighborArrayOffset,
                 MemorySegment.ofArray(buffer), 0,
@@ -142,17 +202,18 @@ final public class PagedGraphIndex {
         MemorySegment page = pages.get(pageIdx);
 
         // 1. Read Count
-        int count = page.get(ValueLayout.JAVA_INT, pageStart);
+        int count = (int) page.get(ValueLayout.JAVA_LONG, pageStart);
+        int toCopy = Math.min(count, outputBuffer.length);
 
         // 2. Read Neighbors
-        long neighborArrayOffset = pageStart + Integer.BYTES;
+        long neighborArrayOffset = pageStart + Long.BYTES;
         MemorySegment.copy(
                 page, neighborArrayOffset,
                 MemorySegment.ofArray(outputBuffer), 0,
-                (long) count * Long.BYTES
+                (long) toCopy * Long.BYTES
         );
 
-        return count;
+        return toCopy;
     }
 
     /**
@@ -168,17 +229,26 @@ final public class PagedGraphIndex {
         MemorySegment page = pages.get(pageIdx);
 
         // 1. Read Count
-        int count = page.get(ValueLayout.JAVA_INT, pageStart);
+        long count = page.get(ValueLayout.JAVA_LONG, pageStart);
         if (count >= maxConnections) {
             throw new IllegalArgumentException("Too many neighbors");
         }
 
         // 2. save new connection
         // at page start + count size + size of current connections
-        long offset = pageStart + Integer.BYTES + (long) count * Long.BYTES;
+        long offset = pageStart + Long.BYTES + count * Long.BYTES;
         page.set(ValueLayout.JAVA_LONG, offset, vectorId2);
 
         // 3. update count
-        page.set(ValueLayout.JAVA_INT, pageStart, count + 1);
+        page.set(ValueLayout.JAVA_LONG, pageStart, count + 1);
+    }
+
+    @Override
+    public void close() {
+        for (Arena arena : arenas) {
+            if (arena.scope().isAlive()) {
+                arena.close();
+            }
+        }
     }
 }

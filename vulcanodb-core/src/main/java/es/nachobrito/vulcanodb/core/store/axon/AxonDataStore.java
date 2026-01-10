@@ -33,6 +33,7 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
 import es.nachobrito.vulcanodb.core.store.axon.wal.DefaultWalManager;
 import es.nachobrito.vulcanodb.core.store.axon.wal.WalManager;
+import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static es.nachobrito.vulcanodb.core.store.axon.wal.WalEntry.Type;
 
@@ -85,19 +87,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
             recoverUncommitedOperations();
 
-            log.info("Indexing current documents");
-            documentPersister
-                    .internalIds()
-                    .forEach(internalId -> {
-                        var document = documentPersister.read(internalId);
-                        if (document.isEmpty()) {
-                            return;
-                        }
-                        if (log.isDebugEnabled()) {
-                            log.debug("Indexing document {}", internalId);
-                        }
-                        indexFields(internalId, document.get());
-                    });
             initialized = true;
             log.info("Initialization complete");
         });
@@ -235,27 +224,40 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     public static class Builder {
         private Path dataFolder = Path.of(System.getProperty("user.home") + "/.VulcanoDB/AxonDS");
 
-        private final Map<String, IndexHandler<?>> indexes = new HashMap<>();
+        private final Map<String, HnswConfig> indexConfigs = new HashMap<>();
 
         public AxonDataStore build() {
             var documentPersister = new DefaultDocumentPersister(dataFolder);
             try {
                 var walManager = new DefaultWalManager(dataFolder.resolve("wal"));
-                return new AxonDataStore(indexes, documentPersister, walManager);
+                return new AxonDataStore(buildIndexHandlers(), documentPersister, walManager);
             } catch (IOException e) {
                 throw new AxonDataStoreException(e);
             }
         }
 
+        private Map<String, IndexHandler<?>> buildIndexHandlers() {
+            return indexConfigs
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+                        var indexFolder = dataFolder
+                                .resolve("index")
+                                .resolve(FileUtils.toLegalFileName(entry.getKey()));
+                        return new HnswIndexHandler(entry.getKey(), entry.getValue(), indexFolder);
+                    }));
+        }
+
         public Builder withVectorIndex(String fieldName) {
-            this.indexes.put(fieldName, new HnswIndexHandler(fieldName));
+            this.indexConfigs.put(fieldName, HnswConfig.builder().build());
             return this;
         }
 
         public Builder withVectorIndex(String fieldName, HnswConfig hnswConfig) {
-            this.indexes.put(fieldName, new HnswIndexHandler(fieldName, hnswConfig));
+            this.indexConfigs.put(fieldName, hnswConfig);
             return this;
         }
+
 
         public Builder withDataFolder(Path dataFolder) {
             if (!dataFolder.toFile().isDirectory() && !dataFolder.toFile().mkdirs()) {

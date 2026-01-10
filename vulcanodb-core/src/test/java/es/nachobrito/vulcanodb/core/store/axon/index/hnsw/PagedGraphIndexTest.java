@@ -16,7 +16,14 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.util.FileUtils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,45 +32,59 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PagedGraphIndexTest {
 
+    private Path path;
+
+    @BeforeEach
+    void setup() throws IOException {
+        path = Files.createTempDirectory("vulcanodb-test-graph");
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        FileUtils.deleteRecursively(path.toFile());
+    }
+
     @Test
     void expectConnectionsSet() {
-        var index = new PagedGraphIndex(2, 2);
-        index.setConnections(1, new long[]{2, 3});
+        try (var index = new PagedGraphIndex(2, 2, path)) {
+            index.setConnections(1, new long[]{2, 3});
 
-        var buffer = new long[2];
-        var count = index.getConnections(1, buffer);
+            var buffer = new long[2];
+            var count = index.getConnections(1, buffer);
 
-        assertEquals(2, count);
-        assertArrayEquals(new long[]{2, 3}, buffer);
+            assertEquals(2, count);
+            assertArrayEquals(new long[]{2, 3}, buffer);
 
-        var connections = index.getConnections(1);
-        assertArrayEquals(new long[]{2, 3}, connections);
+            var connections = index.getConnections(1);
+            assertArrayEquals(new long[]{2, 3}, connections);
+        }
     }
 
     @Test
     void expectConnectionsAdded() {
-        var index = new PagedGraphIndex(2, 2);
-        index.addConnection(1, 2);
-        index.addConnection(1, 3);
+        try (var index = new PagedGraphIndex(2, 2, path)) {
+            index.addConnection(1, 2);
+            index.addConnection(1, 3);
 
-        var buffer = new long[2];
-        var count = index.getConnections(1, buffer);
+            var buffer = new long[2];
+            var count = index.getConnections(1, buffer);
 
-        assertEquals(2, count);
-        assertArrayEquals(new long[]{2, 3}, buffer);
+            assertEquals(2, count);
+            assertArrayEquals(new long[]{2, 3}, buffer);
+        }
     }
 
     @Test
     void expectBoundaryLimit() {
-        var index = new PagedGraphIndex(1, 2);
-        index.addConnection(1, 2);
+        try (var index = new PagedGraphIndex(1, 2, path)) {
+            index.addConnection(1, 2);
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            index.setConnections(1, new long[]{1, 2, 3});
-        });
-        assertThrows(IllegalArgumentException.class, () -> {
-            index.addConnection(1, 3);
-        });
-
+            assertThrows(IllegalArgumentException.class, () -> {
+                index.setConnections(1, new long[]{1, 2, 3});
+            });
+            assertThrows(IllegalArgumentException.class, () -> {
+                index.addConnection(1, 3);
+            });
+        }
     }
 }

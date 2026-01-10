@@ -211,12 +211,8 @@ final class HashIndex implements AutoCloseable {
             }
 
             long keyPos = local + 8;
-            byte[] kb = new byte[keyLen];
 
-            MemorySegment.ofArray(kb)
-                    .copyFrom(m.asSlice(keyPos, keyLen));
-
-            if (Arrays.equals(kb, target)) {
+            if (keyLen == target.length && compareKey(m, keyPos, target)) {
                 long dataOffsetPos = align(keyPos + keyLen, 8);
 
                 if (dataOffsetPos + 8 > local + entryLen) {
@@ -230,6 +226,15 @@ final class HashIndex implements AutoCloseable {
         }
 
         return result;
+    }
+
+    private boolean compareKey(MemorySegment m, long pos, byte[] target) {
+        for (int i = 0; i < target.length; i++) {
+            if (m.get(ValueLayout.JAVA_BYTE, pos + i) != target[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

@@ -21,14 +21,18 @@ import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.DocumentMatcher;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.PriorityQueue;
 
 /**
  * @author nacho
  */
 public class VectorizedRunner {
     private static final int BATCH_SIZE = 1024; // Fits well in L1/L2 cache
+
+    private record ScoredDoc(long id, float score) {
+    }
 
     public QueryResult run(
             long[] candidates,
@@ -39,9 +43,9 @@ public class VectorizedRunner {
 
         long[] batchIds = new long[BATCH_SIZE];
         int count = 0;
-        int survivingCount = 0;
-        long[] survivingIds = new long[candidates.length];
-        Arrays.fill(survivingIds, -1);
+
+        // Min-heap to keep the top K results (worst of the top at the head)
+        PriorityQueue<ScoredDoc> topK = new PriorityQueue<>(Comparator.comparingDouble(ScoredDoc::score));
 
         /*
         Go over all the candidates, evaluate the residual matcher for every one so they can be sorted by score to
@@ -62,32 +66,32 @@ public class VectorizedRunner {
                     var match = residualMatcher.matches(docId, ctx);
                     if (match.matches()) {
                         ctx.saveVectorScore(docId, match.score());
-                        survivingIds[survivingCount++] = docId;
+
+                        if (topK.size() < maxResults) {
+                            topK.add(new ScoredDoc(docId, ctx.getAverageScore(docId)));
+                        } else if (match.score() > topK.peek().score()) {
+                            topK.poll();
+                            topK.add(new ScoredDoc(docId, ctx.getAverageScore(docId)));
+                        }
                     }
                 }
                 count = 0;
             }
         }
 
-        if (survivingCount > 0) {
-            Arrays.stream(survivingIds)
-                    //keep only positions that contain a valid id
-                    .filter(id -> id >= 0)
-                    //wrap as Long objects to sort them by score
-                    .boxed()
-                    .sorted(Comparator.comparingDouble(ctx::getAverageScore).reversed())
-                    //keep only the top <maxResult> items
-                    .limit(maxResults)
-                    //load full documents for selected ids
-                    .map(id -> {
-                        var score = ctx.getAverageScore(id);
-                        var document = ctx.loadDocument(id)
-                                .orElseThrow(
-                                        () -> new AxonDataStoreException("Could not load document with internal id " + id));
-                        return new ResultDocument(document, score);
-                    })
-                    //add to the result
-                    .forEach(builder::addDocument);
+        if (!topK.isEmpty()) {
+            var sortedResults = new ArrayList<ScoredDoc>(topK.size());
+            while (!topK.isEmpty()) {
+                sortedResults.add(topK.poll());
+            }
+            // PriorityQueue is a min-heap, so poll() gives smallest first. We want highest score first.
+            for (int i = sortedResults.size() - 1; i >= 0; i--) {
+                var entry = sortedResults.get(i);
+                var document = ctx.loadDocument(entry.id())
+                        .orElseThrow(
+                                () -> new AxonDataStoreException("Could not load document with internal id " + entry.id()));
+                builder.addDocument(new ResultDocument(document, entry.score()));
+            }
         }
 
 

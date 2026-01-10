@@ -18,6 +18,7 @@ package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import org.roaringbitmap.longlong.Roaring64Bitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -184,7 +185,7 @@ public final class HnswIndex implements AutoCloseable {
             Set<Long> connectionSet = new HashSet<>();
             for (long c : connections) connectionSet.add(c);
             connectionSet.add(vectorId2);
-            var shrunk = shrinkConnections(vectorId1, connectionSet, layer);
+            var shrunk = shrinkConnections(vectorId1, connectionSet);
             graph.setConnections(vectorId1, shrunk);
         } else {
             graph.addConnection(vectorId1, vectorId2);
@@ -194,7 +195,7 @@ public final class HnswIndex implements AutoCloseable {
     /**
      * Uses the neighbor selection heuristic to shrink the number of connections of a vector
      */
-    private Set<Long> shrinkConnections(long vectorId, Set<Long> currentConnections, int layer) {
+    private Set<Long> shrinkConnections(long vectorId, Set<Long> currentConnections) {
         var vector = layer0.getVector(vectorId);
         var similarity = config.vectorSimilarity();
         var candidates = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity).reversed());
@@ -276,7 +277,7 @@ public final class HnswIndex implements AutoCloseable {
      */
     private PriorityQueue<NodeSimilarity> searchLayer(float[] vector, long enterPointId, int layer, int ef) {
         var similarity = config.vectorSimilarity();
-        Set<Long> visited = new HashSet<>();
+        Roaring64Bitmap visited = new Roaring64Bitmap();
         visited.add(enterPointId);
 
         PriorityQueue<NodeSimilarity> candidates = new PriorityQueue<>();

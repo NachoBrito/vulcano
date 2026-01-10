@@ -283,8 +283,7 @@ public final class HnswIndex implements AutoCloseable {
         PriorityQueue<NodeSimilarity> candidates = new PriorityQueue<>();
         PriorityQueue<NodeSimilarity> nearestNeighbors = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity));
 
-        var entryPoint = layer0.getVector(enterPointId);
-        float sim = similarity.between(vector, entryPoint);
+        float sim = layer0.similarity(enterPointId, vector, similarity);
         NodeSimilarity epSim = new NodeSimilarity(enterPointId, sim);
         candidates.add(epSim);
         nearestNeighbors.add(epSim);
@@ -307,8 +306,7 @@ public final class HnswIndex implements AutoCloseable {
                     continue;
                 }
                 visited.add(neighborId);
-                var neighbor = layer0.getVector(neighborId);
-                float neighborSim = similarity.between(vector, neighbor);
+                float neighborSim = layer0.similarity(neighborId, vector, similarity);
                 var currentWorstSim = nearestNeighbors.peek().similarity();
                 if (neighborSim > currentWorstSim || nearestNeighbors.size() < ef) {
                     NodeSimilarity nodeSimilarity = new NodeSimilarity(neighborId, neighborSim);
@@ -330,14 +328,14 @@ public final class HnswIndex implements AutoCloseable {
     private long searchLayerGreedy(float[] query, long entryPoint, int layer) {
         var similarity = config.vectorSimilarity();
         long bestNode = entryPoint;
-        float maxContextSim = similarity.between(query, layer0.getVector(bestNode));
+        float maxContextSim = layer0.similarity(bestNode, query, similarity);
         boolean changed = true;
 
         while (changed) {
             changed = false;
             var neighbors = getConnections(bestNode, layer);
             for (long neighborId : neighbors) {
-                float sim = similarity.between(query, layer0.getVector(neighborId));
+                float sim = layer0.similarity(neighborId, query, similarity);
                 if (sim > maxContextSim) {
                     maxContextSim = sim;
                     bestNode = neighborId;

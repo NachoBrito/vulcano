@@ -18,6 +18,10 @@ package es.nachobrito.vulcanodb.core.query.similarity;
 
 import org.junit.jupiter.api.Test;
 
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -42,6 +46,43 @@ class CosineSimilarityTest {
         assertThrows(IllegalArgumentException.class, () -> {
             similarity.between(new float[]{0, 1}, new float[]{0, 0, 0});
         });
+    }
+
+    @Test
+    void expectCorrectSimilarityFromMemorySegment() {
+        float[] v1 = new float[]{1, 0, 1};
+        float[] v2 = new float[]{1, 1, 0};
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment segment = arena.allocate(v1.length * Float.BYTES);
+            for (int i = 0; i < v1.length; i++) {
+                segment.set(ValueLayout.JAVA_FLOAT, (long) i * Float.BYTES, v1[i]);
+            }
+
+            float expected = similarity.between(v1, v2);
+            float actual = similarity.between(segment, 0, v2);
+
+            assertEquals(expected, actual, 1e-6f);
+        }
+    }
+
+    @Test
+    void expectCorrectSimilarityWithOffset() {
+        float[] v1 = new float[]{1, 2, 3};
+        float[] v2 = new float[]{4, 5, 6};
+        long offset = 100;
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment segment = arena.allocate(offset + v1.length * Float.BYTES);
+            for (int i = 0; i < v1.length; i++) {
+                segment.set(ValueLayout.JAVA_FLOAT, offset + (long) i * Float.BYTES, v1[i]);
+            }
+
+            float expected = similarity.between(v1, v2);
+            float actual = similarity.between(segment, offset, v2);
+
+            assertEquals(expected, actual, 1e-6f);
+        }
     }
 
 }

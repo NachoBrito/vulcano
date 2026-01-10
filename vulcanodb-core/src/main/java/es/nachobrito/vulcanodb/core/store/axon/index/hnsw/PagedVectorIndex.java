@@ -17,6 +17,8 @@
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
 
+import es.nachobrito.vulcanodb.core.query.similarity.VectorSimilarity;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.foreign.Arena;
@@ -151,6 +153,25 @@ final class PagedVectorIndex implements AutoCloseable {
         MemorySegment.copy(vector, 0, pages.get(pageIdx), ValueLayout.JAVA_FLOAT, offset, dimensions);
 
         return internalId;
+    }
+
+    /**
+     * Calculates the similarity between a stored vector and a provided float array, without materializing the stored
+     * vector.
+     *
+     * @param id         the vector id
+     * @param vector     the vector to compare with
+     * @param similarity the similarity metric to use
+     * @return the similarity score
+     */
+    public float similarity(long id, float[] vector, VectorSimilarity similarity) {
+        if (id < 0 || id >= currentCount.get()) {
+            throw new IllegalArgumentException("Illegal vector id");
+        }
+        int pageIdx = (int) (id / blockSize);
+        long pageOffset = (id % blockSize) * dimensions * Float.BYTES;
+
+        return similarity.between(pages.get(pageIdx), pageOffset, vector);
     }
 
     /**

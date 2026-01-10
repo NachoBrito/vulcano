@@ -16,6 +16,9 @@
 
 package es.nachobrito.vulcanodb.core.query.similarity;
 
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+
 /**
  * @author nacho
  */
@@ -37,6 +40,24 @@ public final class CosineSimilarity implements VectorSimilarity {
             dotProduct += vector1[i] * vector2[i];
             normA += vector1[i] * vector1[i];
             normB += vector2[i] * vector2[i];
+        }
+
+        // Avoid division by zero.
+        return dotProduct / (float) Math.max(Math.sqrt(normA) * Math.sqrt(normB), EPSILON);
+    }
+
+    @Override
+    public float between(MemorySegment segment, long offset, float[] vector) {
+        float dotProduct = 0.0f;
+        float normA = 0.0f;
+        float normB = 0.0f;
+
+        for (int i = 0; i < vector.length; i++) {
+            float v1 = segment.get(ValueLayout.JAVA_FLOAT, offset + (long) i * Float.BYTES);
+            float v2 = vector[i];
+            dotProduct += v1 * v2;
+            normA += v1 * v1;
+            normB += v2 * v2;
         }
 
         // Avoid division by zero.

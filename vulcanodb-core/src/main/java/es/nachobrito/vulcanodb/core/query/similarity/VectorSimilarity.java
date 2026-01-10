@@ -16,10 +16,12 @@
 
 package es.nachobrito.vulcanodb.core.query.similarity;
 
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+
 /**
  * @author nacho
  */
-@FunctionalInterface
 public interface VectorSimilarity {
 
     static VectorSimilarity getDefault() {
@@ -27,4 +29,15 @@ public interface VectorSimilarity {
     }
 
     float between(float[] vector1, float[] vector2);
+
+    /**
+     * Calculates the similarity between a memory segment containing a vector and a float array.
+     * This is an optimization to avoid materializing the vector from the segment.
+     *
+     * @param segment the memory segment containing the vector
+     * @param offset  the offset in the segment where the vector starts
+     * @param vector  the float array
+     * @return the similarity score
+     */
+    float between(MemorySegment segment, long offset, float[] vector);
 }

@@ -165,10 +165,17 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     }
 
     private void indexFields(long internalId, Document document) {
-        document
+        var futures = document
                 .getfieldsStream()
                 .filter(field -> isIndexed(field.key()))
-                .forEach(field -> indexes.get(field.key()).index(internalId, document));
+                .map(field -> CompletableFuture.runAsync(
+                        () -> indexes.get(field.key()).index(internalId, document),
+                        ExecutorProvider.defaultExecutor()))
+                .toArray(CompletableFuture[]::new);
+
+        if (futures.length > 0) {
+            CompletableFuture.allOf(futures).join();
+        }
     }
 
     @Override

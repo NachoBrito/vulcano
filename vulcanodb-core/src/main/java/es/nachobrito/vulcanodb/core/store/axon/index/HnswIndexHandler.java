@@ -21,12 +21,11 @@ import es.nachobrito.vulcanodb.core.document.Field;
 import es.nachobrito.vulcanodb.core.document.VectorFieldValue;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswIndex;
+import es.nachobrito.vulcanodb.core.util.PagedLongArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -38,7 +37,7 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     private final HnswIndex index;
     private final String fieldName;
 
-    private final Map<Long, Long> documentIdMap = new HashMap<>();
+    private final PagedLongArray documentIdMap = new PagedLongArray();
 
     public HnswIndexHandler(String fieldName) {
         this.fieldName = fieldName;
@@ -70,7 +69,7 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
 
         @SuppressWarnings("unchecked")
         var newId = index.insert(((Field<float[], VectorFieldValue>) field).value());
-        documentIdMap.put(newId, internalId);
+        documentIdMap.set(newId, internalId);
         if (log.isDebugEnabled()) {
             log.debug("Indexed document {}, with internal id {} -> new id: {}", document.id(), internalId, newId);
         }

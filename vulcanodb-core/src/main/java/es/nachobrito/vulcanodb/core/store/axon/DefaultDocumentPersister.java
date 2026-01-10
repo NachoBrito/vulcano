@@ -69,13 +69,13 @@ public final class DefaultDocumentPersister implements DocumentPersister {
         }
         var executor = ExecutorProvider.defaultExecutor();
 
-        //1. Save all the field values
+        //1. Save all the field values (with commit=false for batching)
         var fieldCallables = document
                 .getfieldsStream()
-                .map(field -> supplyAsync(() -> fieldDiskStore.writeField(document.id().toString(), field), executor))
+                .map(field -> supplyAsync(() -> fieldDiskStore.writeField(document.id().toString(), field, false), executor))
                 .toArray(CompletableFuture[]::new);
 
-        //2. Save document shape
+        //2. Save document shape and commit stores
         AtomicReference<Throwable> error = new AtomicReference<>();
         //noinspection unchecked
         return allOf(fieldCallables)
@@ -83,7 +83,12 @@ public final class DefaultDocumentPersister implements DocumentPersister {
                     error.set(t);
                     return null;
                 })
-                .thenApplyAsync(_ -> commitDocument(document, fieldCallables, error.get()), executor);
+                .thenApplyAsync(_ -> {
+                    if (error.get() == null) {
+                        fieldDiskStore.commitAll();
+                    }
+                    return commitDocument(document, fieldCallables, error.get());
+                }, executor);
     }
 
     private DocumentWriteResult commitDocument(

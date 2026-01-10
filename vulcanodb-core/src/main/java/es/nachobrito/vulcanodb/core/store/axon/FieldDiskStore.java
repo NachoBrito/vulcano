@@ -52,6 +52,20 @@ class FieldDiskStore implements AutoCloseable {
      * @return the result of this operation
      */
     public <V, T extends FieldValueType<V>> FieldWriteResult writeField(String documentId, Field<V, T> field) {
+        return writeField(documentId, field, true);
+    }
+
+    /**
+     * Writes the field value to the corresponding store.
+     *
+     * @param documentId the document id
+     * @param field      the document field
+     * @param commit     whether to commit the store after the write
+     * @param <V>        the value type
+     * @param <T>        the FieldValueType
+     * @return the result of this operation
+     */
+    public <V, T extends FieldValueType<V>> FieldWriteResult writeField(String documentId, Field<V, T> field, boolean commit) {
         var fieldIdentity = FieldIdentity.of(field);
         var store = stores.computeIfAbsent(fieldIdentity, this::createValueStore);
 
@@ -60,10 +74,10 @@ class FieldDiskStore implements AutoCloseable {
         }
         try {
             switch (field.value()) {
-                case String stringValue -> store.putString(documentId, stringValue);
-                case Integer intValue -> store.putInt(documentId, intValue);
-                case float[] vectorValue -> store.putFloatArray(documentId, vectorValue);
-                case float[][] matrixValue -> store.putFloatMatrix(documentId, matrixValue);
+                case String stringValue -> store.putString(documentId, stringValue, commit);
+                case Integer intValue -> store.putInt(documentId, intValue, commit);
+                case float[] vectorValue -> store.putFloatArray(documentId, vectorValue, commit);
+                case float[][] matrixValue -> store.putFloatMatrix(documentId, matrixValue, commit);
                 default -> throw new IllegalArgumentException(
                         "Unknown data type: %s for field '%s'".formatted(
                                 field.value().getClass(), field.key()));
@@ -72,6 +86,13 @@ class FieldDiskStore implements AutoCloseable {
         } catch (Throwable throwable) {
             return FieldWriteResult.error(field.key(), throwable);
         }
+    }
+
+    /**
+     * Commits all field stores.
+     */
+    public void commitAll() {
+        stores.values().forEach(KeyValueStore::commit);
     }
 
 

@@ -83,6 +83,18 @@ public final class KeyValueStore implements AutoCloseable {
      * @return the offset of the new value.
      */
     public long putString(String key, String value) {
+        return putString(key, value, true);
+    }
+
+    /**
+     * Saves a string associated to the given key.
+     *
+     * @param key    the key
+     * @param value  the value
+     * @param commit whether to commit metadata (fsync) after the operation.
+     * @return the offset of the new value.
+     */
+    public long putString(String key, String value, boolean commit) {
 
         // 1. Append to data log (returns global offset)
         long dataOffset = dataLog.writeString(key, value);
@@ -91,10 +103,9 @@ public final class KeyValueStore implements AutoCloseable {
         index.put(key, dataOffset);
 
         // 3. Persist committed offsets (crash boundary)
-        metadata.commit(
-                dataLog.committedOffset(),
-                index.committedOffset()
-        );
+        if (commit) {
+            commit();
+        }
 
         return dataOffset;
     }
@@ -122,12 +133,23 @@ public final class KeyValueStore implements AutoCloseable {
      * @return the offset of the new value.
      */
     public long putInt(String key, int value) {
+        return putInt(key, value, true);
+    }
+
+    /**
+     * Saves an int associated to the given key.
+     *
+     * @param key    the key
+     * @param value  the value
+     * @param commit whether to commit metadata (fsync) after the operation.
+     * @return the offset of the new value.
+     */
+    public long putInt(String key, int value, boolean commit) {
         long dataOffset = dataLog.writeInteger(key, value);
         index.put(key, dataOffset);
-        metadata.commit(
-                dataLog.committedOffset(),
-                index.committedOffset()
-        );
+        if (commit) {
+            commit();
+        }
         return dataOffset;
     }
 
@@ -155,12 +177,23 @@ public final class KeyValueStore implements AutoCloseable {
      * @return the offset of the new value.
      */
     public long putFloatArray(String key, float[] value) {
+        return putFloatArray(key, value, true);
+    }
+
+    /**
+     * Saves a float array associated to the given key.
+     *
+     * @param key    the key
+     * @param value  the value
+     * @param commit whether to commit metadata (fsync) after the operation.
+     * @return the offset of the new value.
+     */
+    public long putFloatArray(String key, float[] value, boolean commit) {
         long dataOffset = dataLog.writeFloatArray(key, value);
         index.put(key, dataOffset);
-        metadata.commit(
-                dataLog.committedOffset(),
-                index.committedOffset()
-        );
+        if (commit) {
+            commit();
+        }
         return dataOffset;
     }
 
@@ -173,12 +206,23 @@ public final class KeyValueStore implements AutoCloseable {
      * @return the offset of the new value.
      */
     public long putFloatMatrix(String key, float[][] value) {
+        return putFloatMatrix(key, value, true);
+    }
+
+    /**
+     * Saves a float matrix associated to the given key.
+     *
+     * @param key    the key
+     * @param value  the value
+     * @param commit whether to commit metadata (fsync) after the operation.
+     * @return the offset of the new value.
+     */
+    public long putFloatMatrix(String key, float[][] value, boolean commit) {
         long dataOffset = dataLog.writeFloatMatrix(key, value);
         index.put(key, dataOffset);
-        metadata.commit(
-                dataLog.committedOffset(),
-                index.committedOffset()
-        );
+        if (commit) {
+            commit();
+        }
         return dataOffset;
     }
 
@@ -211,13 +255,26 @@ public final class KeyValueStore implements AutoCloseable {
     }
 
     public long putBytes(String key, byte[] value) {
+        return putBytes(key, value, true);
+    }
+
+    public long putBytes(String key, byte[] value, boolean commit) {
         long dataOffset = dataLog.writeBytes(key, value);
         index.put(key, dataOffset);
+        if (commit) {
+            commit();
+        }
+        return dataOffset;
+    }
+
+    /**
+     * Commits the current state of the data log and index to metadata (fsync).
+     */
+    public void commit() {
         metadata.commit(
                 dataLog.committedOffset(),
                 index.committedOffset()
         );
-        return dataOffset;
     }
 
     public Optional<byte[]> getBytes(String key) {

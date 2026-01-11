@@ -36,7 +36,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Each entry: [int len] [int status] [long txId] [payload bytes]
  * status: 0 = uncommitted, 1 = committed
  */
-class WalLog implements AutoCloseable {
+final class WalLog implements AutoCloseable {
     private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT;
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG;
 

@@ -1,33 +1,34 @@
 # Tech Context
 
 ## Technologies used
-- **Java 21+**: Primary programming language, utilizing Virtual Threads and the new Foreign Function & Memory API (via `MemorySegment`).
-- **Maven**: Build automation tool.
-- **HNSW (Hierarchical Navigable Small World)**: Indexing algorithm for vector similarity search.
-- **Roaring Bitmaps**: Used for efficient `DocIdSet` implementations.
-- **Netty (MCP Module)**: For network communication in the Multi-Client Protocol.
-- **Micronaut (MCP Module)**: Framework for building the MCP server.
-- **LangChain4j (MCP Module)**: For ONNX embedding model integration.
+- **Java 21+**: Primary programming language.
+    - **Virtual Threads**: For high-concurrency query execution.
+    - **Foreign Function & Memory API (`MemorySegment`)**: For efficient off-heap memory management and paged storage.
+- **Maven**: Build and dependency management.
+- **HNSW (Hierarchical Navigable Small World)**: Custom paged implementation of the HNSW indexing algorithm.
+- **Roaring Bitmaps (Roaring64)**: For efficient `DocIdSet` and bitmap-based query operations.
+- **Micronaut & Netty**: Powers the MCP Module's server and networking.
+- **LangChain4j**: Used in the MCP Module for ONNX embedding model integration.
 
 ## Development setup
 - **IDE**: IntelliJ IDEA Ultimate.
-- **Build**: Maven-based project, standard `mvn clean install` for building.
-- **Test**: JUnit 5 for unit and integration tests.
+- **Build**: `mvn clean install` for full build and test.
+- **Test**: JUnit 5 and Mockito for testing.
+- **Logging**: SLF4J with SimpleLogger for testing.
 
 ## Technical constraints
-- **Atomicity & Durability**: Guaranteed by the Write-Ahead Log (WAL) before operations are applied to the main store.
-- **High-Performance Serialization**: The WAL uses custom binary serialization (`WalSerializer`) to handle complex vector/matrix data with minimal overhead.
-- **Memory management**: Efficient handling of large datasets and indices using memory-mapped files and `MemorySegment`.
-- **Disk I/O**: Optimized append-only writes for the data log and WAL.
-- **Concurrency**: High concurrency handled via virtual threads.
+- **ACID Persistence**: Operations must be logged to the WAL and flushed to disk before completion.
+- **Binary I/O Performance**: Use `DataOutputStream`/`DataInputStream` and `MemorySegment` for high-performance data access.
+- **Off-heap Scaling**: Paged structures must support datasets that exceed the JVM heap size.
+- **Concurrency**: Database operations must be thread-safe and optimized for Virtual Thread execution.
 
 ## Dependencies
-- Standard Java libraries (inc. `java.lang.foreign`).
-- HNSW library (Java implementation).
-- Roaring Bitmaps.
-- Micronaut and Netty.
-- `snakeyaml`.
+- `org.roaringbitmap:RoaringBitmap`
+- `io.micronaut:micronaut-runtime`
+- `dev.langchain4j:langchain4j-embeddings-onnx`
+- `org.yaml:snakeyaml`
+- `org.slf4j:slf4j-api`
 
 ## Tool usage patterns
-- **CLI**: `./mvnw` or `mvn` for building and testing.
-- **MCP Server**: Exposes VulcanoDB tools to AI agents for automated RAG workflows.
+- **Maven Wrapper**: Use `./mvnw` for consistent builds across environments.
+- **MCP Server**: The `vulcano-mcp` module allows AI tools to interact with the database via standard MCP prompts and tools.

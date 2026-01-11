@@ -28,6 +28,8 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -41,8 +43,8 @@ public final class HnswIndex implements AutoCloseable {
     private final Path basePath;
     private final KeyValueStore metadataStore;
 
-    private int globalMaxLayer = 0;
-    private long globalEnterPoint = 0;
+    private final AtomicInteger globalMaxLayer = new AtomicInteger(0);
+    private final AtomicLong globalEnterPoint = new AtomicLong(0);
 
     public HnswIndex(HnswConfig config, Path basePath) {
         this.config = config;
@@ -64,8 +66,8 @@ public final class HnswIndex implements AutoCloseable {
     }
 
     private void loadMetadata() {
-        metadataStore.getInt("maxLayer").ifPresent(val -> globalMaxLayer = val);
-        metadataStore.getInt("enterPoint").ifPresent(val -> globalEnterPoint = (long) val);
+        metadataStore.getInt("maxLayer").ifPresent(globalMaxLayer::set);
+        metadataStore.getInt("enterPoint").ifPresent(val -> globalEnterPoint.set((long) val));
     }
 
     private void loadExistingGraphs() throws IOException {
@@ -73,7 +75,8 @@ public final class HnswIndex implements AutoCloseable {
         graphs.put(0, new PagedGraphIndex(config.mMax0(), config.blockSize(), basePath.resolve("graph_layer_0")));
 
         // Load upper layer graphs based on globalMaxLayer
-        for (int i = 1; i <= globalMaxLayer; i++) {
+        int maxL = globalMaxLayer.get();
+        for (int i = 1; i <= maxL; i++) {
             Path graphPath = basePath.resolve("graph_layer_" + i);
             if (Files.exists(graphPath)) {
                 graphs.put(i, new PagedGraphIndex(config.mMax(), config.blockSize(), graphPath));
@@ -81,9 +84,9 @@ public final class HnswIndex implements AutoCloseable {
         }
     }
 
-    private void persistMetadata() {
-        metadataStore.putInt("maxLayer", globalMaxLayer);
-        metadataStore.putInt("enterPoint", (int) globalEnterPoint);
+    private synchronized void persistMetadata() {
+        metadataStore.putInt("maxLayer", globalMaxLayer.get());
+        metadataStore.putInt("enterPoint", (int) globalEnterPoint.get());
     }
 
     private PagedGraphIndex getGraph(int layer) {
@@ -113,8 +116,8 @@ public final class HnswIndex implements AutoCloseable {
                     "Invalid vector dimension: %d (expected %d)".formatted(newVector.length, config.dimensions()));
         }
 
-        long currentId = globalEnterPoint;
-        int maxL = globalMaxLayer;
+        long currentId = globalEnterPoint.get();
+        int maxL = globalMaxLayer.get();
 
         //1. Randomly choose a maximum layer
         int vectorMaxLayer = determineMaxLayer();
@@ -125,7 +128,7 @@ public final class HnswIndex implements AutoCloseable {
             log.debug("Vector {} will have max layer {}", newId, vectorMaxLayer);
         }
         //3. Zoom down from Top Layer to vectorMaxLayer+1 (Greedy search, ef=1)
-        for (int l = globalMaxLayer; l > vectorMaxLayer; l--) {
+        for (int l = globalMaxLayer.get(); l > vectorMaxLayer; l--) {
             currentId = searchLayerGreedy(newVector, currentId, l);
         }
 
@@ -158,9 +161,9 @@ public final class HnswIndex implements AutoCloseable {
         }
 
         // 5. Update global entry point if new node is in a higher layer
-        if (vectorMaxLayer > globalMaxLayer) {
-            globalMaxLayer = vectorMaxLayer;
-            globalEnterPoint = newId;
+        if (vectorMaxLayer > globalMaxLayer.get()) {
+            globalMaxLayer.set(vectorMaxLayer);
+            globalEnterPoint.set(newId);
             persistMetadata();
         }
         return newId;
@@ -359,13 +362,14 @@ public final class HnswIndex implements AutoCloseable {
             return Collections.emptyList();
         }
 
-        long currObj = globalEnterPoint;
+        long currObj = globalEnterPoint.get();
         if (log.isDebugEnabled()) {
             log.debug("Starting search at vector {}", currObj);
         }
         // 1. Zoom-in Phase: Fast greedy search through upper layers
         // We use ef=1 for speed as we just need a good entry point for the next layer
-        for (int l = globalMaxLayer; l >= 1; l--) {
+        int maxL = globalMaxLayer.get();
+        for (int l = maxL; l >= 1; l--) {
             currObj = searchLayerGreedy(queryVector, currObj, l);
         }
 

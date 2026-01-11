@@ -53,8 +53,26 @@ public final class CosineSimilarity implements VectorSimilarity {
         float normB = 0.0f;
 
         for (int i = 0; i < vector.length; i++) {
-            float v1 = segment.get(ValueLayout.JAVA_FLOAT, offset + (long) i * Float.BYTES);
+            float v1 = segment.get(ValueLayout.JAVA_FLOAT_UNALIGNED, offset + (long) i * Float.BYTES);
             float v2 = vector[i];
+            dotProduct += v1 * v2;
+            normA += v1 * v1;
+            normB += v2 * v2;
+        }
+
+        // Avoid division by zero.
+        return dotProduct / (float) Math.max(Math.sqrt(normA) * Math.sqrt(normB), EPSILON);
+    }
+
+    @Override
+    public float between(MemorySegment s1, long offset1, MemorySegment s2, long offset2, int dimensions) {
+        float dotProduct = 0.0f;
+        float normA = 0.0f;
+        float normB = 0.0f;
+
+        for (int i = 0; i < dimensions; i++) {
+            float v1 = s1.get(ValueLayout.JAVA_FLOAT_UNALIGNED, offset1 + (long) i * Float.BYTES);
+            float v2 = s2.get(ValueLayout.JAVA_FLOAT_UNALIGNED, offset2 + (long) i * Float.BYTES);
             dotProduct += v1 * v2;
             normA += v1 * v1;
             normB += v2 * v2;

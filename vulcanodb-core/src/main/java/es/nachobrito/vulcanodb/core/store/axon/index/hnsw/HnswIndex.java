@@ -196,12 +196,11 @@ public final class HnswIndex implements AutoCloseable {
      * Uses the neighbor selection heuristic to shrink the number of connections of a vector
      */
     private Set<Long> shrinkConnections(long vectorId, Set<Long> currentConnections) {
-        var vector = layer0.getVector(vectorId);
         var similarity = config.vectorSimilarity();
         var candidates = new PriorityQueue<>(Comparator.comparingDouble(NodeSimilarity::similarity).reversed());
 
         for (long id : currentConnections) {
-            candidates.add(new NodeSimilarity(id, similarity.between(vector, layer0.getVector(id))));
+            candidates.add(new NodeSimilarity(id, layer0.similarity(vectorId, id, similarity)));
         }
 
         return selectNeighborsHeuristic(candidates);
@@ -234,17 +233,17 @@ public final class HnswIndex implements AutoCloseable {
      */
     private Set<Long> selectNeighborsHeuristic(PriorityQueue<NodeSimilarity> candidates) {
         Set<Long> neighbors = new HashSet<>();
+        var similarity = config.vectorSimilarity();
+
         while (!candidates.isEmpty() && neighbors.size() < config.m()) {
             var current = candidates.poll();
             var candidateId = current.vectorId();
-            var candidate = layer0.getVector(candidateId);
             var candidateToQuery = current.similarity();
 
             var isCloserToQ = true;
-            var similarity = config.vectorSimilarity();
+
             for (long neighborId : neighbors) {
-                var neighbor = layer0.getVector(neighborId);
-                var candidateToNeighbor = similarity.between(candidate, neighbor);
+                var candidateToNeighbor = layer0.similarity(candidateId, neighborId, similarity);
                 if (candidateToNeighbor > candidateToQuery) {
                     isCloserToQ = false;
                     break;

@@ -175,6 +175,28 @@ final class PagedVectorIndex implements AutoCloseable {
     }
 
     /**
+     * Calculates the similarity between two stored vectors, without materializing them.
+     *
+     * @param id1        the first vector id
+     * @param id2        the second vector id
+     * @param similarity the similarity metric
+     * @return the similarity score
+     */
+    public float similarity(long id1, long id2, VectorSimilarity similarity) {
+        if (id1 < 0 || id1 >= currentCount.get() || id2 < 0 || id2 >= currentCount.get()) {
+            throw new IllegalArgumentException("Illegal vector id");
+        }
+
+        int p1 = (int) (id1 / blockSize);
+        long o1 = (id1 % blockSize) * dimensions * Float.BYTES;
+
+        int p2 = (int) (id2 / blockSize);
+        long o2 = (id2 % blockSize) * dimensions * Float.BYTES;
+
+        return similarity.between(pages.get(p1), o1, pages.get(p2), o2, dimensions);
+    }
+
+    /**
      * Returns the position dimIndex of the vector with the given id
      *
      * @param id       the vector id (as returned by the {@link #addVector(float[])} method

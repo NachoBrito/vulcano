@@ -40,4 +40,17 @@ public interface VectorSimilarity {
      * @return the similarity score
      */
     float between(MemorySegment segment, long offset, float[] vector);
+
+    /**
+     * Calculates the similarity between two memory segments containing vectors.
+     * This is an optimization to avoid materializing the vectors from the segments.
+     *
+     * @param s1         the first memory segment
+     * @param offset1    the offset in the first segment
+     * @param s2         the second memory segment
+     * @param offset2    the offset in the second segment
+     * @param dimensions the number of dimensions of the vectors
+     * @return the similarity score
+     */
+    float between(MemorySegment s1, long offset1, MemorySegment s2, long offset2, int dimensions);
 }

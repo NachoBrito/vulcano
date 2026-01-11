@@ -61,10 +61,10 @@ public class HnswIndexPerformance {
                     .forEach(HnswIndexPerformance::showResult);
 
             long bruteTime = System.currentTimeMillis() - t0;
-            IO.println("Non-indexedd time: %d ms".formatted(bruteTime));
+            IO.println("Non-indexed time: %d ms".formatted(bruteTime));
 
 
-            IO.println("Index search: ");
+            IO.println("Indexed search: ");
             t0 = System.currentTimeMillis();
             var indexedQuery = VulcanoDb.queryBuilder().isSimilarTo(queryVector, "indexedVector").build();
             vulcanoDB
@@ -72,7 +72,7 @@ public class HnswIndexPerformance {
                     .getDocuments()
                     .forEach(HnswIndexPerformance::showResult);
             var indexTime = System.currentTimeMillis() - t0;
-            IO.println("Index time: %d ms.".formatted(indexTime));
+            IO.println("Indexed time: %d ms.".formatted(indexTime));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

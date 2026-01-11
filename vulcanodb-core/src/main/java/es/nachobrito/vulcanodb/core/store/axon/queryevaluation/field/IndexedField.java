@@ -17,12 +17,13 @@
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field;
 
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.DocIdSet;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
 
 /**
  * @author nacho
  */
 @FunctionalInterface
-public interface IndexedField {
+public interface IndexedField<V> {
     // Returns DocIDs where value equals the target (fast lookup)
-    DocIdSet getDocIds(Object value);
+    DocIdSet getDocIds(LeafNode<V> query);
 }

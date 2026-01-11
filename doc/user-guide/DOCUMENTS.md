@@ -67,5 +67,7 @@ db.remove(id);
 ## Best Practices
 
 - **Consistent Schemas**: While VulcanoDB is flexible, keeping a consistent field structure across documents of the same "type" will make querying much easier.
-- **Index Selection**: When using the Axon storage engine, only fields that you intend to perform vector similarity search on need to be explicitly indexed via `withVectorIndex("fieldName")`.
+- **Index Selection**: When using the Axon storage engine, fields used for vector similarity or high-frequency string filtering should be explicitly indexed:
+    - For vectors: `.withVectorIndex("embedding")`
+    - For strings: `.withStringIndex("status")`
 - **Large Strings**: For very large text content, consider storing only the metadata and a reference/summary in VulcanoDB, especially if you are using it primarily for vector search.

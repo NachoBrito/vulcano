@@ -1,7 +1,7 @@
 # Project Brief: VulcanoDB
 
 ## Overview
-VulcanoDB is a high-performance vector database system designed for efficient storage, indexing, and querying of vector data. The system is built with modern Java technologies and leverages advanced indexing techniques including HNSW (Hierarchical Navigable Small World) graphs for fast similarity search.
+VulcanoDB is a high-performance vector database system designed for efficient storage, indexing, and querying of vector and attribute data. The system is built with modern Java technologies and leverages advanced indexing techniques including HNSW (Hierarchical Navigable Small World) graphs for fast similarity search and persistent inverted indexes for attribute filtering.
 
 ## Core Architecture
 - **Core Module**: Main database functionality with document management and query capabilities.
@@ -11,6 +11,7 @@ VulcanoDB is a high-performance vector database system designed for efficient st
 
 ## Key Features
 - Vector similarity search using HNSW indexing.
+- **Attribute indexing**: Persistent inverted index for high-performance string filtering (EQUALS, STARTS_WITH, ENDS_WITH, CONTAINS).
 - ACID-compliant persistence with Write-Ahead Logging (WAL).
 - Document-based storage with flexible field types (String, Integer, Vector, Matrix).
 - Multi-threaded query execution using Java 21 Virtual Threads.

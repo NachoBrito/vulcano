@@ -24,13 +24,13 @@ import static es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical.D
 /**
  * @author nacho
  */
-public record LeafNode(String fieldName, Operation operator, Object value) implements LogicalNode {
+public record LeafNode<T>(String fieldName, Operation operator, T value) implements LogicalNode {
 
     public LeafNode {
         operator.validateOperand(value);
     }
 
-    public float evaluate(Object target) {
+    public float evaluate(T target) {
         if (target == null) {
             return MATCH_MIN;
         }

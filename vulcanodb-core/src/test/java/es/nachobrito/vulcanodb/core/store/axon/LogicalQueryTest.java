@@ -21,8 +21,8 @@ import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentMother;
 import es.nachobrito.vulcanodb.core.query.QueryOperator;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -41,14 +41,14 @@ public class LogicalQueryTest {
     private static Path path;
     private static AxonDataStore axon;
 
-    @BeforeAll
-    static void setup() throws IOException {
+    @BeforeEach
+    void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test");
         axon = buildAxonStore();
     }
 
-    @AfterAll
-    static void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         axon.close();
         FileUtils.deleteRecursively(path.toFile());
     }
@@ -68,6 +68,7 @@ public class LogicalQueryTest {
         var docs = DocumentMother.random(shape, 100);
         var futures = docs.stream().map(axon::addAsync).toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
+        assertEquals(100, axon.getDocumentCount());
         return axon;
     }
 

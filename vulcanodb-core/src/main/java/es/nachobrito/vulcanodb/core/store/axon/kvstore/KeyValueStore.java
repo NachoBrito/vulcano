@@ -326,6 +326,10 @@ public final class KeyValueStore implements AutoCloseable {
         return dataLog.readString(offset);
     }
 
+    public String getKeyAt(long offset) {
+        return dataLog.readKey(offset);
+    }
+
     public int getIntAt(long offset) {
         return dataLog.readInteger(offset);
     }

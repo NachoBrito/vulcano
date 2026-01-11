@@ -14,13 +14,14 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.index;
+package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.Field;
 import es.nachobrito.vulcanodb.core.document.VectorFieldValue;
-import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
-import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswIndex;
+import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
+import es.nachobrito.vulcanodb.core.store.axon.index.IndexMatch;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
 import es.nachobrito.vulcanodb.core.util.PagedLongArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +39,6 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     private final HnswIndex index;
     private final String fieldName;
     private final PagedLongArray documentIdMap;
-
-    public HnswIndexHandler(String fieldName, Path basePath) {
-        this(fieldName, HnswConfig.builder().build(), basePath);
-    }
 
     public HnswIndexHandler(String fieldName, HnswConfig hnswConfig, Path basePath) {
         this.fieldName = fieldName;
@@ -75,8 +72,9 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     }
 
     @Override
-    public List<IndexMatch> search(float[] query, int maxResults) {
-        var hits = index.search(query, maxResults);
+    public List<IndexMatch> search(LeafNode<float[]> query, int maxResults) {
+        float[] vector = (float[]) query.value();
+        var hits = index.search(vector, maxResults);
         if (log.isDebugEnabled()) {
             log.debug("Search returned {} hits: {}", hits.size(), hits.stream().map(Objects::toString).collect(Collectors.joining(", ")));
         }

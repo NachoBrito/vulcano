@@ -1,7 +1,7 @@
 # Low-Level Design Document: VulcanoDB
 
 ## 1. Overview
-VulcanoDB is a high-performance vector database that integrates traditional document storage with advanced vector similarity search. This document describes the internal components, their relationships, and the core workflows of the system, focusing on the `AxonDataStore` implementation.
+VulcanoDB is a high-performance vector database that integrates traditional document storage with advanced indexing for both vectors and attributes. This document describes the internal components, their relationships, and the core workflows of the system, focusing on the `AxonDataStore` implementation.
 
 ## 2. System Architecture
 
@@ -31,6 +31,10 @@ graph TD
 
     HnswIndexHandler -- implements --> IndexHandler
     HnswIndexHandler --> HnswIndex
+    
+    StringIndexHandler -- implements --> IndexHandler
+    StringIndexHandler --> InvertedIndex
+    InvertedIndex --> KeyValueStore
 
     QueryExecutor --> QuerySplitter
     QueryExecutor --> QueryCompiler
@@ -47,12 +51,18 @@ graph TD
 
 - **WAL (`WalManager`)**: Records every `add` or `remove` operation before execution to ensure durability and recovery.
 - **Document Persister (`DocumentPersister`)**: Handles the physical storage of documents.
-- **Index Registry**: Keeps track of which fields are indexed (e.g., HNSW for vector fields).
+- **Index Registry**: Keeps track of which fields are indexed. Supports both HNSW (vector) and Inverted (string) handlers.
 
 ### 3.2 Document Persistence
 The `DefaultDocumentPersister` decomposes documents into individual fields:
 - **Dictionary**: A `KeyValueStore` that maps external `DocumentId` to an `internalId` and stores the `DocumentShape`.
 - **FieldDiskStore**: Manages a set of `KeyValueStore` instances, one per field name and type combination.
+
+### 3.3 Thread-Safe Data Logging
+The `DataLog` implements a highly concurrent binary log using atomic space reservation:
+- **Atomic Reservation**: Uses `reserved.getAndAdd(maxEntrySize)` to ensure threads never overlap in memory.
+- **Header Integrity**: Stores unaligned `rawSize` in headers. Readers calculate payload length by accounting for internal alignment padding.
+- **Safety Margins**: Reserves extra bytes to accommodate dynamic alignment requirements in a thread-safe manner.
 
 ## 4. Query Evaluation Design
 
@@ -60,8 +70,8 @@ The query evaluation follows a multi-phase pipeline designed for speed and effic
 
 ### 4.1 Query Pipeline
 1.  **Optimization (Logical Phase)**: `QuerySplitter` analyzes the logical query tree and splits it into two parts:
-    - **Index Tree**: Parts of the query that can be satisfied using indexes (e.g., vector similarity).
-    - **Residual Tree**: Parts of the query that require a full scan of the candidate documents.
+    - **Index Tree**: Parts of the query that can be satisfied using indexes (vector similarity or indexed string matches).
+    - **Residual Tree**: Parts of the query that require a scan over the candidate documents.
 2.  **Compilation (Physical Phase)**: `QueryCompiler` transforms logical nodes into physical operators:
     - `BitmapOperator`: Executable code for index lookups returning sets of `docId`.
     - `DocumentMatcher`: Functional predicates for document attribute filtering.
@@ -111,13 +121,15 @@ sequenceDiagram
 ## 5. Indexing Design
 
 ### 5.1 HNSW Indexing
-Vector fields are indexed using a Hierarchical Navigable Small World (HNSW) graph.
+Vector fields are indexed using a Hierarchical Navigable Small World (HNSW) graph for approximate nearest neighbor search.
 
-- **`HnswIndexHandler`**: Orchestrates the interaction between the data store and the HNSW graph.
-- **`HnswIndex`**: The core implementation of the HNSW algorithm.
-- **`documentIdMap`**: Maintains a mapping between HNSW internal IDs and the database's `internalId`.
+### 5.2 Attribute Indexing
+String fields can be indexed using a persistent `InvertedIndex`.
+- **Exact Match**: Optimized via direct hash lookup in the `KeyValueStore`.
+- **Partial Match**: Supports `STARTS_WITH`, `ENDS_WITH`, and `CONTAINS` by iterating over unique terms stored in the index.
+- **Storage**: Maps terms to comma-separated internal document IDs, managed with precise byte-level length validation to ensure data integrity.
 
-### 5.2 Sequence Diagram: Document Insertion
+### 5.3 Sequence Diagram: Document Insertion
 This diagram illustrates how a document is persisted and indexed.
 
 ```mermaid
@@ -127,7 +139,7 @@ sequenceDiagram
     participant ADS as AxonDataStore
     participant WAL as WalManager
     participant DP as DocumentPersister
-    participant HIH as HnswIndexHandler
+    participant HIH as IndexHandler
 
     App->>VDB: add(document)
     VDB->>ADS: add(document)
@@ -142,7 +154,7 @@ sequenceDiagram
     
     loop For each indexed field
         ADS->>HIH: index(internalId, document)
-        HIH->>HIH: insert into HnswIndex
+        HIH->>HIH: Update Vector or Inverted index
     end
     
     ADS->>WAL: commit(txId)
@@ -151,6 +163,6 @@ sequenceDiagram
 ```
 
 ## 6. Technical Considerations
-- **Concurrency**: `AxonDataStore` uses virtual threads (via `ExecutorProvider`) for asynchronous operations like background indexing and concurrent field writes.
-- **Durability**: The WAL ensures that even if the system crashes during document persistence, it can recover its state upon restart.
-- **Performance**: Use of Roaring Bitmaps for index set operations and vectorized scanning for residual matching minimizes CPU and IO overhead.
+- **Concurrency**: `AxonDataStore` uses virtual threads for asynchronous operations. Storage writes are synchronized via atomic memory reservation in the `DataLog`.
+- **Durability**: The WAL ensures crash consistency by replaying operations upon initialization.
+- **Performance**: High-performance binary serialization and bitset-driven query evaluation minimize overhead. Attribute indexes provide O(1) lookups for filtered queries.

@@ -33,4 +33,9 @@ public class DocumentCollection implements QueryResult {
     public List<ResultDocument> getDocuments() {
         return this.documents;
     }
+
+    @Override
+    public int totalHits() {
+        return this.documents.size();
+    }
 }

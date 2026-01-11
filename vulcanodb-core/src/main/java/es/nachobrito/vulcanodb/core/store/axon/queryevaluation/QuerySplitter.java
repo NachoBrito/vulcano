@@ -40,7 +40,7 @@ public class QuerySplitter {
      */
     public SplitResult split(LogicalNode node) {
         if (node instanceof LeafNode) {
-            return splitLeaf((LeafNode) node);
+            return splitLeaf((LeafNode<?>) node);
         } else if (node instanceof AndNode) {
             return splitAnd((AndNode) node);
         } else if (node instanceof OrNode) {
@@ -56,7 +56,7 @@ public class QuerySplitter {
 
     // --- Handling Leaf Nodes ---
 
-    private SplitResult splitLeaf(LeafNode node) {
+    private SplitResult splitLeaf(LeafNode<?> node) {
         if (indexRegistry.isIndexed(node.fieldName())) {
             // If indexed, it goes entirely to the Index Tree.
             // The Residual Tree gets "MatchAll" (meaning: no further work needed for this node).

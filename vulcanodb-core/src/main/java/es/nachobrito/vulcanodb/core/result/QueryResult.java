@@ -33,4 +33,6 @@ public interface QueryResult {
         var documents = getDocuments();
         return documents == null || documents.isEmpty();
     }
+
+    int totalHits();
 }

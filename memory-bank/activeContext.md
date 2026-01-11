@@ -1,31 +1,30 @@
 # Active Context
 
 ## Current work focus
-Integrating and optimizing the Write-Ahead Log (WAL) for `AxonDataStore` and preparing for the next phase of RAG-focused API development.
+Completing the high-performance attribute indexing system and ensuring storage layer atomicity under concurrent load.
 
 ## Recent changes
-- **Binary Optimized WAL**: Implemented `WalManager`, `WalEntry`, and `WalSerializer` using high-performance binary serialization.
-- **Crash Recovery**: Integrated automatic recovery in `AxonDataStore.initialize()` which replays pending WAL entries.
-- **Data Types Support**: Verified that WAL and `AxonDataStore` correctly handle all document types including high-dimensional vectors and matrices.
-- **Concurrency Enhancements**: Validated `AxonDataStore` robustness under concurrent load using Virtual Threads.
+- **String Field Indexing**: Implemented `StringIndexHandler` using a persistent `InvertedIndex`. Added full support for `EQUALS`, `STARTS_WITH`, `ENDS_WITH`, and `CONTAINS` operators.
+- **DataLog Data Integrity**: Standardized on storing `rawSize` in entry headers and refined `readBytes` to account for internal alignment padding. This fixed corruption issues when reading string IDs.
+- **Concurrency Fixes**: Resolved a race condition in `DataLog` by implementing atomic space reservation (`getAndAdd`) with safety margins, ensuring thread-safe concurrent document ingestion via virtual threads.
+- **Binary Optimized WAL**: Integrated high-performance binary logging and automatic crash recovery.
 
 ## Next steps
 - **WAL Robustness**: Implement background checkpointing to truncate the WAL and manage disk space.
 - **RAG API Layer**:
     - Design and implement `Collection` and `Schema` management classes.
     - Create `Embedder` abstractions for seamless integration with ONNX and other embedding models.
-    - Implement a high-level `KnowledgeStore` or similar facade for simplified RAG workflows.
-- **Query Optimization**: Enhance the `QueryCompiler` to better handle hybrid searches (combining HNSW vector search with attribute filters).
+- **Query Optimization**: Further refine the `QueryCompiler` for hybrid searches, potentially adding a sorted index (B-Tree) for faster prefix matches.
 
 ## Active decisions and considerations
-- **Storage Format**: Sticking with paged memory-mapped files via `MemorySegment` for its performance and direct control over memory usage.
-- **WAL Strategy**: Using a single WAL for all operations in a `DataStore` to simplify recovery and ensure consistent snapshots.
-- **API Design**: Moving towards a more user-friendly API that abstracts away manual vectorization, aligning with "RAG-first" goals.
+- **Indexing Strategy**: Using a hash-based inverted index for strings currently. While O(1) for exact matches, partial matches require term iteration. A future B-Tree implementation could optimize range and prefix queries.
+- **Atomic Persistence**: Standardized the use of `rawSize` in headers to guarantee identical read/write payloads, crucial for both main storage and WAL consistency.
+- **Concurrency Model**: Continuing to leverage Java 21 Virtual Threads as the primary mechanism for scaling ingestion and query performance.
 
 ## Important patterns and preferences
-- **Performance First**: Favoring binary serialization and direct memory access over high-level abstractions for core storage components.
-- **Safety Second**: Ensuring data durability via WAL is a top priority, even at a slight performance cost (mitigated by binary optimization).
+- **Defensive Storage**: Header-driven length validation and atomic memory reservation are now established patterns for all persistent structures.
+- **Package Organization**: Auxiliary indexing classes (e.g., `InvertedIndex`) are located in specialized sub-packages (e.g., `es.nachobrito.vulcanodb.core.store.axon.index.string`).
 
 ## Learnings and project insights
-- The `MemorySegment` API provides excellent performance for paged storage but requires careful management of page boundaries.
-- Binary serialization is significantly faster and more compact than text-based formats for vector data, which is critical for WAL performance.
+- Header-based length calculations in paged storage must account for internal alignment padding to avoid reading junk data.
+- Atomic reservation in memory-mapped files requires a "reserve-then-calculate" approach with safety margins to handle dynamic alignment needs in a thread-safe manner.

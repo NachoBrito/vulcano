@@ -16,8 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
 
 import java.util.List;
 
@@ -29,22 +29,9 @@ public interface IndexHandler<V> extends AutoCloseable {
 
     void index(Long internalId, Document document);
 
-    List<IndexMatch> search(V query, int maxResults);
+    List<IndexMatch> search(LeafNode<V> query, int maxResults);
 
-    default List<IndexMatch> search(Object query) {
-        //noinspection unchecked
-        return search((V) query, Integer.MAX_VALUE);
-    }
-
-    @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
-    default boolean acceptsValue(Object value) {
-        try {
-            @SuppressWarnings("unchecked")
-
-            var v = (V) value;
-            return true;
-        } catch (ClassCastException classCastException) {
-            return false;
-        }
+    default List<IndexMatch> search(LeafNode<V> query) {
+        return search(query, Integer.MAX_VALUE);
     }
 }

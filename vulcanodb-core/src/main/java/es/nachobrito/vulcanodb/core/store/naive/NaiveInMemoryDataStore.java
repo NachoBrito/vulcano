@@ -56,6 +56,11 @@ public class NaiveInMemoryDataStore implements DataStore {
     }
 
     @Override
+    public long getDocumentCount() {
+        return this.documents.size();
+    }
+
+    @Override
     public CompletableFuture<Void> initialize() {
         return CompletableFuture.completedFuture(null);
     }

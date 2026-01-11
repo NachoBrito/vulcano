@@ -41,10 +41,12 @@ var query = VulcanoDb.queryBuilder()
 
 ### String Filtering
 
-- `isEqual(String value, String fieldName)`
-- `startsWith(String prefix, String fieldName)`
-- `endsWith(String suffix, String fieldName)`
-- `contains(String value, String fieldName)`
+String filtering is highly efficient when a field is indexed using `.withStringIndex("fieldName")`.
+
+- `isEqual(String value, String fieldName)`: Exact match.
+- `startsWith(String prefix, String fieldName)`: Matches if field begins with the prefix.
+- `endsWith(String suffix, String fieldName)`: Matches if field ends with the suffix.
+- `contains(String value, String fieldName)`: Matches if field contains the substring.
 
 ### Integer Filtering
 

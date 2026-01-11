@@ -24,9 +24,10 @@ import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.axon.concurrent.ExecutorProvider;
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreCloseException;
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
-import es.nachobrito.vulcanodb.core.store.axon.index.HnswIndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
+import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswIndexHandler;
+import es.nachobrito.vulcanodb.core.store.axon.index.string.StringIndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.IndexRegistry;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
@@ -39,10 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -227,11 +225,17 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         return this.indexes.containsKey(fieldName);
     }
 
+    @Override
+    public long getDocumentCount() {
+        return this.documentPersister.internalIds().count();
+    }
+
 
     public static class Builder {
         private Path dataFolder = Path.of(System.getProperty("user.home") + "/.VulcanoDB/AxonDS");
 
-        private final Map<String, HnswConfig> indexConfigs = new HashMap<>();
+        private final Map<String, HnswConfig> vectorIndexConfigs = new HashMap<>();
+        private final List<String> stringIndexes = new ArrayList<>();
 
         public AxonDataStore build() {
             var documentPersister = new DefaultDocumentPersister(dataFolder);
@@ -244,7 +248,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         }
 
         private Map<String, IndexHandler<?>> buildIndexHandlers() {
-            return indexConfigs
+            Map<String, IndexHandler<?>> handlers = vectorIndexConfigs
                     .entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
@@ -253,15 +257,29 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                                 .resolve(FileUtils.toLegalFileName(entry.getKey()));
                         return new HnswIndexHandler(entry.getKey(), entry.getValue(), indexFolder);
                     }));
+
+            stringIndexes.forEach(fieldName -> {
+                var indexFolder = dataFolder
+                        .resolve("index")
+                        .resolve(FileUtils.toLegalFileName(fieldName));
+                handlers.put(fieldName, new StringIndexHandler(fieldName, indexFolder));
+            });
+
+            return handlers;
         }
 
         public Builder withVectorIndex(String fieldName) {
-            this.indexConfigs.put(fieldName, HnswConfig.builder().build());
+            this.vectorIndexConfigs.put(fieldName, HnswConfig.builder().build());
             return this;
         }
 
         public Builder withVectorIndex(String fieldName, HnswConfig hnswConfig) {
-            this.indexConfigs.put(fieldName, hnswConfig);
+            this.vectorIndexConfigs.put(fieldName, hnswConfig);
+            return this;
+        }
+
+        public Builder withStringIndex(String fieldName) {
+            this.stringIndexes.add(fieldName);
             return this;
         }
 

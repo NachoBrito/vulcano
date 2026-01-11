@@ -40,16 +40,19 @@ public class QueryCompiler {
                 leftSet.and(rightSet); // In-place optimization
                 return leftSet;
             };
-        } else if (node instanceof LeafNode leaf) {
-            return ctx -> {
-                IndexedField col = ctx.getIndexedField(leaf.fieldName());
-                return col.getDocIds(leaf.value());
-            };
+        } else if (node instanceof LeafNode<?> leaf) {
+            return ctx -> compileLeafIndex(ctx, leaf);
         } else if (node instanceof MatchAllNode) {
             return ExecutionContext::getAllDocs;
         }
 
         throw new UnsupportedOperationException("Complex node in index tree: " + node);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <V> DocIdSet compileLeafIndex(ExecutionContext ctx, LeafNode<V> leaf) {
+        IndexedField<V> col = ctx.getIndexedField(leaf);
+        return col.getDocIds(leaf);
     }
 
     // --- 2. Compile the Residual Tree into a Row Matcher ---
@@ -58,7 +61,7 @@ public class QueryCompiler {
         return switch (node) {
             case AndNode andNode -> compileAndNode(andNode);
             case OrNode orNode -> compileOrNode(orNode);
-            case LeafNode leafNode -> compileLeafNode(leafNode);
+            case LeafNode<?> leafNode -> compileLeafNode(leafNode);
             case NotNode notNode -> compileNotNode(notNode);
             case MatchAllNode _ -> compileMatchAllNode();
             case MatchNoneNode _ -> compileMatchNoneNode();
@@ -78,10 +81,11 @@ public class QueryCompiler {
         return (docId, readers) -> negated.matches(docId, readers).negate();
     }
 
-    private DocumentMatcher compileLeafNode(LeafNode leafNode) {
+    private <V> DocumentMatcher compileLeafNode(LeafNode<V> leafNode) {
         return (docId, readers) -> {
             var col = readers.getScannableField(leafNode.fieldName(), leafNode.operator().getOperandType());
-            Object val = col.getValue(docId);
+            @SuppressWarnings("unchecked")
+            V val = (V) col.getValue(docId);
             return DocumentMatcher.Score.of(leafNode.evaluate(val));
         };
     }

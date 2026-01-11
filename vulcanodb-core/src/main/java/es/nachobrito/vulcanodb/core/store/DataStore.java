@@ -95,11 +95,12 @@ public interface DataStore extends AutoCloseable {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-
     /**
      * Removes the document associated to the provided id
      *
      * @param documentId the document id to remove.
      */
     void remove(DocumentId documentId);
+
+    long getDocumentCount();
 }

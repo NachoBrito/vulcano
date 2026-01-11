@@ -23,6 +23,7 @@ import es.nachobrito.vulcanodb.core.store.axon.DocumentPersister;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.IndexedField;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.ScannableField;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
 
 import java.util.Collection;
 import java.util.Map;
@@ -47,16 +48,21 @@ public class ExecutionContext {
         this.indexHandlers = indexHandlers;
     }
 
+    public <T> IndexedField<T> getIndexedField(LeafNode<T> node) {
+        //noinspection unchecked
+        return (IndexedField<T>) getIndexedField(node.fieldName(), node.value().getClass());
+    }
 
-    public IndexedField getIndexedField(String fieldName) {
-        return (value) -> {
+    public <T> IndexedField<T> getIndexedField(String fieldName, Class<T> type) {
+        return (LeafNode<T> query) -> {
             var docIds = new Roaring64DocIdSet();
-            var handler = indexHandlers.get(fieldName);
-            if (handler == null || !handler.acceptsValue(value)) {
+            //noinspection unchecked
+            var handler = (IndexHandler<T>) indexHandlers.get(fieldName);
+            if (handler == null) {
                 return docIds;
             }
             handler
-                    .search(value)
+                    .search(query)
                     .forEach(it -> {
                         docIds.add(it.internalId());
                         saveVectorScore(it.internalId(), it.score());

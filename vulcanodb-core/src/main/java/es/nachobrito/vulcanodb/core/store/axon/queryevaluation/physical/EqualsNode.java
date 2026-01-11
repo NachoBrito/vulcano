@@ -16,22 +16,25 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.queryevaluation.physical;
 
+import es.nachobrito.vulcanodb.core.document.FieldValueType;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.DocIdSet;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
-import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.field.IndexedField;
+import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.Roaring64DocIdSet;
 
 /**
  * @author nacho
  */
-public record EqualsNode(String fieldName, Object value) implements BitmapOperator {
+public record EqualsNode<T>(String fieldName, Class<? extends FieldValueType<T>> valueType,
+                            T value) implements BitmapOperator {
 
     public DocIdSet compute(ExecutionContext ctx) {
-        IndexedField col = ctx.getIndexedField(fieldName);
-        if (col != null) {
-            return col.getDocIds(value);
-        } else {
-            // Fallback strategy defined later
-            return ctx.getAllDocs();
-        }
+        var field = ctx.getScannableField(fieldName, valueType);
+        DocIdSet matches = new Roaring64DocIdSet();
+        ctx
+                .getAllDocs()
+                .stream()
+                .filter(id -> field.getValue(id).equals(value))
+                .forEach(matches::add);
+        return matches;
     }
 }

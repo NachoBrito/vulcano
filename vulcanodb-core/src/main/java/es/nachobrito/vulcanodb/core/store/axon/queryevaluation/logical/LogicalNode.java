@@ -46,15 +46,15 @@ public sealed interface LogicalNode permits AndNode, OrNode, NotNode, LeafNode, 
     }
 
     static LogicalNode ofVectorQuery(VectorFieldQuery vectorFieldQuery) {
-        return new LeafNode(vectorFieldQuery.fieldName(), Operation.VECTOR_SIMILAR, vectorFieldQuery.vector());
+        return new LeafNode<>(vectorFieldQuery.fieldName(), Operation.VECTOR_SIMILAR, vectorFieldQuery.vector());
     }
 
     static LogicalNode ofStringQuery(StringFieldQuery stringFieldQuery) {
-        return new LeafNode(stringFieldQuery.fieldName(), Operation.of(stringFieldQuery.operator()), stringFieldQuery.value());
+        return new LeafNode<>(stringFieldQuery.fieldName(), Operation.of(stringFieldQuery.operator()), stringFieldQuery.value());
     }
 
     static LogicalNode ofIntegerQuery(IntegerFieldQuery integerFieldQuery) {
-        return new LeafNode(integerFieldQuery.fieldName(), Operation.of(integerFieldQuery.operator()), integerFieldQuery.value());
+        return new LeafNode<>(integerFieldQuery.fieldName(), Operation.of(integerFieldQuery.operator()), integerFieldQuery.value());
     }
 
     static LogicalNode ofMultiQuery(MultiQuery multiQuery) {

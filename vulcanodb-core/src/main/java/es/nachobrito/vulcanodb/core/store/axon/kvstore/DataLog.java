@@ -29,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Writes data in variable length entries. Uses VarHandle.releaseFence(); to avoid modern CPUs or the JVM to
@@ -61,6 +62,7 @@ final class DataLog implements AutoCloseable {
     private final AtomicLong reserved;
     private final AtomicLong committed;
     private final Path basePath;
+    private final ReentrantLock segmentLock = new ReentrantLock();
 
     DataLog(Path base, long segmentSize, long recoveredOffset) {
         this.basePath = base;
@@ -384,12 +386,15 @@ final class DataLog implements AutoCloseable {
         }
 
         // Slow path: need to create missing segments
-        synchronized (segments) {
+        segmentLock.lock();
+        try {
             while (segmentIndex >= segments.size()) {
                 long idx = segments.size();
                 segments.add(createSegment(idx));
             }
             return segments.get((int) segmentIndex);
+        } finally {
+            segmentLock.unlock();
         }
     }
 

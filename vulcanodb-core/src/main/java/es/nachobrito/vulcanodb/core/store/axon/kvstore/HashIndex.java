@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -52,6 +53,7 @@ final class HashIndex implements AutoCloseable {
     private final AtomicLong[] committed;
 
     private final DataLog dataLog;
+    private final ReentrantLock globalLock = new ReentrantLock();
 
     private boolean initialized = false;
 
@@ -276,11 +278,14 @@ final class HashIndex implements AutoCloseable {
             return list.get((int) segmentIndex);
         }
 
-        synchronized (list) {
+        globalLock.lock();
+        try {
             while (segmentIndex >= list.size()) {
                 list.add(createSegment(bucket, list.size()));
             }
             return list.get((int) segmentIndex);
+        } finally {
+            globalLock.unlock();
         }
     }
 

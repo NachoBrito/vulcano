@@ -31,6 +31,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A Vector index that uses Chunking to scale. Vector components are stored in off-heap memory segments, backed by
@@ -49,6 +50,7 @@ final class PagedVectorIndex implements AutoCloseable {
     private final int blockSize;
     private final int dimensions;
     private final Path basePath;
+    private final ReentrantLock expansionLock = new ReentrantLock();
 
     /**
      * Creates a paged vector index backed by memory-mapped files.
@@ -126,11 +128,14 @@ final class PagedVectorIndex implements AutoCloseable {
 
     private void ensureCapacity(long vectorId) {
         int requiredPages = (int) (vectorId / blockSize) + 1;
-        while (pages.size() < requiredPages) {
-            synchronized (this) {
-                if (pages.size() < requiredPages) {
+        if (pages.size() < requiredPages) {
+            expansionLock.lock();
+            try {
+                while (pages.size() < requiredPages) {
                     addPage();
                 }
+            } finally {
+                expansionLock.unlock();
             }
         }
     }

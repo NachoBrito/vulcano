@@ -28,6 +28,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * <pre>
@@ -50,6 +51,7 @@ final public class PagedGraphIndex implements AutoCloseable {
     private final List<MemorySegment> pages = new ArrayList<>();
     private final List<Arena> arenas = new ArrayList<>();
     private final Path basePath;
+    private final ReentrantLock expansionLock = new ReentrantLock();
 
     /**
      * Creates a paged graph index backed by memory-mapped files.
@@ -111,11 +113,14 @@ final public class PagedGraphIndex implements AutoCloseable {
 
     private void ensureCapacity(long vectorId) {
         int pageIdx = (int) (vectorId / blockSize);
-        while (pages.size() <= pageIdx) {
-            synchronized (this) {
-                if (pages.size() <= pageIdx) {
+        if (pages.size() <= pageIdx) {
+            expansionLock.lock();
+            try {
+                while (pages.size() <= pageIdx) {
                     addPage();
                 }
+            } finally {
+                expansionLock.unlock();
             }
         }
     }

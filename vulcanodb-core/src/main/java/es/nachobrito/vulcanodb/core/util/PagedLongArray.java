@@ -28,6 +28,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A thread-safe, paged array of primitive longs that avoids boxing and provides lock-free reads.
@@ -44,7 +45,7 @@ public final class PagedLongArray implements AutoCloseable {
 
     private volatile MemorySegment[] pages;
     private final List<Arena> arenas = new ArrayList<>();
-    private final Object expansionLock = new Object();
+    private final ReentrantLock expansionLock = new ReentrantLock();
 
     private final Path basePath;
 
@@ -120,7 +121,8 @@ public final class PagedLongArray implements AutoCloseable {
 
     private void ensureCapacity(int pageIndex) {
         if (pageIndex >= pages.length) {
-            synchronized (expansionLock) {
+            expansionLock.lock();
+            try {
                 while (pageIndex >= pages.length) {
                     int newLength = Math.max(pageIndex + 1, pages.length * 2);
                     if (newLength == 0) newLength = 1;
@@ -135,16 +137,21 @@ public final class PagedLongArray implements AutoCloseable {
                     }
                     this.pages = newPages; // Volatile write
                 }
+            } finally {
+                expansionLock.unlock();
             }
         }
     }
 
     private void openPage(int pageIdx, Path path) throws IOException {
-        synchronized (expansionLock) {
+        expansionLock.lock();
+        try {
             if (pageIdx >= pages.length) {
                 pages = Arrays.copyOf(pages, pageIdx + 1);
             }
             pages[pageIdx] = createMappedPage(path);
+        } finally {
+            expansionLock.unlock();
         }
     }
 
@@ -169,13 +176,16 @@ public final class PagedLongArray implements AutoCloseable {
 
     @Override
     public void close() {
-        synchronized (expansionLock) {
+        expansionLock.lock();
+        try {
             for (Arena arena : arenas) {
                 if (arena.scope().isAlive()) {
                     arena.close();
                 }
             }
             arenas.clear();
+        } finally {
+            expansionLock.unlock();
         }
     }
 }

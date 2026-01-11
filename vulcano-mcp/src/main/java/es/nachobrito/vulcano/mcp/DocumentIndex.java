@@ -20,7 +20,6 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.query.Query;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -113,7 +112,7 @@ public class DocumentIndex {
         init();
         var embeddingModel = getEmbeddingModel();
         var vector = embeddingModel.embed(query).content().vector();
-        var vectorQuery = Query.builder().isSimilarTo(vector, "embedding").build();
+        var vectorQuery = VulcanoDb.queryBuilder().isSimilarTo(vector, "embedding").build();
         return vectorDb
                 .search(vectorQuery)
                 .getDocuments()

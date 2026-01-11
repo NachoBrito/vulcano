@@ -16,9 +16,9 @@
 
 package es.nachobrito.vulcanodb.core.store.axon;
 
+import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentMother;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.QueryOperator;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterAll;
@@ -73,8 +73,8 @@ public class LogicalQueryTest {
 
     @Test
     public void expectAndQueriesWork() {
-        var query1 = Query
-                .builder()
+        var query1 = VulcanoDb
+                .queryBuilder()
                 .isGreaterThanOrEqual(0, "number1")
                 .isGreaterThanOrEqual(0, "number2")
                 .build();
@@ -82,8 +82,8 @@ public class LogicalQueryTest {
         var result1 = axon.search(query1);
         assertEquals(100, result1.getDocuments().size());
 
-        var query2 = Query
-                .builder()
+        var query2 = VulcanoDb
+                .queryBuilder()
                 .isLessThan(0, "number1")
                 .isGreaterThanOrEqual(0, "number2")
                 .build();
@@ -94,8 +94,8 @@ public class LogicalQueryTest {
 
     @Test
     public void expectOrQueriesWork() {
-        var query1 = Query
-                .builder()
+        var query1 = VulcanoDb
+                .queryBuilder()
                 .isLessThan(0, "number1")
                 .isGreaterThanOrEqual(0, "number2")
                 .withOperator(QueryOperator.OR)
@@ -104,8 +104,8 @@ public class LogicalQueryTest {
         var result1 = axon.search(query1);
         assertEquals(100, result1.getDocuments().size());
 
-        var query2 = Query
-                .builder()
+        var query2 = VulcanoDb
+                .queryBuilder()
                 .isLessThan(0, "number1")
                 .isLessThan(0, "number2")
                 .withOperator(QueryOperator.OR)
@@ -117,8 +117,8 @@ public class LogicalQueryTest {
 
     @Test
     public void expectNotQueriesWork() {
-        var query1 = Query
-                .builder()
+        var query1 = VulcanoDb
+                .queryBuilder()
                 .isLessThan(0, "number1")
                 .isGreaterThanOrEqual(0, "number2")
                 .withOperator(QueryOperator.OR)
@@ -127,8 +127,8 @@ public class LogicalQueryTest {
         var result1 = axon.search(query1);
         assertEquals(100, result1.getDocuments().size());
 
-        var query2 = Query
-                .builder()
+        var query2 = VulcanoDb
+                .queryBuilder()
                 .not(query1)
                 .build();
 

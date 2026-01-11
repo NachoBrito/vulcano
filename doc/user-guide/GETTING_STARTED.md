@@ -73,7 +73,7 @@ db.add(doc);
 ### Searching
 
 ```java
-var query = Query.builder()
+var query = VulcanoDb.queryBuilder()
         .isSimilarTo(new float[]{0.1f, 0.2f, 0.3f}, "embedding")
         .build();
 

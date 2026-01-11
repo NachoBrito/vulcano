@@ -16,9 +16,9 @@
 
 package es.nachobrito.vulcanodb.core.store.axon;
 
+import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -102,7 +102,7 @@ class AxonDataStoreConcurrencyTest {
                         queryVector[0] = 5.0f;
 
                         var result = store.search(
-                                Query.builder().isSimilarTo(queryVector, "embedding").build(),
+                                VulcanoDb.queryBuilder().isSimilarTo(queryVector, "embedding").build(),
                                 10
                         );
                         assertFalse(result.getDocuments().isEmpty());

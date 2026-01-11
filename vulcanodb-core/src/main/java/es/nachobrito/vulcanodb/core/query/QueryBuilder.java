@@ -32,7 +32,7 @@ public class QueryBuilder {
     private QueryOperator operator = AND;
     private final PriorityQueue<Query> queries = new PriorityQueue<>(new QueryComparator());
 
-    QueryBuilder() {
+    public QueryBuilder() {
 
     }
 

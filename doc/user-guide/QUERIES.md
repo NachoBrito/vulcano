@@ -10,7 +10,7 @@ The most common use case is finding documents similar to a given vector (semanti
 ```java
 float[] targetVector = getEmbedding("my search query");
 
-var query = Query.builder()
+var query = VulcanoDb.queryBuilder()
         .isSimilarTo(targetVector, "embedding")
         .build();
 
@@ -23,7 +23,7 @@ You can combine vector search with boolean filters to narrow down your results. 
 a `QueryBuilder` are combined using the **AND** operator.
 
 ```java
-var query = Query.builder()
+var query = VulcanoDb.queryBuilder()
         .isSimilarTo(targetVector, "embedding")
         .isEqual("Sci-Fi", "genre")
         .isGreaterThan(1990, "year")
@@ -63,7 +63,7 @@ To use the **OR** operator for the top-level conditions:
 ```java
 import es.nachobrito.vulcanodb.core.query.QueryOperator;
 
-var query = Query.builder()
+var query = VulcanoDb.queryBuilder()
         .withOperator(QueryOperator.OR)
         .isEqual("Action", "genre")
         .isEqual("Adventure", "genre")
@@ -75,9 +75,9 @@ var query = Query.builder()
 To exclude documents matching certain criteria:
 
 ```java
-var excludeQuery = Query.builder().isEqual("Horror", "genre");
+var excludeQuery = VulcanoDb.queryBuilder().isEqual("Horror", "genre");
 
-var query = Query.builder()
+var query = VulcanoDb.queryBuilder()
         .isSimilarTo(targetVector, "embedding")
         .not(excludeQuery)
         .build();

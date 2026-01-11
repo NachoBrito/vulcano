@@ -18,7 +18,6 @@ package es.nachobrito.vulcanodb.atests;
 
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +38,7 @@ public class BigDbUseCaseTest {
         var db = VulcanoDb.builder().build();
         var positiveCount = 1_000;
         var negativeCount = 1_000_000;
-        var query = Query.builder().isSimilarTo(new float[]{1, 0}, "vector").build();
+        var query = VulcanoDb.queryBuilder().isSimilarTo(new float[]{1, 0}, "vector").build();
 
         for (int i = 0; i < positiveCount; i++) {
             var document = Document.builder()

@@ -17,9 +17,9 @@
 package es.nachobrito.vulcanodb.core.store.axon;
 
 import es.nachobrito.vulcanodb.core.Embedding;
+import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentMother;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.similarity.VectorSimilarity;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -97,7 +97,7 @@ public class IndexQueryTest {
         // average of those two values is the expected score for the best result.
         var expectedScore = (1.0f + querySimilarity) / 2.0f;
 
-        var query1 = Query.builder().isSimilarTo(queryVector1, "indexedVector").build();
+        var query1 = VulcanoDb.queryBuilder().isSimilarTo(queryVector1, "indexedVector").build();
         var result1 = axon.search(query1);
         //give logs time to flush
         Thread.sleep(250);
@@ -120,7 +120,7 @@ public class IndexQueryTest {
         axon.add(doc);
 
         var queryVector1 = Embedding.of("What is an algorithm?");
-        var query1 = Query.builder().isSimilarTo(queryVector1, "indexedVector").build();
+        var query1 = VulcanoDb.queryBuilder().isSimilarTo(queryVector1, "indexedVector").build();
         assertTrue(axon.search(query1).getDocuments().stream().anyMatch(it -> it.document().equals(doc)));
 
         axon.remove(doc.id());

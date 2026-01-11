@@ -18,7 +18,6 @@ package es.nachobrito.vulcanodb;
 
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
 
@@ -151,7 +150,7 @@ public class VulcanoCli {
         var embedding = Embedding.of(queryText);
         var embeddingTime = System.currentTimeMillis() - t0;
 
-        var query = Query.builder().isSimilarTo(embedding, "embedding").build();
+        var query = VulcanoDb.queryBuilder().isSimilarTo(embedding, "embedding").build();
 
         t0 = System.currentTimeMillis();
         var results = vulcanoDb.search(query, MAX_RESULTS);

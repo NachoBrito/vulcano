@@ -37,7 +37,7 @@ db.
 add(doc);
 
 // Search for similar documents
-var query = Query.builder()
+var query = VulcanoDb.queryBuilder()
         .isSimilarTo(new float[]{0.15f, 0.25f, 0.35f}, "embedding")
         .build();
 

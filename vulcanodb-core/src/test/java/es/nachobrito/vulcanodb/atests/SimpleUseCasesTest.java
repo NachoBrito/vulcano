@@ -18,7 +18,6 @@ package es.nachobrito.vulcanodb.atests;
 
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +52,7 @@ public class SimpleUseCasesTest {
         var expected = new Document[][]{{document1}, {document2}, {document1, document2}};
 
         for (int i = 0; i < queries.length; i++) {
-            var query = Query.builder()
+            var query = VulcanoDb.queryBuilder()
                     .allSimilarTo(queries[i], List.of(VECTOR_FIELD_NAME))
                     .build();
             var expectedResult = expected[i];
@@ -85,7 +84,7 @@ public class SimpleUseCasesTest {
         var expected = new Document[][]{{document1}, {document1, document2}, {document1, document2}};
 
         for (int i = 0; i < queries.length; i++) {
-            var query = Query.builder()
+            var query = VulcanoDb.queryBuilder()
                     .allSimilarTo(queries[i], List.of(VECTOR_FIELD_NAME))
                     .build();
             var expectedResult = expected[i];
@@ -115,20 +114,20 @@ public class SimpleUseCasesTest {
 
         db.add(document1, document2);
 
-        var result = db.search(Query.builder().isEqual("FIRST DOCUMENT", STRING_FIELD_NAME).build());
+        var result = db.search(VulcanoDb.queryBuilder().isEqual("FIRST DOCUMENT", STRING_FIELD_NAME).build());
         assertEquals(1, result.getDocuments().size());
         assertEquals(document1, result.getDocuments().getFirst().document());
 
-        result = db.search(Query.builder().startsWith("SECOND", STRING_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().startsWith("SECOND", STRING_FIELD_NAME).build());
         assertEquals(1, result.getDocuments().size());
         assertEquals(document2, result.getDocuments().getFirst().document());
 
-        result = db.search(Query.builder().endsWith("DOCUMENT", STRING_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().endsWith("DOCUMENT", STRING_FIELD_NAME).build());
         assertEquals(2, result.getDocuments().size());
         var resultDocs1 = result.getDocuments().stream().map(ResultDocument::document).toList();
         docs.forEach(it -> assertTrue(resultDocs1.contains(it)));
 
-        result = db.search(Query.builder().contains("DOC", STRING_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().contains("DOC", STRING_FIELD_NAME).build());
         assertEquals(2, result.getDocuments().size());
         var resultDocs2 = result.getDocuments().stream().map(ResultDocument::document).toList();
         docs.forEach(it -> assertTrue(resultDocs2.contains(it)));
@@ -149,24 +148,24 @@ public class SimpleUseCasesTest {
 
         db.add(document1, document2);
 
-        var result = db.search(Query.builder().isEqual(100, INTEGER_FIELD_NAME).build());
+        var result = db.search(VulcanoDb.queryBuilder().isEqual(100, INTEGER_FIELD_NAME).build());
         assertEquals(1, result.getDocuments().size());
         assertEquals(document1, result.getDocuments().getFirst().document());
 
-        result = db.search(Query.builder().isGreaterThan(100, INTEGER_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().isGreaterThan(100, INTEGER_FIELD_NAME).build());
         assertEquals(1, result.getDocuments().size());
         assertEquals(document2, result.getDocuments().getFirst().document());
 
-        result = db.search(Query.builder().isGreaterThanOrEqual(100, INTEGER_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().isGreaterThanOrEqual(100, INTEGER_FIELD_NAME).build());
         assertEquals(2, result.getDocuments().size());
         var resultDocs1 = result.getDocuments().stream().map(ResultDocument::document).toList();
         docs.forEach(it -> assertTrue(resultDocs1.contains(it)));
 
-        result = db.search(Query.builder().isLessThan(200, INTEGER_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().isLessThan(200, INTEGER_FIELD_NAME).build());
         assertEquals(1, result.getDocuments().size());
         assertEquals(document1, result.getDocuments().getFirst().document());
 
-        result = db.search(Query.builder().isLessThanOrEqual(200, INTEGER_FIELD_NAME).build());
+        result = db.search(VulcanoDb.queryBuilder().isLessThanOrEqual(200, INTEGER_FIELD_NAME).build());
         assertEquals(2, result.getDocuments().size());
         var resultDocs2 = result.getDocuments().stream().map(ResultDocument::document).toList();
         docs.forEach(it -> assertTrue(resultDocs2.contains(it)));

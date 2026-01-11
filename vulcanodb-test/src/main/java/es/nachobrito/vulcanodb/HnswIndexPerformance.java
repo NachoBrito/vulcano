@@ -18,7 +18,6 @@ package es.nachobrito.vulcanodb;
 
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.ResultDocument;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
@@ -55,7 +54,7 @@ public class HnswIndexPerformance {
 
             IO.println("Non-indexed search:");
             long t0 = System.currentTimeMillis();
-            var nonIndexedQuery = Query.builder().isSimilarTo(queryVector, "nonIndexedVector").build();
+            var nonIndexedQuery = VulcanoDb.queryBuilder().isSimilarTo(queryVector, "nonIndexedVector").build();
             vulcanoDB
                     .search(nonIndexedQuery, 10)
                     .getDocuments()
@@ -67,7 +66,7 @@ public class HnswIndexPerformance {
 
             IO.println("Index search: ");
             t0 = System.currentTimeMillis();
-            var indexedQuery = Query.builder().isSimilarTo(queryVector, "indexedVector").build();
+            var indexedQuery = VulcanoDb.queryBuilder().isSimilarTo(queryVector, "indexedVector").build();
             vulcanoDB
                     .search(indexedQuery, 10)
                     .getDocuments()

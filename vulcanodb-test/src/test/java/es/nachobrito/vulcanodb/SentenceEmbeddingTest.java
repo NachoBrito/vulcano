@@ -19,7 +19,6 @@ package es.nachobrito.vulcanodb;
 import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.query.Query;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -55,7 +54,7 @@ public class SentenceEmbeddingTest {
         }
 
         var questionVector = convertFloatsToDoubles(embeddingModel.embed(question).content().vector());
-        var query = Query.builder().isSimilarTo(questionVector, "embedding").build();
+        var query = VulcanoDb.queryBuilder().isSimilarTo(questionVector, "embedding").build();
         var result = db.search(query);
 
         assertNotNull(result);

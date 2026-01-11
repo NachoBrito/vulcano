@@ -17,26 +17,24 @@
 package es.nachobrito.vulcanodb.core.store.axon.wal;
 
 import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Default implementation of WalManager using KeyValueStore and binary serialization.
+ * Default implementation of WalManager using a high-performance append-only log.
  */
 public class DefaultWalManager implements WalManager {
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private final KeyValueStore kvStore;
+    private final WalLog walLog;
     private final AtomicLong nextTxId = new AtomicLong(System.currentTimeMillis());
 
     public DefaultWalManager(Path path) throws IOException {
-        this.kvStore = new KeyValueStore(path);
+        this.walLog = new WalLog(path);
     }
 
     @Override
@@ -44,7 +42,7 @@ public class DefaultWalManager implements WalManager {
         long txId = nextTxId.incrementAndGet();
         WalEntry entry = WalEntry.add(txId, document);
         byte[] binary = WalSerializer.serialize(entry);
-        kvStore.putBytes(String.valueOf(txId), binary);
+        walLog.append(txId, binary);
         return txId;
     }
 
@@ -53,36 +51,37 @@ public class DefaultWalManager implements WalManager {
         long txId = nextTxId.incrementAndGet();
         WalEntry entry = WalEntry.remove(txId, documentId);
         byte[] binary = WalSerializer.serialize(entry);
-        kvStore.putBytes(String.valueOf(txId), binary);
+        walLog.append(txId, binary);
         return txId;
     }
 
     @Override
     public void commit(long txId) throws IOException {
-        kvStore.remove(String.valueOf(txId));
+        walLog.markCommitted(txId);
     }
 
     @Override
     public List<WalEntry> readUncommitted() throws IOException {
-        List<WalEntry> uncommitted = new ArrayList<>();
-        kvStore.getOffsetStream().forEach(offset -> {
-            try {
-                byte[] binary = kvStore.getBytesAt(offset);
-                uncommitted.add(WalSerializer.deserialize(binary));
-            } catch (IOException e) {
-                log.error("Failed to deserialize uncommitted WAL entry at offset {}", offset, e);
-            }
-        });
-        return uncommitted;
+        return walLog.uncommittedStream()
+                .map(payload -> {
+                    try {
+                        return WalSerializer.deserialize(payload);
+                    } catch (IOException e) {
+                        log.error("Failed to deserialize uncommitted WAL entry", e);
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     @Override
     public void checkpoint() throws IOException {
-        // KVStore already manages its own consistency
+        // High-performance WAL manages its own consistency
     }
 
     @Override
     public void close() throws Exception {
-        kvStore.close();
+        walLog.close();
     }
 }

@@ -169,7 +169,7 @@ public final class HnswIndex implements AutoCloseable {
     /**
      * Adds vector 2 as connection to vector 1 in layer.
      */
-    private void addConnection(long vectorId1, long vectorId2, int layer) {
+    private synchronized void addConnection(long vectorId1, long vectorId2, int layer) {
         if (log.isDebugEnabled()) {
             log.debug("Adding vector {} as connection of vector {} in layer {}", vectorId2, vectorId1, layer);
         }

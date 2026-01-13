@@ -7,6 +7,8 @@
     <file url="file://$PROJECT_DIR$/vulcano-mcp/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/vulcanodb-core/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/vulcanodb-core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/vulcanodb-langchain4j/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/vulcanodb-langchain4j/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/vulcanodb-test/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/vulcanodb-test/src/main/resources" charset="UTF-8" />
   </component>

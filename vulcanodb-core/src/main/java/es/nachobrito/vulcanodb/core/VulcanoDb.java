@@ -18,6 +18,9 @@ package es.nachobrito.vulcanodb.core;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
+import es.nachobrito.vulcanodb.core.observability.MetricName;
+import es.nachobrito.vulcanodb.core.observability.MetricsService;
+import es.nachobrito.vulcanodb.core.observability.NoOpMetricsService;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.QueryBuilder;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
@@ -34,9 +37,11 @@ import java.util.Arrays;
 public class VulcanoDb implements AutoCloseable {
 
     private final DataStore dataStore;
+    private final MetricsService metrics;
 
-    private VulcanoDb(DataStore dataStore) {
+    private VulcanoDb(DataStore dataStore, MetricsService metrics) {
         this.dataStore = dataStore;
+        this.metrics = metrics;
     }
 
 
@@ -46,7 +51,18 @@ public class VulcanoDb implements AutoCloseable {
      * @param document the document to add to the database
      */
     public void add(Document document) {
-        dataStore.add(document);
+        if (!metrics.isEnabled()) {
+            dataStore.add(document);
+            return;
+        }
+
+        long startTime = System.nanoTime();
+        try {
+            dataStore.add(document);
+        } finally {
+            metrics.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
+            metrics.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
+        }
     }
 
     /**
@@ -59,7 +75,17 @@ public class VulcanoDb implements AutoCloseable {
     }
 
     public void remove(DocumentId documentId) {
-        this.dataStore.remove(documentId);
+        if (!metrics.isEnabled()) {
+            dataStore.remove(documentId);
+            return;
+        }
+        long startTime = System.nanoTime();
+        try {
+            dataStore.remove(documentId);
+        } finally {
+            metrics.recordTimer(MetricName.DOCUMENT_REMOVE_COUNT, System.nanoTime() - startTime);
+            metrics.incrementCounter(MetricName.DOCUMENT_REMOVE_COUNT);
+        }
     }
 
     /**
@@ -69,7 +95,17 @@ public class VulcanoDb implements AutoCloseable {
      * @return the result containing relevant documents
      */
     public QueryResult search(Query query) {
-        return dataStore.search(query);
+        if (!metrics.isEnabled()) {
+            return dataStore.search(query);
+        }
+
+        long startTime = System.nanoTime();
+        try {
+            return dataStore.search(query);
+        } finally {
+            metrics.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
+            metrics.incrementCounter(MetricName.SEARCH_COUNT);
+        }
     }
 
     /**
@@ -80,7 +116,16 @@ public class VulcanoDb implements AutoCloseable {
      * @return the result containing relevant documents
      */
     public QueryResult search(Query query, int maxResults) {
-        return dataStore.search(query, maxResults);
+        if (!metrics.isEnabled()) {
+            return dataStore.search(query, maxResults);
+        }
+        long startTime = System.nanoTime();
+        try {
+            return dataStore.search(query, maxResults);
+        } finally {
+            metrics.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
+            metrics.incrementCounter(MetricName.SEARCH_COUNT);
+        }
     }
 
     public static QueryBuilder queryBuilder() {
@@ -103,14 +148,20 @@ public class VulcanoDb implements AutoCloseable {
 
     public static final class Builder {
         private DataStore dataStore = new NaiveInMemoryDataStore();
+        private MetricsService metricsService = new NoOpMetricsService();
 
         public Builder withDataStore(DataStore newDataStore) {
             this.dataStore = newDataStore;
             return this;
         }
 
+        public Builder withMetricsService(MetricsService metricsService) {
+            this.metricsService = metricsService;
+            return this;
+        }
+
         public VulcanoDb build() {
-            var vulcanoDb = new VulcanoDb(dataStore);
+            var vulcanoDb = new VulcanoDb(dataStore, metricsService);
             vulcanoDb.dataStore.initialize().join();
             return vulcanoDb;
         }

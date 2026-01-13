@@ -24,11 +24,12 @@
     <packaging>pom</packaging>
 
     <name>VulcanoDB</name>
-    <url>http://maven.apache.org</url>
+    <url>https://github.com/NachoBrito/vulcano</url>
     <modules>
         <module>vulcanodb-core</module>
         <module>vulcanodb-test</module>
         <module>vulcano-mcp</module>
+        <module>vulcanodb-langchain4j</module>
     </modules>
 
     <properties>

@@ -92,9 +92,25 @@ final class WalLog implements AutoCloseable {
         int len = 4 + 4 + 8 + payload.length; // len + status + txId + payload
         long size = align(len, 8);
 
-        long offset = writeOffset.getAndAdd(size);
-        LogSegment s = segmentFor(offset);
-        long p = offset % SEGMENT_SIZE;
+        long offset;
+        long p;
+        LogSegment s;
+
+        segmentLock.lock();
+        try {
+            offset = writeOffset.get();
+            p = offset % SEGMENT_SIZE;
+            if (p + size > SEGMENT_SIZE) {
+                // Doesn't fit in current segment, move to next one
+                offset = (offset / SEGMENT_SIZE + 1) * SEGMENT_SIZE;
+                p = 0;
+            }
+            writeOffset.set(offset + size);
+            s = segmentFor(offset);
+        } finally {
+            segmentLock.unlock();
+        }
+
         MemorySegment m = s.memory();
 
         m.set(INT, p + 4, STATUS_UNCOMMITTED);

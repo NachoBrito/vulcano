@@ -147,20 +147,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         return queryExecutor.execute(logicalQueryRoot, maxResults);
     }
 
-    @Override
-    public CompletableFuture<Void> addAsync(Document document) {
-        return documentPersister
-                .write(document)
-                .thenAcceptAsync(
-                        result -> {
-                            if (!result.success()) {
-                                throw new AxonDataStoreException(result.error());
-                            }
-                            indexFields(result.internalId(), document);
-                        },
-                        ExecutorProvider.defaultExecutor()
-                );
-    }
 
     private void indexFields(long internalId, Document document) {
         var futures = document
@@ -176,11 +162,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         }
     }
 
-    @Override
-    public CompletableFuture<Optional<Document>> getAsync(DocumentId documentId) {
-        return CompletableFuture.supplyAsync(
-                () -> documentPersister.read(documentId), ExecutorProvider.defaultExecutor());
-    }
 
     @Override
     public void remove(DocumentId documentId) {

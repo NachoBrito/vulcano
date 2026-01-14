@@ -18,6 +18,7 @@ package es.nachobrito.vulcanodb.core.store;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
+import es.nachobrito.vulcanodb.core.observability.Telemetry;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
 
@@ -43,6 +44,17 @@ public interface DataStore extends AutoCloseable {
      * @param document the document to add
      */
     void add(Document document);
+
+    /**
+     * Adds a new document to the datastore, collecting internal metrics via the {@link Telemetry} instance
+     *
+     * @param document the document to add
+     * @param metrics  the metrics service instance
+     */
+    default void add(Document document, Telemetry metrics) {
+        //default implementation does not publish any internal metrics.
+        add(document);
+    }
 
     /**
      * Retrieves a document by its id.
@@ -72,27 +84,17 @@ public interface DataStore extends AutoCloseable {
      */
     QueryResult search(Query query, int maxResults);
 
-    /**
-     * Asynchronous version of the {@link #add(Document)} method.
-     * <p>
-     * Adds a new document to the store. If a document with the same id exists, it will be replaced by this one.
-     *
-     * @param document the document to add
-     */
-    default CompletableFuture<Void> addAsync(Document document) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
 
     /**
-     * Asynchronous version of the {@link #get(DocumentId)} method
-     * <p>
-     * Retrieves a document by its id.
+     * Finds documents matching the provided query, publishing internal metrics via the {@link Telemetry} instance
      *
-     * @param documentId the document id
-     * @return the document, if it exists
+     * @param query      the query
+     * @param maxResults the maximum number of documents to return
+     * @return the result containing documents matching the query
      */
-    default CompletableFuture<Optional<Document>> getAsync(DocumentId documentId) {
-        throw new UnsupportedOperationException("Not implemented");
+    default QueryResult search(Query query, int maxResults, Telemetry metrics) {
+        //default implementation does not publish any internal metrics.
+        return search(query, maxResults);
     }
 
     /**
@@ -102,5 +104,21 @@ public interface DataStore extends AutoCloseable {
      */
     void remove(DocumentId documentId);
 
+    /**
+     * Removes the document associated to the provided id, publishing internal metrics via the {@link Telemetry} instance
+     *
+     * @param documentId the document id to remove.
+     */
+    default void remove(DocumentId documentId, Telemetry metrics) {
+        //default implementation does not publish any internal metrics.
+        remove(documentId);
+    }
+
+    /**
+     * Calculates the total number of documents stored.
+     *
+     * @return the number of documents stored.
+     */
     long getDocumentCount();
+
 }

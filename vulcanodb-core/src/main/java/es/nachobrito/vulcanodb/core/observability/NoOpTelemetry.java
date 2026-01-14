@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 /**
  * @author nacho
  */
-public final class NoOpMetricsService implements MetricsService {
+public final class NoOpTelemetry implements Telemetry {
     @Override
     public boolean isEnabled() {
         return false;

@@ -25,7 +25,7 @@ import java.util.function.Supplier;
  *
  * @author nacho
  */
-public interface MetricsService {
+public interface Telemetry {
 
     /**
      * Check if metrics collection is globally enabled.

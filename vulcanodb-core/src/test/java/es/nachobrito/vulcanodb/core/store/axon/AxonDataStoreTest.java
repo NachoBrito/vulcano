@@ -76,15 +76,6 @@ class AxonDataStoreTest {
         assertTrue(read.isPresent());
         assertEquals(document1, read.get());
 
-        //Asynchronously
-        axon
-                .addAsync(document2)
-                .thenCompose(_ -> axon.getAsync(document2.id()))
-                .thenApply(doc -> {
-                    assertTrue(doc.isPresent());
-                    assertEquals(document2, doc.get());
-                    return null;
-                });
     }
 
     @Test

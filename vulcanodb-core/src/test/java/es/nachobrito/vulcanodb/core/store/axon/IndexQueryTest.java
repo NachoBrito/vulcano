@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -69,8 +68,7 @@ public class IndexQueryTest {
 
         var shape = exampleDoc.getShape();
         var docs = DocumentMother.random(shape, 100);
-        var futures = docs.stream().map(axon::addAsync).toArray(CompletableFuture[]::new);
-        CompletableFuture.allOf(futures).join();
+        docs.forEach(axon::add);
         LoggerFactory.getLogger(IndexQueryTest.class).info("*** {} documents indexed.", docs.size());
         return axon;
     }

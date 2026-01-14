@@ -19,8 +19,8 @@ package es.nachobrito.vulcanodb.core;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.observability.MetricName;
-import es.nachobrito.vulcanodb.core.observability.MetricsService;
-import es.nachobrito.vulcanodb.core.observability.NoOpMetricsService;
+import es.nachobrito.vulcanodb.core.observability.NoOpTelemetry;
+import es.nachobrito.vulcanodb.core.observability.Telemetry;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.QueryBuilder;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
@@ -37,9 +37,9 @@ import java.util.Arrays;
 public class VulcanoDb implements AutoCloseable {
 
     private final DataStore dataStore;
-    private final MetricsService metrics;
+    private final Telemetry metrics;
 
-    private VulcanoDb(DataStore dataStore, MetricsService metrics) {
+    private VulcanoDb(DataStore dataStore, Telemetry metrics) {
         this.dataStore = dataStore;
         this.metrics = metrics;
     }
@@ -58,7 +58,7 @@ public class VulcanoDb implements AutoCloseable {
 
         long startTime = System.nanoTime();
         try {
-            dataStore.add(document);
+            dataStore.add(document, metrics);
         } finally {
             metrics.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
             metrics.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
@@ -81,9 +81,9 @@ public class VulcanoDb implements AutoCloseable {
         }
         long startTime = System.nanoTime();
         try {
-            dataStore.remove(documentId);
+            dataStore.remove(documentId, metrics);
         } finally {
-            metrics.recordTimer(MetricName.DOCUMENT_REMOVE_COUNT, System.nanoTime() - startTime);
+            metrics.recordTimer(MetricName.DOCUMENT_REMOVE_LATENCY, System.nanoTime() - startTime);
             metrics.incrementCounter(MetricName.DOCUMENT_REMOVE_COUNT);
         }
     }
@@ -101,7 +101,7 @@ public class VulcanoDb implements AutoCloseable {
 
         long startTime = System.nanoTime();
         try {
-            return dataStore.search(query);
+            return dataStore.search(query, Integer.MAX_VALUE, metrics);
         } finally {
             metrics.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
             metrics.incrementCounter(MetricName.SEARCH_COUNT);
@@ -121,13 +121,18 @@ public class VulcanoDb implements AutoCloseable {
         }
         long startTime = System.nanoTime();
         try {
-            return dataStore.search(query, maxResults);
+            return dataStore.search(query, maxResults, metrics);
         } finally {
             metrics.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
             metrics.incrementCounter(MetricName.SEARCH_COUNT);
         }
     }
 
+    /**
+     * Returns a new query builder
+     *
+     * @return a new QueryBuilder
+     */
     public static QueryBuilder queryBuilder() {
         return new QueryBuilder();
     }
@@ -148,20 +153,37 @@ public class VulcanoDb implements AutoCloseable {
 
     public static final class Builder {
         private DataStore dataStore = new NaiveInMemoryDataStore();
-        private MetricsService metricsService = new NoOpMetricsService();
+        private Telemetry telemetry = new NoOpTelemetry();
 
+        /**
+         * Defines the data store that the database will use.
+         *
+         * @param newDataStore the new data store
+         * @return this builder
+         */
         public Builder withDataStore(DataStore newDataStore) {
             this.dataStore = newDataStore;
             return this;
         }
 
-        public Builder withMetricsService(MetricsService metricsService) {
-            this.metricsService = metricsService;
+        /**
+         * Defines the telemetry object to use in the new database
+         *
+         * @param telemetry the telemetry object
+         * @return this builder
+         */
+        public Builder withTelemetry(Telemetry telemetry) {
+            this.telemetry = telemetry;
             return this;
         }
 
+        /**
+         * Builds a new database with the configured dependencies.
+         *
+         * @return a new VulcanoDb instance.
+         */
         public VulcanoDb build() {
-            var vulcanoDb = new VulcanoDb(dataStore, metricsService);
+            var vulcanoDb = new VulcanoDb(dataStore, telemetry);
             vulcanoDb.dataStore.initialize().join();
             return vulcanoDb;
         }

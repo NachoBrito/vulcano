@@ -26,6 +26,7 @@ public enum MetricName {
     DOCUMENT_INSERT_LATENCY("vulcanodb.document.insert.latency"),
     DOCUMENT_REMOVE_COUNT("vulcanodb.document.removals"),
     DOCUMENT_REMOVE_LATENCY("vulcanodb.document.removal.latency"),
+
     OFF_HEAP_MEMORY_USAGE("vulcanodb.memory.offheap"),
     INDEX_RECALL_ESTIMATE("vulcanodb.index.recall"),
     HNSW_DISTANCE_CALULATIONS("vulcanodb.hnsw.distance.calcs");

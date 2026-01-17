@@ -29,7 +29,8 @@
         <module>vulcanodb-core</module>
         <module>vulcanodb-test</module>
         <module>vulcano-mcp</module>
-        <module>vulcanodb-langchain4j</module>
+        <module>vulcanodb-micrometer</module>
+        <module>vulcanodb-micronaut</module>
     </modules>
 
     <properties>

@@ -18,14 +18,14 @@ package es.nachobrito.vulcanodb.core;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
-import es.nachobrito.vulcanodb.core.observability.MetricName;
-import es.nachobrito.vulcanodb.core.observability.NoOpTelemetry;
-import es.nachobrito.vulcanodb.core.observability.Telemetry;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.QueryBuilder;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
 import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.naive.NaiveInMemoryDataStore;
+import es.nachobrito.vulcanodb.core.telemetry.MetricName;
+import es.nachobrito.vulcanodb.core.telemetry.NoOpTelemetry;
+import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 
 import java.util.Arrays;
 
@@ -37,11 +37,11 @@ import java.util.Arrays;
 public class VulcanoDb implements AutoCloseable {
 
     private final DataStore dataStore;
-    private final Telemetry metrics;
+    private final Telemetry telemetry;
 
-    private VulcanoDb(DataStore dataStore, Telemetry metrics) {
+    private VulcanoDb(DataStore dataStore, Telemetry telemetry) {
         this.dataStore = dataStore;
-        this.metrics = metrics;
+        this.telemetry = telemetry;
     }
 
 
@@ -51,17 +51,17 @@ public class VulcanoDb implements AutoCloseable {
      * @param document the document to add to the database
      */
     public void add(Document document) {
-        if (!metrics.isEnabled()) {
+        if (!telemetry.isEnabled()) {
             dataStore.add(document);
             return;
         }
 
         long startTime = System.nanoTime();
         try {
-            dataStore.add(document, metrics);
+            dataStore.add(document, telemetry);
         } finally {
-            metrics.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
-            metrics.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
+            telemetry.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
+            telemetry.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
         }
     }
 
@@ -75,16 +75,16 @@ public class VulcanoDb implements AutoCloseable {
     }
 
     public void remove(DocumentId documentId) {
-        if (!metrics.isEnabled()) {
+        if (!telemetry.isEnabled()) {
             dataStore.remove(documentId);
             return;
         }
         long startTime = System.nanoTime();
         try {
-            dataStore.remove(documentId, metrics);
+            dataStore.remove(documentId, telemetry);
         } finally {
-            metrics.recordTimer(MetricName.DOCUMENT_REMOVE_LATENCY, System.nanoTime() - startTime);
-            metrics.incrementCounter(MetricName.DOCUMENT_REMOVE_COUNT);
+            telemetry.recordTimer(MetricName.DOCUMENT_REMOVE_LATENCY, System.nanoTime() - startTime);
+            telemetry.incrementCounter(MetricName.DOCUMENT_REMOVE_COUNT);
         }
     }
 
@@ -95,16 +95,16 @@ public class VulcanoDb implements AutoCloseable {
      * @return the result containing relevant documents
      */
     public QueryResult search(Query query) {
-        if (!metrics.isEnabled()) {
+        if (!telemetry.isEnabled()) {
             return dataStore.search(query);
         }
 
         long startTime = System.nanoTime();
         try {
-            return dataStore.search(query, Integer.MAX_VALUE, metrics);
+            return dataStore.search(query, Integer.MAX_VALUE, telemetry);
         } finally {
-            metrics.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
-            metrics.incrementCounter(MetricName.SEARCH_COUNT);
+            telemetry.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
+            telemetry.incrementCounter(MetricName.SEARCH_COUNT);
         }
     }
 
@@ -116,15 +116,15 @@ public class VulcanoDb implements AutoCloseable {
      * @return the result containing relevant documents
      */
     public QueryResult search(Query query, int maxResults) {
-        if (!metrics.isEnabled()) {
+        if (!telemetry.isEnabled()) {
             return dataStore.search(query, maxResults);
         }
         long startTime = System.nanoTime();
         try {
-            return dataStore.search(query, maxResults, metrics);
+            return dataStore.search(query, maxResults, telemetry);
         } finally {
-            metrics.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
-            metrics.incrementCounter(MetricName.SEARCH_COUNT);
+            telemetry.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
+            telemetry.incrementCounter(MetricName.SEARCH_COUNT);
         }
     }
 
@@ -149,6 +149,7 @@ public class VulcanoDb implements AutoCloseable {
     @Override
     public void close() throws Exception {
         dataStore.close();
+        telemetry.close();
     }
 
     public static final class Builder {

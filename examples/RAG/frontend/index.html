@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VulcanoDB - RAG Frontend</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app" class="app-container">
+      <main class="chat-column">
+        <header class="chat-header">
+          <div class="header-left">
+            <h1>VulcanoDB RAG</h1>
+            <span id="connection-status" class="status-indicator disconnected" title="Disconnected"></span>
+          </div>
+        </header>
+        <div id="chat-history" class="chat-history">
+          <div class="message bot-message">
+            Hello! I'm the VulcanoDB RAG assistant. How can I help you today?
+          </div>
+        </div>
+        <div class="chat-input-container">
+          <div class="input-wrapper">
+            <input type="text" id="query" placeholder="Ask a question..." autocomplete="off" />
+            <div class="input-links">
+              <a href="#" id="reindex-link">(Re)Index arXiv Dataset</a>
+              <span class="separator">|</span>
+              <a href="https://github.com/NachoBrito/vulcano" target="_blank" id="about-link">About VulcanoDb</a>
+            </div>
+          </div>
+          <button id="search">Send</button>
+        </div>
+      </main>
+
+      <aside id="telemetry-sidebar" class="telemetry-column">
+        <button id="telemetry-toggle" class="telemetry-toggle" aria-label="Toggle Telemetry">
+          <span>📊</span>
+        </button>
+        <div class="telemetry-content">
+          <section class="telemetry-section">
+            <h2>Telemetry</h2>
+            <div class="telemetry-grid">
+              <div class="graph-placeholder span-2">
+                <p>Vector Search</p>
+                <div class="chart-container">
+                  <canvas id="vector-search-chart"></canvas>
+                </div>
+              </div>
+              <div class="graph-placeholder span-2">
+                <p>Document Insert</p>
+                <div class="chart-container">
+                  <canvas id="doc-insert-chart"></canvas>
+                </div>
+              </div>
+              
+              <div class="graph-placeholder">
+                <p>Recall</p>
+                <div class="chart-container gauge-container">
+                  <canvas id="recall-gauge"></canvas>
+                </div>
+              </div>
+              
+              <div class="indicator-box">
+                <span class="indicator-label">Distance Calcs</span>
+                <span id="stat-dist-calcs" class="indicator-value">00</span>
+              </div>
+              
+              <div class="indicator-box">
+                <span class="indicator-label">Doc Count</span>
+                <span id="stat-doc-count" class="indicator-value">00</span>
+              </div>
+              
+              <div class="indicator-box">
+                <span class="indicator-label">Off-heap Memory</span>
+                <div class="indicator-row">
+                  <span id="stat-off-heap" class="indicator-value">00</span>
+                  <span class="indicator-unit">MB</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="status-section">
+            <h2>System Status</h2>
+            <div id="status-terminal" class="status-terminal">
+              <div class="terminal-line system-line">[SYSTEM] Initializing...</div>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

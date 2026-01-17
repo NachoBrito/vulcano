@@ -18,9 +18,9 @@ package es.nachobrito.vulcanodb.core.store;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
-import es.nachobrito.vulcanodb.core.observability.Telemetry;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
+import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;

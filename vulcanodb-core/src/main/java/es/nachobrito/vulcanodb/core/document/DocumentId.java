@@ -27,8 +27,12 @@ public record DocumentId(UUID value) {
         return new DocumentId(UUID.randomUUID());
     }
 
-    public static DocumentId of(String stringId) {
-        return new DocumentId(UUID.fromString(stringId));
+    public static DocumentId of(String uuidString) {
+        return new DocumentId(UUID.fromString(uuidString));
+    }
+
+    public static DocumentId of(byte[] bytes) {
+        return new DocumentId(UUID.nameUUIDFromBytes(bytes));
     }
 
     @Override

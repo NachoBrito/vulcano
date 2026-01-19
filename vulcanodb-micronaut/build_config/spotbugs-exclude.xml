@@ -21,6 +21,9 @@
   put here to instruct spotbugs it must ignore them.
 -->
 <FindBugsFilter>
-
+    <Match>
+        <Class name="es.nachobrito.vulcanodb.micronaut.MicronautTelemetry"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
 
 </FindBugsFilter>

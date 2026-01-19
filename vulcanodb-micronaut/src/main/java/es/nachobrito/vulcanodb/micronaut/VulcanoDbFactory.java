@@ -19,13 +19,12 @@ package es.nachobrito.vulcanodb.micronaut;
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
-import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
-import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
-import es.nachobrito.vulcanodb.telemetry.micrometer.PrometheusTelemetry;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -35,47 +34,42 @@ import java.nio.file.Path;
  */
 @Factory
 @Requires(property = "vulcanodb.enabled", value = "true")
-public class VulcanoDbFactory {
+public final class VulcanoDbFactory {
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final boolean telemetryEnabled;
-    private final MetricLevel metricLevel;
-    private final int telemetryPort;
     private final Path dataFolder;
     private final String[] vectorIndexes;
     private final String[] stringIndexes;
+    private final MicronautTelemetry micronautTelemetry;
 
     public VulcanoDbFactory(
-            @Value("${vulcanodb.telemetry.enabled:false}")
-            String telemetryEnabled,
-            @Value("${vulcanodb.telemetry.level:BASIC}")
-            String metricLevel,
-            @Value("${vulcanodb.telemetry.port:9999}")
-            String telemetryPort,
-            @Value("${vulcano.datafolder:./vulcanodb-data")
+            @Value("${vulcanodb.datafolder:./vulcanodb-data}")
             String dataFolder,
-            @Value("${vulcano.indexes.vector:")
+            @Value("${vulcanodb.index.vector:}")
             String vectorIndexes,
-            @Value("${vulcano.indexes.string:")
-            String stringIndexes) {
-        this.telemetryEnabled = Boolean.parseBoolean(telemetryEnabled);
-        this.metricLevel = MetricLevel.valueOf(metricLevel.toUpperCase());
-        this.telemetryPort = Integer.parseInt(telemetryPort);
+            @Value("${vulcanodb.index.string:}")
+            String stringIndexes, MicronautTelemetry micronautTelemetry) {
+
         this.dataFolder = Path.of(dataFolder);
         this.vectorIndexes = vectorIndexes.split(",");
         this.stringIndexes = stringIndexes.split(",");
+        this.micronautTelemetry = micronautTelemetry;
     }
 
     @Singleton
     public VulcanoDb getVulcanoDb() throws IOException {
+        log.info("""
+                *** Initializing VulcanoDb ***
+                - data folder: {}
+                - vector indexes: {}
+                - string indexes: {}
+                *******************************
+                """, dataFolder, vectorIndexes, stringIndexes);
         return VulcanoDb
                 .builder()
                 .withDataStore(buildDataStore())
-                .withTelemetry(buildTelemetry())
+                .withTelemetry(micronautTelemetry)
                 .build();
-    }
-
-    private Telemetry buildTelemetry() throws IOException {
-        return new PrometheusTelemetry(telemetryPort, telemetryEnabled, metricLevel);
     }
 
     private DataStore buildDataStore() {

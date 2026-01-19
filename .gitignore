@@ -38,3 +38,4 @@ build/
 ### Mac OS ###
 .DS_Store
 vulcanodb.log
+/examples/RAG/backend/vulcanodb-data

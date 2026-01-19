@@ -20,13 +20,16 @@ import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.metrics.exporter.httpserver.HTTPServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 /**
  * @author nacho
  */
-public final class PrometheusTelemetry extends MicrometerTelemetry {
+public class PrometheusTelemetry extends MicrometerTelemetry {
+    private final Logger log = LoggerFactory.getLogger(PrometheusTelemetry.class);
     private final HTTPServer httpServer;
 
     /**
@@ -34,15 +37,26 @@ public final class PrometheusTelemetry extends MicrometerTelemetry {
      * @param port        The port to publish Prometheus metrics
      * @param enabled     whether this telemetry is enabled
      * @param configLevel the max metric level to publish
-     * @throws IOException if the server cannot be opened in the provided port
      */
-    public PrometheusTelemetry(int port, boolean enabled, MetricLevel configLevel) throws IOException {
+    public PrometheusTelemetry(int port, boolean enabled, MetricLevel configLevel) {
         var registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         super(registry, enabled, configLevel);
-        httpServer = HTTPServer.builder()
-                .port(port)
-                .registry(registry.getPrometheusRegistry())
-                .buildAndStart();
+        httpServer = startHttpServer(port, registry);
+    }
+
+    private HTTPServer startHttpServer(int port, PrometheusMeterRegistry registry) {
+        HTTPServer httpServer;
+        try {
+            httpServer = HTTPServer.builder()
+                    .port(port)
+                    .registry(registry.getPrometheusRegistry())
+                    .buildAndStart();
+            log.info("HTTP telemetry exposed on port {}", port);
+            return httpServer;
+        } catch (IOException e) {
+            log.error("Could not start HTTP server on port {}", port, e);
+        }
+        return null;
     }
 
 

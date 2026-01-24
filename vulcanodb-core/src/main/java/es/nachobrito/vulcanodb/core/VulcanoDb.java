@@ -18,6 +18,8 @@ package es.nachobrito.vulcanodb.core;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
+import es.nachobrito.vulcanodb.core.ingestion.DocumentIngestor;
+import es.nachobrito.vulcanodb.core.ingestion.WorkQueueIngestor;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.query.QueryBuilder;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
@@ -30,7 +32,9 @@ import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import java.util.Arrays;
 
 /**
- * Façade class for the Vector Database.
+ * The main entry point for the VulcanoDB vector database.
+ * This class provides a high-level API for managing documents, performing similarity searches,
+ * and handling database operations.
  *
  * @author nacho
  */
@@ -46,9 +50,9 @@ public class VulcanoDb implements AutoCloseable {
 
 
     /**
-     * Adds a new document to the database
+     * Adds a document to the database.
      *
-     * @param document the document to add to the database
+     * @param document the document to be indexed
      */
     public void add(Document document) {
         if (!telemetry.isEnabled()) {
@@ -60,15 +64,20 @@ public class VulcanoDb implements AutoCloseable {
         try {
             dataStore.add(document, telemetry);
         } finally {
-            telemetry.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
             telemetry.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
+            if (telemetry.shouldCapture(MetricName.DOCUMENT_INSERT_LATENCY)) {
+                telemetry.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
+            }
+            if (telemetry.shouldCapture(MetricName.DOCUMENT_COUNT)) {
+                telemetry.registerGauge(MetricName.DOCUMENT_COUNT, dataStore::getDocumentCount);
+            }
         }
     }
 
     /**
-     * Adds all the documents to the database
+     * Adds multiple documents to the database.
      *
-     * @param documents the documents to add to the database
+     * @param documents the documents to be indexed
      */
     public void add(Document... documents) {
         Arrays.stream(documents).forEach(this::add);
@@ -85,14 +94,17 @@ public class VulcanoDb implements AutoCloseable {
         } finally {
             telemetry.recordTimer(MetricName.DOCUMENT_REMOVE_LATENCY, System.nanoTime() - startTime);
             telemetry.incrementCounter(MetricName.DOCUMENT_REMOVE_COUNT);
+            if (telemetry.shouldCapture(MetricName.DOCUMENT_COUNT)) {
+                telemetry.registerGauge(MetricName.DOCUMENT_COUNT, dataStore::getDocumentCount);
+            }
         }
     }
 
     /**
-     * Finds documents relevant for the provided physical
+     * Searches for documents matching the specified query.
      *
-     * @param query the physical to filter stored documents
-     * @return the result containing relevant documents
+     * @param query the search query criteria
+     * @return a {@link QueryResult} containing the matching documents
      */
     public QueryResult search(Query query) {
         if (!telemetry.isEnabled()) {
@@ -109,11 +121,11 @@ public class VulcanoDb implements AutoCloseable {
     }
 
     /**
-     * Finds documents relevant for the provided physical
+     * Searches for documents matching the specified query, limiting the number of results returned.
      *
-     * @param query      the physical to filter stored documents
-     * @param maxResults the maximum number of documents to return
-     * @return the result containing relevant documents
+     * @param query      the search query criteria
+     * @param maxResults the maximum number of results to return
+     * @return a {@link QueryResult} containing the matching documents
      */
     public QueryResult search(Query query, int maxResults) {
         if (!telemetry.isEnabled()) {
@@ -129,18 +141,27 @@ public class VulcanoDb implements AutoCloseable {
     }
 
     /**
-     * Returns a new query builder
+     * Creates a new {@link DocumentIngestor} for asynchronous batch document loading.
      *
-     * @return a new QueryBuilder
+     * @return a new document ingestor instance
+     */
+    public DocumentIngestor newDocumentIngestor() {
+        return new WorkQueueIngestor(this, telemetry);
+    }
+
+    /**
+     * Returns a new builder for constructing database queries.
+     *
+     * @return a new query builder instance
      */
     public static QueryBuilder queryBuilder() {
         return new QueryBuilder();
     }
 
     /**
-     * Gets a new builder instance
+     * Returns a new builder for configuring and creating a {@link VulcanoDb} instance.
      *
-     * @return a new builder for VulcanoDb objects
+     * @return a new database builder
      */
     public static Builder builder() {
         return new Builder();
@@ -157,10 +178,10 @@ public class VulcanoDb implements AutoCloseable {
         private Telemetry telemetry = new NoOpTelemetry();
 
         /**
-         * Defines the data store that the database will use.
+         * Configures the data storage engine to be used by the database.
          *
-         * @param newDataStore the new data store
-         * @return this builder
+         * @param newDataStore the data store implementation
+         * @return this builder instance
          */
         public Builder withDataStore(DataStore newDataStore) {
             this.dataStore = newDataStore;
@@ -168,10 +189,10 @@ public class VulcanoDb implements AutoCloseable {
         }
 
         /**
-         * Defines the telemetry object to use in the new database
+         * Configures the telemetry provider for monitoring database metrics and performance.
          *
-         * @param telemetry the telemetry object
-         * @return this builder
+         * @param telemetry the telemetry implementation
+         * @return this builder instance
          */
         public Builder withTelemetry(Telemetry telemetry) {
             this.telemetry = telemetry;
@@ -179,9 +200,9 @@ public class VulcanoDb implements AutoCloseable {
         }
 
         /**
-         * Builds a new database with the configured dependencies.
+         * Creates a new {@link VulcanoDb} instance with the configured settings.
          *
-         * @return a new VulcanoDb instance.
+         * @return a configured database instance
          */
         public VulcanoDb build() {
             var vulcanoDb = new VulcanoDb(dataStore, telemetry);

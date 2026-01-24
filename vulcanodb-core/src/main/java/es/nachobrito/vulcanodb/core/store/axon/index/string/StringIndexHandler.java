@@ -107,4 +107,9 @@ public class StringIndexHandler implements IndexHandler<String> {
     public void close() throws Exception {
         invertedIndex.close();
     }
+
+    @Override
+    public long offHeapBytes() {
+        return invertedIndex.offHeapBytes();
+    }
 }

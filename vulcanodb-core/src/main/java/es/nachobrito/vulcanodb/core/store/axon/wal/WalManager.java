@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon.wal;
 
 import es.nachobrito.vulcanodb.core.document.Document;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -24,9 +25,10 @@ import java.util.List;
  * Interface for the Write-Ahead Log manager.
  */
 public interface WalManager extends AutoCloseable {
-    
+
     /**
      * Records an intention to add a document.
+     *
      * @param document the document to be added
      * @return a unique transaction ID for this operation
      * @throws IOException if the log cannot be written
@@ -35,6 +37,7 @@ public interface WalManager extends AutoCloseable {
 
     /**
      * Records an intention to remove a document.
+     *
      * @param documentId the ID of the document to be removed
      * @return a unique transaction ID for this operation
      * @throws IOException if the log cannot be written
@@ -43,6 +46,7 @@ public interface WalManager extends AutoCloseable {
 
     /**
      * Marks a transaction as committed in the log.
+     *
      * @param txId the transaction ID
      * @throws IOException if the log cannot be written
      */
@@ -50,6 +54,7 @@ public interface WalManager extends AutoCloseable {
 
     /**
      * Returns all entries that have not been committed.
+     *
      * @return a list of uncommitted entries
      * @throws IOException if the log cannot be read
      */
@@ -57,7 +62,10 @@ public interface WalManager extends AutoCloseable {
 
     /**
      * Truncates the log up to the last committed transaction, if safe to do so.
+     *
      * @throws IOException if the log cannot be modified
      */
     void checkpoint() throws IOException;
+
+    long offHeapBytes();
 }

@@ -87,4 +87,8 @@ public final class InvertedIndex implements AutoCloseable {
     public void close() throws Exception {
         kvStore.close();
     }
+
+    public long offHeapBytes() {
+        return kvStore.offHeapBytes();
+    }
 }

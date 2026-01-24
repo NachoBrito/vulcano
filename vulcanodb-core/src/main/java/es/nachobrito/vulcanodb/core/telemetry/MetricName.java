@@ -22,10 +22,12 @@ package es.nachobrito.vulcanodb.core.telemetry;
 public enum MetricName {
     SEARCH_LATENCY("vucanodb.search.latency"),
     SEARCH_COUNT("vucanodb.search.count"),
+    DOCUMENT_INSERT_QUEUE("vucanodb.document.insert.queue"),
     DOCUMENT_INSERT_COUNT("vulcanodb.document.inserts"),
     DOCUMENT_INSERT_LATENCY("vulcanodb.document.insert.latency"),
     DOCUMENT_REMOVE_COUNT("vulcanodb.document.removals"),
     DOCUMENT_REMOVE_LATENCY("vulcanodb.document.removal.latency"),
+    DOCUMENT_COUNT("vulcanodb.storage.documentcount"),
 
     OFF_HEAP_MEMORY_USAGE("vulcanodb.memory.offheap"),
     INDEX_RECALL_ESTIMATE("vulcanodb.index.recall"),

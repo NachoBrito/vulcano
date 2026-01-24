@@ -174,6 +174,10 @@ public final class PagedLongArray implements AutoCloseable {
         return (long) pages.length * pageSize;
     }
 
+    public long offHeapBytes() {
+        return (long) pages.length * pageSize * Long.BYTES;
+    }
+
     @Override
     public void close() {
         expansionLock.lock();

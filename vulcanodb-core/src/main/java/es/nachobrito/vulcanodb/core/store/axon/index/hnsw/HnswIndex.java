@@ -406,4 +406,12 @@ public final class HnswIndex implements AutoCloseable {
         layer0.close();
         for (var g : graphs.values()) g.close();
     }
+
+    public long offHeapBytes() {
+        long total = metadataStore.offHeapBytes() + layer0.offHeapBytes();
+        for (var g : graphs.values()) {
+            total += g.offHeapBytes();
+        }
+        return total;
+    }
 }

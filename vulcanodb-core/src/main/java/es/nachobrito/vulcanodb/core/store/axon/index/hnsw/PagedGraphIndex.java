@@ -256,4 +256,8 @@ final public class PagedGraphIndex implements AutoCloseable {
             }
         }
     }
+
+    public long offHeapBytes() {
+        return (long) pages.size() * blockSize * slotSizeBytes;
+    }
 }

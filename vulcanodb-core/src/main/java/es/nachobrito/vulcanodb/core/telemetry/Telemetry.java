@@ -40,6 +40,14 @@ public interface Telemetry extends AutoCloseable {
      */
     boolean shouldCapture(MetricLevel level);
 
+    /**
+     * Determines if a specific metric should be captured. There will be metrics that, due to their nature, are not
+     * published on every change, but sampled
+     *
+     * @param name The name of the metric.
+     */
+    boolean shouldCapture(MetricName name);
+
     // --- Counters (Monotonically increasing values) ---
 
     void incrementCounter(MetricName name);

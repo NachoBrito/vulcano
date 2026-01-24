@@ -34,6 +34,8 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
 import es.nachobrito.vulcanodb.core.store.axon.wal.DefaultWalManager;
 import es.nachobrito.vulcanodb.core.store.axon.wal.WalManager;
+import es.nachobrito.vulcanodb.core.telemetry.MetricName;
+import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +127,15 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         }
     }
 
+    @Override
+    public void add(Document document, Telemetry metrics) {
+        add(document);
+        if (!metrics.isEnabled() || !metrics.shouldCapture(MetricName.OFF_HEAP_MEMORY_USAGE)) {
+            return;
+        }
+        metrics.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, this::getOffHeapMemoryUsage);
+    }
+
     private void addInternal(Document document) {
         var result = documentPersister
                 .write(document)
@@ -172,6 +183,26 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }
+    }
+
+    @Override
+    public void remove(DocumentId documentId, Telemetry metrics) {
+        remove(documentId);
+        if (!metrics.isEnabled() || !metrics.shouldCapture(MetricName.OFF_HEAP_MEMORY_USAGE)) {
+            return;
+        }
+        metrics.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, this::getOffHeapMemoryUsage);
+    }
+
+    private Number getOffHeapMemoryUsage() {
+        long documentOffHeapMemory = documentPersister.getOffHeapBytes();
+        long walOffHeapMemory = walManager.offHeapBytes();
+        long indexOffHeapMemory = indexes
+                .values()
+                .stream()
+                .mapToLong(IndexHandler::offHeapBytes)
+                .sum();
+        return documentOffHeapMemory + walOffHeapMemory + indexOffHeapMemory;
     }
 
 

@@ -84,4 +84,9 @@ public class DefaultWalManager implements WalManager {
     public void close() throws Exception {
         walLog.close();
     }
+
+    @Override
+    public long offHeapBytes() {
+        return walLog.offHeapBytes();
+    }
 }

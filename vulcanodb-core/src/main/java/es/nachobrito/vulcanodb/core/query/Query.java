@@ -17,6 +17,9 @@
 package es.nachobrito.vulcanodb.core.query;
 
 /**
+ * Base interface for all database queries.
+ * A query defines criteria for filtering and retrieving documents from the database.
+ *
  * @author nacho
  */
 public sealed interface Query permits NegativeQuery, MultiQuery, VectorFieldQuery, IntegerFieldQuery, StringFieldQuery {

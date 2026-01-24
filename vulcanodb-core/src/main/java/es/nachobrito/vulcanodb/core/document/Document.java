@@ -22,6 +22,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
+ * Represents a document within the database.
+ * A document consists of a unique identifier and a collection of fields.
+ *
  * @author nacho
  */
 public class Document {
@@ -33,21 +36,39 @@ public class Document {
         this.fields = fields.stream().collect(Collectors.toMap(Field::key, Function.identity()));
     }
 
+    /**
+     * Retrieves a field from the document by its name.
+     *
+     * @param fieldName the name of the field to retrieve
+     * @return an {@link Optional} containing the field if found, or empty otherwise
+     */
     public Optional<Field<?, ?>> field(String fieldName) {
         return Optional.ofNullable(fields.get(fieldName));
     }
 
+    /**
+     * Returns the unique identifier of this document.
+     *
+     * @return the document ID
+     */
     public DocumentId id() {
         return id;
     }
 
+    /**
+     * Returns a new builder for creating a {@link Document}.
+     *
+     * @return a new document builder
+     */
     public static DocumentBuilder builder() {
         return new DocumentBuilder();
     }
 
-    /// Build an unmodifiable map with the fields of this document
-    ///
-    /// @return an unmodifiable map of this document
+    /**
+     * Returns an unmodifiable map containing all the fields of this document.
+     *
+     * @return an unmodifiable map of field names to their values
+     */
     public Map<String, Object> toMap() {
         return Collections.unmodifiableMap(fields
                 .entrySet()
@@ -59,17 +80,19 @@ public class Document {
     }
 
     /**
-     * .
+     * Returns a stream of the fields contained in this document.
      *
-     * @return a stream of this document's fields
+     * @return a stream of document fields
      */
     public Stream<Field<?, ?>> getfieldsStream() {
         return fields.values().stream();
     }
 
-    /// Build an unmodifiable map with the shape of this document (field name -> value type)
-    ///
-    /// @return an unmodifiable map of the shape of this document
+    /**
+     * Returns the shape of this document, describing its structure and field types.
+     *
+     * @return the document shape
+     */
     public DocumentShape getShape() {
         return new DocumentShape(id, fields);
     }

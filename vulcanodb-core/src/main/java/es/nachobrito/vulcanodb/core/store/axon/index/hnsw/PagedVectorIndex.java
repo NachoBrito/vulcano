@@ -262,4 +262,8 @@ final class PagedVectorIndex implements AutoCloseable {
             }
         }
     }
+
+    public long offHeapBytes() {
+        return (long) pages.size() * blockSize * dimensions * Float.BYTES;
+    }
 }

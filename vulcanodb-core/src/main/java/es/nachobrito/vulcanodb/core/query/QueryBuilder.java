@@ -26,6 +26,9 @@ import static es.nachobrito.vulcanodb.core.query.QueryOperator.AND;
 import static es.nachobrito.vulcanodb.core.query.QueryOperator.OR;
 
 /**
+ * A builder class for creating database queries with a fluent API.
+ * Supports vector similarity searches, string matches, and integer comparisons.
+ *
  * @author nacho
  */
 public class QueryBuilder {
@@ -37,118 +40,142 @@ public class QueryBuilder {
     }
 
 
-    ///  Match documents where the value in the provided field is similar (semantic search) to the vector provided.
-    ///
-    /// @param vector    the vector to search
-    /// @param fieldName the field to compare
-    /// @return this query builder
+    /**
+     * Matches documents where the specified field is semantically similar to the given vector.
+     *
+     * @param vector    the query vector
+     * @param fieldName the name of the field to compare
+     * @return this builder instance
+     */
     public QueryBuilder isSimilarTo(float[] vector, String fieldName) {
         return allSimilarTo(vector, List.of(fieldName));
     }
 
-    /// Match documents where the value of **all** the fields in the list are similar the vector provided.
-    ///
-    /// @param vector     the vector to search
-    /// @param fieldNames the field names to compare
-    /// @return this query builder
+    /**
+     * Matches documents where all specified fields are semantically similar to the given vector.
+     *
+     * @param vector     the query vector
+     * @param fieldNames the names of the fields to compare
+     * @return this builder instance
+     */
     public QueryBuilder allSimilarTo(float[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, AND, new CosineSimilarity());
     }
 
-    /// Match documents where the value of **any** of the fields in the list is similar to the vector provided.
-    ///
-    /// @param vector     the vector to search
-    /// @param fieldNames the field names to compare
-    /// @return this query builder
+    /**
+     * Matches documents where any of the specified fields are semantically similar to the given vector.
+     *
+     * @param vector     the query vector
+     * @param fieldNames the names of the fields to compare
+     * @return this builder instance
+     */
     public QueryBuilder anySimilarTo(float[] vector, List<String> fieldNames) {
         return addVectorQuery(vector, fieldNames, OR, new CosineSimilarity());
     }
 
-    /// Match documents where the value of the *fieldMame* field starts with the provided prefix
-    ///
-    /// @param prefix    the prefix to search
-    /// @param fieldName the field to search in
-    /// @return this query builder
+    /**
+     * Matches documents where the specified string field starts with the given prefix.
+     *
+     * @param prefix    the prefix to match
+     * @param fieldName the name of the string field
+     * @return this builder instance
+     */
     public QueryBuilder startsWith(String prefix, String fieldName) {
         queries.add(new StringFieldQuery(prefix, fieldName, StringFieldOperator.STARTS_WITH));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field ends with the provided suffix
-    ///
-    /// @param suffix    the suffix to search
-    /// @param fieldName the field to search in
-    /// @return this query builder
+    /**
+     * Matches documents where the specified string field ends with the given suffix.
+     *
+     * @param suffix    the suffix to match
+     * @param fieldName the name of the string field
+     * @return this builder instance
+     */
     public QueryBuilder endsWith(String suffix, String fieldName) {
         queries.add(new StringFieldQuery(suffix, fieldName, StringFieldOperator.ENDS_WITH));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field contains the provided value
-    ///
-    /// @param value     the text to search
-    /// @param fieldName the field to search in
-    /// @return this query builder
+    /**
+     * Matches documents where the specified string field contains the given value.
+     *
+     * @param value     the substring to match
+     * @param fieldName the name of the string field
+     * @return this builder instance
+     */
     public QueryBuilder contains(String value, String fieldName) {
         queries.add(new StringFieldQuery(value, fieldName, StringFieldOperator.CONTAINS));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field is equal to the provided value
-    ///
-    /// @param value     the text to search
-    /// @param fieldName the field to search in
-    /// @return this query builder
+    /**
+     * Matches documents where the specified string field is exactly equal to the given value.
+     *
+     * @param value     the string to match
+     * @param fieldName the name of the string field
+     * @return this builder instance
+     */
     public QueryBuilder isEqual(String value, String fieldName) {
         queries.add(new StringFieldQuery(value, fieldName, StringFieldOperator.EQUALS));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field is equal to the provided value
-    ///
-    /// @param value     the integer to compare
-    /// @param fieldName the field to compare with
-    /// @return this query builder
+    /**
+     * Matches documents where the specified integer field is equal to the given value.
+     *
+     * @param value     the value to compare
+     * @param fieldName the name of the integer field
+     * @return this builder instance
+     */
     public QueryBuilder isEqual(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.EQUALS));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field is less than the provided value
-    ///
-    /// @param value     the integer to compare
-    /// @param fieldName the field to compare with
-    /// @return this query builder
+    /**
+     * Matches documents where the specified integer field is less than the given value.
+     *
+     * @param value     the value to compare
+     * @param fieldName the name of the integer field
+     * @return this builder instance
+     */
     public QueryBuilder isLessThan(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.LESS_THAN));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field is less than or equal the provided value
-    ///
-    /// @param value     the integer to compare
-    /// @param fieldName the field to compare with
-    /// @return this query builder
+    /**
+     * Matches documents where the specified integer field is less than or equal to the given value.
+     *
+     * @param value     the value to compare
+     * @param fieldName the name of the integer field
+     * @return this builder instance
+     */
     public QueryBuilder isLessThanOrEqual(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.LESS_THAN_EQUAL));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field is greater than the provided value
-    ///
-    /// @param value     the integer to compare
-    /// @param fieldName the field to compare with
-    /// @return this query builder
+    /**
+     * Matches documents where the specified integer field is greater than the given value.
+     *
+     * @param value     the value to compare
+     * @param fieldName the name of the integer field
+     * @return this builder instance
+     */
     public QueryBuilder isGreaterThan(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.GREATER_THAN));
         return this;
     }
 
-    /// Match documents where the value of the *fieldMame* field is greater than or equal the provided value
-    ///
-    /// @param value     the integer to compare
-    /// @param fieldName the field to compare with
-    /// @return this query builder
+    /**
+     * Matches documents where the specified integer field is greater than or equal to the given value.
+     *
+     * @param value     the value to compare
+     * @param fieldName the name of the integer field
+     * @return this builder instance
+     */
     public QueryBuilder isGreaterThanOrEqual(Integer value, String fieldName) {
         queries.add(new IntegerFieldQuery(value, fieldName, IntegerFieldOperator.GREATER_THAN_EQUAL));
         return this;
@@ -169,35 +196,46 @@ public class QueryBuilder {
         return this;
     }
 
-    ///  Set the operator for this query, affecting all the conditions added with [#isSimilarTo(float\[\], String)],
-    /// [#allSimilarTo(float\[\], List)], [#anySimilarTo(float\[\], List)]
-    ///
-    /// @param operator [QueryOperator]
-    /// @return this query builder
+    /**
+     * Sets the logical operator used to combine query conditions.
+     *
+     * @param operator the logical operator (AND/OR)
+     * @return this builder instance
+     */
     public QueryBuilder withOperator(QueryOperator operator) {
         this.operator = operator;
         return this;
     }
 
 
-    /// Match queries that do not match the query generated by the other builder
-    ///
-    /// @param other the builder producing the query to negate
-    /// @return this query builder
+    /**
+     * Negates the query criteria provided by another builder.
+     *
+     * @param other the other query builder
+     * @return this builder instance
+     */
     public QueryBuilder not(QueryBuilder other) {
         return this.not(other.build());
     }
 
-    /// Match queries that do not match the other query
-    ///
-    /// @param other the query to negate
-    /// @return this query builder
+    /**
+     * Negates the specified query criteria.
+     *
+     * @param other the query to negate
+     * @return this builder instance
+     */
     public QueryBuilder not(Query other) {
         queries.add(new NegativeQuery(other));
         return this;
     }
 
 
+    /**
+     * Builds the final {@link Query} instance based on the configured conditions.
+     *
+     * @return the constructed query
+     * @throws IllegalStateException if no query conditions have been added
+     */
     public Query build() {
         if (queries.isEmpty()) {
             throw new IllegalStateException("Query cannot be empty");

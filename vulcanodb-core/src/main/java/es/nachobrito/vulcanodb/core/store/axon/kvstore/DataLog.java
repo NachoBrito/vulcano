@@ -443,6 +443,10 @@ final class DataLog implements AutoCloseable {
         return committed.get();
     }
 
+    public long offHeapBytes() {
+        return segments.size() * segmentSize;
+    }
+
 
     private static long align(long v, long a) {
         return (v + a - 1) & ~(a - 1);

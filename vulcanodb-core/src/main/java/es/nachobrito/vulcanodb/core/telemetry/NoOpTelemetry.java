@@ -33,6 +33,11 @@ public final class NoOpTelemetry implements Telemetry {
     }
 
     @Override
+    public boolean shouldCapture(MetricName name) {
+        return false;
+    }
+
+    @Override
     public void incrementCounter(MetricName name) {
     }
 

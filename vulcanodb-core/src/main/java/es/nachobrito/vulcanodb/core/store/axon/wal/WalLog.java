@@ -203,6 +203,10 @@ final class WalLog implements AutoCloseable {
         segments.clear();
     }
 
+    public long offHeapBytes() {
+        return (long) segments.size() * SEGMENT_SIZE;
+    }
+
     private record LogSegment(FileChannel channel, Arena arena, MemorySegment memory) implements AutoCloseable {
         @Override
         public void close() throws Exception {

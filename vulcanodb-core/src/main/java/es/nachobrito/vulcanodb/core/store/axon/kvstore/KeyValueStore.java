@@ -294,6 +294,10 @@ public final class KeyValueStore implements AutoCloseable {
         index.put(key, -1);
     }
 
+    public long offHeapBytes() {
+        return dataLog.offHeapBytes() + index.offHeapBytes();
+    }
+
     @Override
     public void close() throws Exception {
         // 1. Capture durable boundaries

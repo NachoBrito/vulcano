@@ -170,7 +170,13 @@ public final class DefaultDocumentPersister implements DocumentPersister {
 
 
     @Override
+    public long getOffHeapBytes() {
+        return fieldDiskStore.offHeapBytes() + dictionary.offHeapBytes();
+    }
+
+    @Override
     public void close() throws Exception {
         fieldDiskStore.close();
+        dictionary.close();
     }
 }

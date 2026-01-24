@@ -26,30 +26,33 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
+ * Interface for document storage engines.
+ * A data store is responsible for persisting documents and performing efficient searches.
+ *
  * @author nacho
  */
 public interface DataStore extends AutoCloseable {
 
     /**
-     * Some DataStore implementations will need to perform an initialization process, like building in-memory
-     * data structures used at runtime. Implementations of this method will execute such operations asynchronously.
+     * Initializes the data store.
+     * This may involve building in-memory structures or opening file handles.
      *
-     * @return the CompletableFuture for this initialization process
+     * @return a {@link CompletableFuture} that completes when initialization is finished
      */
     CompletableFuture<Void> initialize();
 
     /**
-     * Adds a new document to the store. If a document with the same id exists, it will be replaced by this one.
+     * Adds a document to the store. If a document with the same ID already exists, it will be overwritten.
      *
      * @param document the document to add
      */
     void add(Document document);
 
     /**
-     * Adds a new document to the datastore, collecting internal metrics via the {@link Telemetry} instance
+     * Adds a document to the store and records performance metrics.
      *
      * @param document the document to add
-     * @param metrics  the metrics service instance
+     * @param metrics  the telemetry provider
      */
     default void add(Document document, Telemetry metrics) {
         //default implementation does not publish any internal metrics.
@@ -57,18 +60,18 @@ public interface DataStore extends AutoCloseable {
     }
 
     /**
-     * Retrieves a document by its id.
+     * Retrieves a document by its unique identifier.
      *
-     * @param documentId the document id
-     * @return the document, if it exists
+     * @param documentId the document ID
+     * @return an {@link Optional} containing the document if found, or empty otherwise
      */
     Optional<Document> get(DocumentId documentId);
 
     /**
-     * Finds documents matching the provided query.
+     * Searches for documents matching the specified query.
      *
-     * @param query the query
-     * @return the result containing documents matching the query
+     * @param query the search query criteria
+     * @return a {@link QueryResult} containing the matching documents
      */
     default QueryResult search(Query query) {
         return search(query, Integer.MAX_VALUE);
@@ -76,21 +79,22 @@ public interface DataStore extends AutoCloseable {
 
 
     /**
-     * Finds documents matching the provided query.
+     * Searches for documents matching the specified query, limiting the number of results returned.
      *
-     * @param query      the query
-     * @param maxResults the maximum number of documents to return
-     * @return the result containing documents matching the query
+     * @param query      the search query criteria
+     * @param maxResults the maximum number of results to return
+     * @return a {@link QueryResult} containing the matching documents
      */
     QueryResult search(Query query, int maxResults);
 
 
     /**
-     * Finds documents matching the provided query, publishing internal metrics via the {@link Telemetry} instance
+     * Searches for documents matching the specified query and records performance metrics.
      *
-     * @param query      the query
-     * @param maxResults the maximum number of documents to return
-     * @return the result containing documents matching the query
+     * @param query      the search query criteria
+     * @param maxResults the maximum number of results to return
+     * @param metrics     the telemetry provider
+     * @return a {@link QueryResult} containing the matching documents
      */
     default QueryResult search(Query query, int maxResults, Telemetry metrics) {
         //default implementation does not publish any internal metrics.
@@ -98,16 +102,17 @@ public interface DataStore extends AutoCloseable {
     }
 
     /**
-     * Removes the document associated to the provided id
+     * Removes the document with the specified identifier from the store.
      *
-     * @param documentId the document id to remove.
+     * @param documentId the ID of the document to remove
      */
     void remove(DocumentId documentId);
 
     /**
-     * Removes the document associated to the provided id, publishing internal metrics via the {@link Telemetry} instance
+     * Removes the document with the specified identifier and records performance metrics.
      *
-     * @param documentId the document id to remove.
+     * @param documentId the ID of the document to remove
+     * @param metrics    the telemetry provider
      */
     default void remove(DocumentId documentId, Telemetry metrics) {
         //default implementation does not publish any internal metrics.
@@ -115,9 +120,9 @@ public interface DataStore extends AutoCloseable {
     }
 
     /**
-     * Calculates the total number of documents stored.
+     * Returns the total number of documents currently stored in the data store.
      *
-     * @return the number of documents stored.
+     * @return the total document count
      */
     long getDocumentCount();
 

@@ -80,4 +80,6 @@ public interface DocumentPersister extends AutoCloseable {
      * @param documentId the document id to remove
      */
     void remove(DocumentId documentId);
+
+    long getOffHeapBytes();
 }

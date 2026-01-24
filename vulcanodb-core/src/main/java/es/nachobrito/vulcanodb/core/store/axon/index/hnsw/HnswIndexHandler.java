@@ -91,4 +91,9 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
         index.close();
         documentIdMap.close();
     }
+
+    @Override
+    public long offHeapBytes() {
+        return index.offHeapBytes() + documentIdMap.offHeapBytes();
+    }
 }

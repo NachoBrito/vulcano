@@ -22,7 +22,11 @@
 -->
 <FindBugsFilter>
     <Match>
-        <Class name="es.nachobrito.vulcanodb.core.VulcanoDb$Builder"/>
+        <Or>
+            <Class name="es.nachobrito.vulcanodb.core.VulcanoDb$Builder"/>
+            <Class name="es.nachobrito.vulcanodb.core.ingestion.WorkQueueIngestor"/>
+        </Or>
+
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
 

@@ -335,6 +335,16 @@ final class HashIndex implements AutoCloseable {
         return max;
     }
 
+    public long offHeapBytes() {
+        long total = 0;
+        for (List<Segment> bucket : segments) {
+            if (bucket != null) {
+                total += (long) bucket.size() * segmentSize;
+            }
+        }
+        return total;
+    }
+
     @Override
     public void close() throws Exception {
         for (List<Segment> bucket : segments) {

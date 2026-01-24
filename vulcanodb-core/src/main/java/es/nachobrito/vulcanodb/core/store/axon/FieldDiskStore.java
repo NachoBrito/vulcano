@@ -95,6 +95,10 @@ class FieldDiskStore implements AutoCloseable {
         stores.values().forEach(KeyValueStore::commit);
     }
 
+    public long offHeapBytes() {
+        return stores.values().stream().mapToLong(KeyValueStore::offHeapBytes).sum();
+    }
+
 
     private KeyValueStore createValueStore(FieldIdentity<?> fieldIdentity) {
         try {

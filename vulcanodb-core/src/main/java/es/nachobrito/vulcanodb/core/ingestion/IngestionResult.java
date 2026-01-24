@@ -14,26 +14,22 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.index;
+package es.nachobrito.vulcanodb.core.ingestion;
 
-import es.nachobrito.vulcanodb.core.document.Document;
-import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
-
-import java.util.List;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * @author nacho
  */
-public interface IndexHandler<V> extends AutoCloseable {
-
-
-    void index(Long internalId, Document document);
-
-    List<IndexMatch> search(LeafNode<V> query, int maxResults);
-
-    default List<IndexMatch> search(LeafNode<V> query) {
-        return search(query, Integer.MAX_VALUE);
+public record IngestionResult(
+        int totalDocuments,
+        int ingestedDocuments,
+        Set<IngestionError> errors
+) {
+    public IngestionResult(int totalDocuments, int ingestedDocuments, Set<IngestionError> errors) {
+        this.totalDocuments = totalDocuments;
+        this.ingestedDocuments = ingestedDocuments;
+        this.errors = Collections.unmodifiableSet(errors);
     }
-
-    long offHeapBytes();
 }

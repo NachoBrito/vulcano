@@ -59,7 +59,7 @@ public final class VulcanoDbFactory {
     @Singleton
     public VulcanoDb getVulcanoDb() throws IOException {
         log.info("""
-                *** Initializing VulcanoDb ***
+                \n*** Initializing VulcanoDb ***
                 - data folder: {}
                 - vector indexes: {}
                 - string indexes: {}

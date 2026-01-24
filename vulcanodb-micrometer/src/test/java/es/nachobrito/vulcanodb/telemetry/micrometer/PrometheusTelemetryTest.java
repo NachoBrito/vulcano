@@ -20,6 +20,7 @@ import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.store.naive.NaiveInMemoryDataStore;
 import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
+import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -60,7 +61,7 @@ class PrometheusTelemetryTest {
         return VulcanoDb
                 .builder()
                 .withDataStore(new NaiveInMemoryDataStore())
-                .withTelemetry(new PrometheusTelemetry(9999, true, MetricLevel.DIAGNOSTIC))
+                .withTelemetry(new PrometheusTelemetry(9999, true, MetricLevel.DIAGNOSTIC, SamplingRate.EXTREME))
                 .build();
     }
 }

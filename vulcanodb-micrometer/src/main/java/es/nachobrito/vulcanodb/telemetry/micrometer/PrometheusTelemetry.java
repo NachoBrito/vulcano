@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.telemetry.micrometer;
 
 import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
+import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.metrics.exporter.httpserver.HTTPServer;
@@ -38,9 +39,9 @@ public class PrometheusTelemetry extends MicrometerTelemetry {
      * @param enabled     whether this telemetry is enabled
      * @param configLevel the max metric level to publish
      */
-    public PrometheusTelemetry(int port, boolean enabled, MetricLevel configLevel) {
+    public PrometheusTelemetry(int port, boolean enabled, MetricLevel configLevel, SamplingRate samplingRate) {
         var registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-        super(registry, enabled, configLevel);
+        super(registry, enabled, configLevel, samplingRate);
         httpServer = startHttpServer(port, registry);
     }
 

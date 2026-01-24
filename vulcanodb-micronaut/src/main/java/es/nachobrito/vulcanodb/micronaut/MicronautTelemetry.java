@@ -18,10 +18,11 @@ package es.nachobrito.vulcanodb.micronaut;
 
 import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
 import es.nachobrito.vulcanodb.core.telemetry.MetricName;
+import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,16 +40,20 @@ public class MicronautTelemetry implements Telemetry {
     private final boolean telemetryEnabled;
     private final MetricLevel metricLevel;
     private final MeterRegistry meterRegistry;
+    private final SamplingRate samplingRate;
 
     public MicronautTelemetry(
-            @Value("${vulcanodb.telemetry.enabled:false}")
+            @Property(name = "vulcanodb.telemetry.enabled", defaultValue = "false")
             String telemetryEnabled,
-            @Value("${vulcanodb.telemetry.level:BASIC}")
+            @Property(name = "vulcanodb.telemetry.level", defaultValue = "BASIC")
             String metricLevel,
+            @Property(name = "vulcano.telemetry.sampling", defaultValue = "MEDIUM")
+            String samplingRate,
             MeterRegistry meterRegistry
     ) {
         this.telemetryEnabled = Boolean.parseBoolean(telemetryEnabled);
         this.metricLevel = MetricLevel.valueOf(metricLevel);
+        this.samplingRate = SamplingRate.valueOf(samplingRate);
         this.meterRegistry = meterRegistry;
         log.info("VulcanoDb telemetry (level: {}) will be shown in Micronaut metrics", metricLevel);
     }
@@ -91,6 +96,11 @@ public class MicronautTelemetry implements Telemetry {
                     Number val = supplier.get();
                     return val == null ? Double.NaN : val.doubleValue();
                 });
+    }
+
+    @Override
+    public SamplingRate getSamplingRate() {
+        return samplingRate;
     }
 
     @Override

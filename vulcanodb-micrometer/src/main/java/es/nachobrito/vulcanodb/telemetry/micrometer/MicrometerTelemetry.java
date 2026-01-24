@@ -18,6 +18,7 @@ package es.nachobrito.vulcanodb.telemetry.micrometer;
 
 import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
 import es.nachobrito.vulcanodb.core.telemetry.MetricName;
+import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -36,15 +37,17 @@ public abstract class MicrometerTelemetry implements Telemetry {
     private final MeterRegistry registry;
     private final boolean enabled;
     private final MetricLevel configLevel;
+    private final SamplingRate samplingRate;
 
     // Fast lookup maps to avoid re-binding meters in the hot path
     private final Map<MetricName, Counter> counters = new EnumMap<>(MetricName.class);
     private final Map<MetricName, Timer> timers = new EnumMap<>(MetricName.class);
 
-    public MicrometerTelemetry(MeterRegistry registry, boolean enabled, MetricLevel configLevel) {
+    public MicrometerTelemetry(MeterRegistry registry, boolean enabled, MetricLevel configLevel, SamplingRate samplingRate) {
         this.registry = registry;
         this.enabled = enabled;
         this.configLevel = configLevel;
+        this.samplingRate = samplingRate;
 
         if (enabled) {
             preRegisterMeters();
@@ -103,5 +106,10 @@ public abstract class MicrometerTelemetry implements Telemetry {
         // Micrometer handles the polling of the supplier automatically
         Gauge.builder(name.getKey(), valueSupplier)
                 .register(registry);
+    }
+
+    @Override
+    public SamplingRate getSamplingRate() {
+        return this.samplingRate;
     }
 }

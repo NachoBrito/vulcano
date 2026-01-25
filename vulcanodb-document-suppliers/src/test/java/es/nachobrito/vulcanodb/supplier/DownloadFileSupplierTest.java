@@ -25,7 +25,9 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -158,7 +160,10 @@ class DownloadFileSupplierTest {
         private byte[] lastBytes;
 
         public TestDownloadFileSupplier(URL url) {
-            super(url, _ -> new float[]{});
+            super(url, _ -> new float[]{}, HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .connectTimeout(Duration.ofSeconds(30))
+                    .build());
         }
 
         @Override

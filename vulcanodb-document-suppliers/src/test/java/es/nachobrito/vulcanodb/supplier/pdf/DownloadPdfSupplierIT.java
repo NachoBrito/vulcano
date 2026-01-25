@@ -19,6 +19,8 @@ package es.nachobrito.vulcanodb.supplier.pdf;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -33,7 +35,10 @@ class DownloadPdfSupplierIT {
 
         byte[] data = this.getClass().getClassLoader()
                 .getResourceAsStream("1603.09320v4.pdf").readAllBytes();
-        var supplier = new DownloadPdfSupplier(null, _ -> new float[]{});
+        var supplier = new DownloadPdfSupplier(null, _ -> new float[]{}, HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(30))
+                .build());
         var documents = supplier.generateDocuments(data);
 
         assertNotNull(documents);

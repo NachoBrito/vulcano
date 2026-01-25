@@ -24,6 +24,7 @@ import org.apache.pdfbox.Loader;
 
 import java.io.IOException;
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,8 +48,8 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
      * @param url               the URL of the PDF file to download.
      * @param embeddingFunction the function used to generate embeddings from the PDF text.
      */
-    public DownloadPdfSupplier(URL url, EmbeddingFunction embeddingFunction) {
-        super(url, embeddingFunction);
+    public DownloadPdfSupplier(URL url, EmbeddingFunction embeddingFunction, HttpClient httpClient) {
+        super(url, embeddingFunction, httpClient);
     }
 
     /**

@@ -69,13 +69,10 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
      * @param url               the URL of the file to download.
      * @param embeddingFunction the function used to generate embeddings from extracted text.
      */
-    public DownloadFileSupplier(URL url, EmbeddingFunction embeddingFunction) {
+    public DownloadFileSupplier(URL url, EmbeddingFunction embeddingFunction, HttpClient httpClient) {
         super(embeddingFunction);
         this.url = url;
-        this.httpClient = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(TIMEOUT)
-                .build();
+        this.httpClient = httpClient;
     }
 
     /**

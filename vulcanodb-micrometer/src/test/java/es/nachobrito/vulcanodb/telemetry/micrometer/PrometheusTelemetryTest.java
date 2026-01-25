@@ -42,8 +42,6 @@ class PrometheusTelemetryTest {
         try (var db = buildVulcanoDb()) {
             var document = Document.builder().withStringField("name", "test document").build();
             db.add(document);
-
-
             var request = HttpRequest
                     .newBuilder()
                     .uri(new URI("http://localhost:9999/metrics"))

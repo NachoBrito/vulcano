@@ -57,13 +57,15 @@ public class WorkQueueIngestor implements DocumentIngestor {
         this.vulcanoDb = vulcanoDb;
         this.telemetry = telemetry;
         executorService = Executors.newVirtualThreadPerTaskExecutor();
+        if (telemetry.isEnabled()) {
+            telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, queueSize::get);
+        }
     }
 
     @Override
     public IngestionResult ingest(Collection<Document> documents) {
         if (telemetry.isEnabled()) {
             queueSize.addAndGet(documents.size());
-            telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, queueSize::get);
         }
 
         if (documents.size() < Runtime.getRuntime().availableProcessors()) {
@@ -95,7 +97,6 @@ public class WorkQueueIngestor implements DocumentIngestor {
                 ingested.incrementAndGet();
                 if (telemetry.isEnabled()) {
                     queueSize.decrementAndGet();
-                    telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, queueSize::get);
                 }
             } catch (Throwable throwable) {
                 errors.add(new IngestionError(document, throwable.getMessage()));
@@ -121,7 +122,6 @@ public class WorkQueueIngestor implements DocumentIngestor {
     public IngestionResult ingestFrom(Collection<Supplier<Document>> suppliers) {
         if (telemetry.isEnabled()) {
             queueSize.addAndGet(suppliers.size());
-            telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, queueSize::get);
         }
         AtomicInteger ingested = new AtomicInteger(0);
         Set<IngestionError> errors = ConcurrentHashMap.newKeySet();
@@ -150,7 +150,6 @@ public class WorkQueueIngestor implements DocumentIngestor {
                 ingested.incrementAndGet();
                 if (telemetry.isEnabled()) {
                     queueSize.decrementAndGet();
-                    telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, queueSize::get);
                 }
             } catch (Throwable throwable) {
                 errors.add(new IngestionError(document, throwable.getMessage()));

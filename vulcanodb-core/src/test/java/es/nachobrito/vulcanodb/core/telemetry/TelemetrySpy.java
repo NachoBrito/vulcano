@@ -21,22 +21,59 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * @author nacho
  */
 public class TelemetrySpy implements Telemetry {
-    Logger logger = LoggerFactory.getLogger(TelemetrySpy.class);
+    private final Logger logger = LoggerFactory.getLogger(TelemetrySpy.class);
 
-    private final Map<MetricName, Long> counters = new ConcurrentHashMap<>();
+    private final Map<MetricName, AtomicLong> counters = new ConcurrentHashMap<>();
     private final Map<MetricName, List<Long>> timers = new ConcurrentHashMap<>();
-    private final Map<MetricName, List<Number>> gauges = new ConcurrentHashMap<>();
+    private final Map<MetricName, Supplier<Number>> gauges = new ConcurrentHashMap<>();
+    private final Map<MetricName, List<Number>> gaugeValues = new ConcurrentHashMap<>();
 
-    private final Map<MetricLevel, Object> shouldCaptureLevelInvocations = new EnumMap<>(MetricLevel.class);
-    private final Map<MetricName, Object> shouldCaptureMetricInvocations = new EnumMap<>(MetricName.class);
+    private final Map<MetricName, AtomicInteger> shouldCaptureMetricInvocations = new ConcurrentHashMap<>();
+
+    private final Map<MetricLevel, AtomicInteger> shouldCaptureLevelInvocations = new ConcurrentHashMap<>();
+
     private final AtomicInteger isEnabledInvocations = new AtomicInteger(0);
+
+    private boolean running = true;
+
+    public TelemetrySpy() {
+        for (MetricName metricName : MetricName.values()) {
+            counters.put(metricName, new AtomicLong(0));
+            timers.put(metricName, new CopyOnWriteArrayList<>());
+            shouldCaptureMetricInvocations.put(metricName, new AtomicInteger(0));
+        }
+        for (MetricLevel metricLevel : MetricLevel.values()) {
+            shouldCaptureLevelInvocations.put(metricLevel, new AtomicInteger(0));
+        }
+        Thread.ofPlatform().start(this::monitorGauges);
+    }
+
+    private void monitorGauges() {
+        logger.info("Starting gauge monitor");
+        while (running) {
+            this.gauges.forEach((metricName, gauge) -> {
+                var value = gauge.get();
+                logger.info("Reading gauge '{}': {}", metricName, value);
+                this.gaugeValues.get(metricName).add(value);
+            });
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
 
     @Override
     public boolean isEnabled() {
@@ -48,17 +85,20 @@ public class TelemetrySpy implements Telemetry {
     @Override
     public boolean shouldCapture(MetricLevel level) {
         logger.info("{} -> shouldCapture(level: {})", Thread.currentThread().threadId(), level);
-        ((AtomicInteger) shouldCaptureLevelInvocations
-                .computeIfAbsent(level, k -> new AtomicInteger())).incrementAndGet();
-
+        shouldCaptureLevelInvocations.get(level).incrementAndGet();
         return true;
+    }
+
+    @Override
+    public SamplingRate getSamplingRate() {
+        return SamplingRate.EXTREME;
     }
 
     @Override
     public boolean shouldCapture(MetricName name) {
         logger.info("{} -> shouldCapture(name: {})", Thread.currentThread().threadId(), name);
-        ((AtomicInteger) shouldCaptureMetricInvocations
-                .computeIfAbsent(name, k -> new AtomicInteger())).incrementAndGet();
+        shouldCaptureMetricInvocations.get(name).incrementAndGet();
+
         return true;
     }
 
@@ -72,51 +112,64 @@ public class TelemetrySpy implements Telemetry {
     @Override
     public void incrementCounter(MetricName name, long amount) {
         logger.info("{} -> incrementCounter({}, {})", Thread.currentThread().threadId(), name, amount);
-
-        if (!counters.containsKey(name)) {
-            counters.put(name, amount);
-            return;
-        }
-        counters.put(name, counters.get(name) + amount);
+        counters.get(name).addAndGet(amount);
     }
 
     @Override
     public void recordTimer(MetricName name, long durationNanos) {
         logger.info("{} -> recordTimer({}, {})", Thread.currentThread().threadId(), name, durationNanos);
-
-        timers.computeIfAbsent(name, _ -> new ArrayList<>()).add(durationNanos);
+        timers.get(name).add(durationNanos);
     }
 
     @Override
     public void registerGauge(MetricName name, Supplier<Number> valueSupplier) {
         logger.info("{} -> registerGauge({}, {})", Thread.currentThread().threadId(), name, valueSupplier);
+        gauges.put(name, valueSupplier);
+        gaugeValues.put(name, new CopyOnWriteArrayList<>());
 
-        gauges.computeIfAbsent(name, _ -> new ArrayList<>()).add(valueSupplier.get());
+        gaugeValues.get(name).add(valueSupplier.get());
     }
 
     @Override
     public void close() throws Exception {
-
+        this.running = false;
     }
 
     public Map<MetricName, Long> getCounters() {
-        return Collections.unmodifiableMap(counters);
+        return Collections
+                .unmodifiableMap(
+                        counters
+                                .entrySet()
+                                .stream()
+                                .collect(
+                                        Collectors
+                                                .toMap(
+                                                        Map.Entry::getKey,
+                                                        entry -> entry.getValue().get()
+                                                )
+                                )
+                );
+
     }
 
     public Map<MetricName, List<Long>> getTimers() {
         return Collections.unmodifiableMap(timers);
     }
 
-    public Map<MetricName, List<Number>> getGauges() {
+    public Map<MetricName, Supplier<Number>> getGauges() {
         return Collections.unmodifiableMap(gauges);
     }
 
+    public Map<MetricName, List<Number>> getGaugeValues() {
+        return Collections.unmodifiableMap(gaugeValues);
+    }
+
     public DoubleSummaryStatistics getGaugeStats(MetricName name) {
-        if (!gauges.containsKey(name)) {
+        if (!gaugeValues.containsKey(name)) {
             throw new IllegalStateException("Gauge not found: " + name);
         }
 
-        return gauges.get(name).stream().mapToDouble(Number::doubleValue).summaryStatistics();
+        return gaugeValues.get(name).stream().mapToDouble(Number::doubleValue).summaryStatistics();
     }
 
     public LongSummaryStatistics getTimerStats(MetricName name) {
@@ -130,7 +183,7 @@ public class TelemetrySpy implements Telemetry {
         if (!counters.containsKey(name)) {
             throw new IllegalStateException("Counter not found: " + name);
         }
-        return counters.get(name);
+        return counters.get(name).get();
     }
 
     public int getIsEnabledInvocations() {
@@ -138,10 +191,10 @@ public class TelemetrySpy implements Telemetry {
     }
 
     public int getShouldCaptureMetricInvocations(MetricName name) {
-        return ((AtomicInteger) shouldCaptureMetricInvocations.get(name)).get();
+        return shouldCaptureMetricInvocations.get(name).get();
     }
 
     public int getShouldCaptureLevelInvocations(MetricLevel level) {
-        return ((AtomicInteger) shouldCaptureLevelInvocations.get(level)).get();
+        return shouldCaptureLevelInvocations.get(level).get();
     }
 }

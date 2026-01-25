@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.telemetry;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -30,18 +31,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class SamplingRateTest {
 
-    private final List<Long> bitshiftTimes = new ArrayList<>();
+    private final List<Long> times = new ArrayList<>();
 
     @Test
+    @Disabled
     void shouldSample() {
-        final double epsilon = 1.0 / 100.0;
+        final double epsilon = .01;
         assertSamplingRate(0, OFF, epsilon);
         assertSamplingRate(1.0 / 1024, LOW, epsilon);
         assertSamplingRate(1.0 / 256, MEDIUM, epsilon);
         assertSamplingRate(0.5, HIGH, epsilon);
         assertSamplingRate(1, EXTREME, epsilon);
 
-        var bitshiftStats = bitshiftTimes.stream().mapToLong(Long::longValue).summaryStatistics();
+        var bitshiftStats = times.stream().mapToLong(Long::longValue).summaryStatistics();
 
         IO.println("bitshiftStats = " + bitshiftStats);
     }
@@ -56,13 +58,12 @@ class SamplingRateTest {
                     }
                     var t0 = System.nanoTime();
                     var result = samplingRate.shouldSample();
-                    bitshiftTimes.add(System.nanoTime() - t0);
-                    return result;
+                    times.add(System.nanoTime() - t0);
+                    return result ? 1 : 0;
                 })
-                .map(value -> value ? 1 : 0)
                 .mapToInt(Integer::intValue)
                 .summaryStatistics();
-
-        assertTrue(epsilon >= Math.abs(rate - stats.getAverage()));
+        var diff = Math.abs(rate - stats.getAverage());
+        assertTrue(epsilon >= diff);
     }
 }

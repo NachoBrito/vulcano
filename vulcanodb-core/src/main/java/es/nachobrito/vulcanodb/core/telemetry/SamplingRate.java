@@ -44,7 +44,8 @@ public enum SamplingRate {
      * All metrics are captured (1 in 1).
      */
     EXTREME(1);
-    final int mask;
+
+    private final int mask;
 
     SamplingRate(int value) {
         this.mask = value - 1;
@@ -57,7 +58,6 @@ public enum SamplingRate {
         if (this.equals(EXTREME)) {
             return true;
         }
-
         return 0 == (System.nanoTime() & this.mask);
     }
 

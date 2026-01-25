@@ -20,7 +20,6 @@ import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
-import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -48,16 +47,6 @@ public interface DataStore extends AutoCloseable {
      */
     void add(Document document);
 
-    /**
-     * Adds a document to the store and records performance metrics.
-     *
-     * @param document the document to add
-     * @param metrics  the telemetry provider
-     */
-    default void add(Document document, Telemetry metrics) {
-        //default implementation does not publish any internal metrics.
-        add(document);
-    }
 
     /**
      * Retrieves a document by its unique identifier.
@@ -89,19 +78,6 @@ public interface DataStore extends AutoCloseable {
 
 
     /**
-     * Searches for documents matching the specified query and records performance metrics.
-     *
-     * @param query      the search query criteria
-     * @param maxResults the maximum number of results to return
-     * @param metrics     the telemetry provider
-     * @return a {@link QueryResult} containing the matching documents
-     */
-    default QueryResult search(Query query, int maxResults, Telemetry metrics) {
-        //default implementation does not publish any internal metrics.
-        return search(query, maxResults);
-    }
-
-    /**
      * Removes the document with the specified identifier from the store.
      *
      * @param documentId the ID of the document to remove
@@ -109,15 +85,15 @@ public interface DataStore extends AutoCloseable {
     void remove(DocumentId documentId);
 
     /**
-     * Removes the document with the specified identifier and records performance metrics.
+     * Returns the off-heap memory usage in bytes.
      *
-     * @param documentId the ID of the document to remove
-     * @param metrics    the telemetry provider
+     * @return off-heap memory usage in bytes
      */
-    default void remove(DocumentId documentId, Telemetry metrics) {
-        //default implementation does not publish any internal metrics.
-        remove(documentId);
+    default long getOffHeapMemoryUsage() {
+        return 0;
     }
+
+    ;
 
     /**
      * Returns the total number of documents currently stored in the data store.

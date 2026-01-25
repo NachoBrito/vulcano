@@ -95,7 +95,7 @@ public final class DefaultDocumentPersister implements DocumentPersister {
             Document document, CompletableFuture<FieldWriteResult>[] fieldCallables, Throwable error) {
         var stringId = document.id().toString();
         if (logger.isDebugEnabled()) {
-            logger.debug("Writing shape of document {}", stringId);
+            logger.debug("Committing document {}", stringId);
         }
         if (error != null) {
             return DocumentWriteResult.ofError(error);

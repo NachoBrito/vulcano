@@ -42,10 +42,19 @@ public class VulcanoDb implements AutoCloseable {
 
     private final DataStore dataStore;
     private final Telemetry telemetry;
+    private final boolean telemetryDisabled;
 
     private VulcanoDb(DataStore dataStore, Telemetry telemetry) {
         this.dataStore = dataStore;
         this.telemetry = telemetry;
+        this.telemetryDisabled = !telemetry.isEnabled();
+
+        if (telemetry.isEnabled()) {
+            telemetry.registerGauge(MetricName.STORED_DOCUMENTS, this::getDocumentCount);
+            if (telemetry.shouldCapture(MetricName.OFF_HEAP_MEMORY_USAGE)) {
+                telemetry.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, dataStore::getOffHeapMemoryUsage);
+            }
+        }
     }
 
 
@@ -55,21 +64,18 @@ public class VulcanoDb implements AutoCloseable {
      * @param document the document to be indexed
      */
     public void add(Document document) {
-        if (!telemetry.isEnabled()) {
+        if (telemetryDisabled) {
             dataStore.add(document);
             return;
         }
 
         long startTime = System.nanoTime();
         try {
-            dataStore.add(document, telemetry);
+            dataStore.add(document);
         } finally {
             telemetry.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
             if (telemetry.shouldCapture(MetricName.DOCUMENT_INSERT_LATENCY)) {
                 telemetry.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
-            }
-            if (telemetry.shouldCapture(MetricName.DOCUMENT_COUNT)) {
-                telemetry.registerGauge(MetricName.DOCUMENT_COUNT, dataStore::getDocumentCount);
             }
         }
     }
@@ -84,19 +90,16 @@ public class VulcanoDb implements AutoCloseable {
     }
 
     public void remove(DocumentId documentId) {
-        if (!telemetry.isEnabled()) {
+        if (telemetryDisabled) {
             dataStore.remove(documentId);
             return;
         }
         long startTime = System.nanoTime();
         try {
-            dataStore.remove(documentId, telemetry);
+            dataStore.remove(documentId);
         } finally {
             telemetry.recordTimer(MetricName.DOCUMENT_REMOVE_LATENCY, System.nanoTime() - startTime);
             telemetry.incrementCounter(MetricName.DOCUMENT_REMOVE_COUNT);
-            if (telemetry.shouldCapture(MetricName.DOCUMENT_COUNT)) {
-                telemetry.registerGauge(MetricName.DOCUMENT_COUNT, dataStore::getDocumentCount);
-            }
         }
     }
 
@@ -107,13 +110,13 @@ public class VulcanoDb implements AutoCloseable {
      * @return a {@link QueryResult} containing the matching documents
      */
     public QueryResult search(Query query) {
-        if (!telemetry.isEnabled()) {
+        if (telemetryDisabled) {
             return dataStore.search(query);
         }
 
         long startTime = System.nanoTime();
         try {
-            return dataStore.search(query, Integer.MAX_VALUE, telemetry);
+            return dataStore.search(query, Integer.MAX_VALUE);
         } finally {
             telemetry.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
             telemetry.incrementCounter(MetricName.SEARCH_COUNT);
@@ -128,16 +131,20 @@ public class VulcanoDb implements AutoCloseable {
      * @return a {@link QueryResult} containing the matching documents
      */
     public QueryResult search(Query query, int maxResults) {
-        if (!telemetry.isEnabled()) {
+        if (telemetryDisabled) {
             return dataStore.search(query, maxResults);
         }
         long startTime = System.nanoTime();
         try {
-            return dataStore.search(query, maxResults, telemetry);
+            return dataStore.search(query, maxResults);
         } finally {
             telemetry.recordTimer(MetricName.SEARCH_LATENCY, System.nanoTime() - startTime);
             telemetry.incrementCounter(MetricName.SEARCH_COUNT);
         }
+    }
+
+    public long getDocumentCount() {
+        return dataStore.getDocumentCount();
     }
 
     /**

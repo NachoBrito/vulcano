@@ -34,8 +34,6 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
 import es.nachobrito.vulcanodb.core.store.axon.wal.DefaultWalManager;
 import es.nachobrito.vulcanodb.core.store.axon.wal.WalManager;
-import es.nachobrito.vulcanodb.core.telemetry.MetricName;
-import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +42,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static es.nachobrito.vulcanodb.core.store.axon.wal.WalEntry.Type;
@@ -64,6 +63,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private final QueryExecutor queryExecutor;
     private final WalManager walManager;
     private boolean initialized = false;
+    private final AtomicLong storedDocuments = new AtomicLong();
 
     private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister, WalManager walManager) {
         this.indexes = indexes;
@@ -86,10 +86,15 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             log.info("Starting initialization process, recovering from WAL if needed");
 
             recoverUncommitedOperations();
+            countDocuments();
 
             initialized = true;
             log.info("Initialization complete");
-        });
+        }, ExecutorProvider.defaultExecutor());
+    }
+
+    private void countDocuments() {
+        storedDocuments.set(this.documentPersister.internalIds().count());
     }
 
     private void recoverUncommitedOperations() {
@@ -122,18 +127,10 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             long txId = walManager.recordAdd(document);
             addInternal(document);
             walManager.commit(txId);
+            ExecutorProvider.defaultExecutor().execute(storedDocuments::incrementAndGet);
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }
-    }
-
-    @Override
-    public void add(Document document, Telemetry metrics) {
-        add(document);
-        if (!metrics.isEnabled() || !metrics.shouldCapture(MetricName.OFF_HEAP_MEMORY_USAGE)) {
-            return;
-        }
-        metrics.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, this::getOffHeapMemoryUsage);
     }
 
     private void addInternal(Document document) {
@@ -180,21 +177,14 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             long txId = walManager.recordRemove(documentId.toString());
             this.documentPersister.remove(documentId);
             walManager.commit(txId);
+            ExecutorProvider.defaultExecutor().execute(storedDocuments::decrementAndGet);
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }
     }
 
     @Override
-    public void remove(DocumentId documentId, Telemetry metrics) {
-        remove(documentId);
-        if (!metrics.isEnabled() || !metrics.shouldCapture(MetricName.OFF_HEAP_MEMORY_USAGE)) {
-            return;
-        }
-        metrics.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, this::getOffHeapMemoryUsage);
-    }
-
-    private Number getOffHeapMemoryUsage() {
+    public long getOffHeapMemoryUsage() {
         long documentOffHeapMemory = documentPersister.getOffHeapBytes();
         long walOffHeapMemory = walManager.offHeapBytes();
         long indexOffHeapMemory = indexes
@@ -225,6 +215,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             log.error("Could not close datastore.");
             throw new AxonDataStoreCloseException("Some Index Handlers could not  be closed", errors);
         }
+        ExecutorProvider.defaultExecutor().close();
         log.info("Axon Datastore closed successfully.");
     }
 
@@ -239,7 +230,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     @Override
     public long getDocumentCount() {
-        return this.documentPersister.internalIds().count();
+        return storedDocuments.get();
     }
 
 

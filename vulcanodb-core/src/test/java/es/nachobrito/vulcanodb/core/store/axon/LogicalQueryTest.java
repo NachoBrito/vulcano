@@ -41,7 +41,7 @@ public class LogicalQueryTest {
     private static AxonDataStore axon;
 
     @BeforeEach
-    void setup() throws IOException {
+    void setup() throws IOException, InterruptedException {
         path = Files.createTempDirectory("vulcanodb-test");
         axon = buildAxonStore();
     }
@@ -52,7 +52,7 @@ public class LogicalQueryTest {
         FileUtils.deleteRecursively(path.toFile());
     }
 
-    private static AxonDataStore buildAxonStore() {
+    private static AxonDataStore buildAxonStore() throws InterruptedException {
         var axon = AxonDataStore
                 .builder()
                 .withDataFolder(path)
@@ -66,12 +66,13 @@ public class LogicalQueryTest {
         var shape = exampleDoc.getShape();
         var docs = DocumentMother.random(shape, 100);
         docs.forEach(axon::add);
+        Thread.sleep(500);
         assertEquals(100, axon.getDocumentCount());
         return axon;
     }
 
     @Test
-    public void expectAndQueriesWork() {
+    public void expectAndQueriesWork() throws InterruptedException {
         var query1 = VulcanoDb
                 .queryBuilder()
                 .isGreaterThanOrEqual(0, "number1")
@@ -79,6 +80,7 @@ public class LogicalQueryTest {
                 .build();
 
         var result1 = axon.search(query1);
+        Thread.sleep(500);
         assertEquals(100, result1.getDocuments().size());
 
         var query2 = VulcanoDb
@@ -115,7 +117,7 @@ public class LogicalQueryTest {
     }
 
     @Test
-    public void expectNotQueriesWork() {
+    public void expectNotQueriesWork() throws InterruptedException {
         var query1 = VulcanoDb
                 .queryBuilder()
                 .isLessThan(0, "number1")
@@ -124,6 +126,7 @@ public class LogicalQueryTest {
                 .build();
 
         var result1 = axon.search(query1);
+        Thread.sleep(500);
         assertEquals(100, result1.getDocuments().size());
 
         var query2 = VulcanoDb

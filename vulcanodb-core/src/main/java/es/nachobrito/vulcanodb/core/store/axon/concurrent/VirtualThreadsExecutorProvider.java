@@ -26,10 +26,13 @@ public class VirtualThreadsExecutorProvider implements ExecutorProvider {
 
     static final VirtualThreadsExecutorProvider INSTANCE = new VirtualThreadsExecutorProvider();
 
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Override
     public ExecutorService getExecutor() {
+        if (executor == null || executor.isShutdown()) {
+            executor = Executors.newVirtualThreadPerTaskExecutor();
+        }
         return executor;
     }
 }

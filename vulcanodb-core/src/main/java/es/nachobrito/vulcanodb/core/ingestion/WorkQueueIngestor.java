@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 /**
  * A {@link DocumentIngestor} implementation that uses a work queue for background ingestion.
@@ -119,7 +118,7 @@ public class WorkQueueIngestor implements DocumentIngestor {
     }
 
     @Override
-    public IngestionResult ingestFrom(Collection<Supplier<Document>> suppliers) {
+    public IngestionResult ingestFrom(Collection<DocumentSupplier> suppliers) {
         if (telemetry.isEnabled()) {
             queueSize.addAndGet(suppliers.size());
         }
@@ -138,21 +137,26 @@ public class WorkQueueIngestor implements DocumentIngestor {
         return new IngestionResult(suppliers.size(), ingested.get(), errors);
     }
 
-    private CompletableFuture<Void> toCompletableFuture(Supplier<Document> supplier, AtomicInteger ingested, Set<IngestionError> errors) {
+    private CompletableFuture<Void> toCompletableFuture(DocumentSupplier supplier, AtomicInteger ingested, Set<IngestionError> errors) {
         return CompletableFuture.runAsync(() -> {
-            Document document = null;
-            try {
-                if (log.isDebugEnabled()) {
-                    log.debug("{} -> Invoking supplier {}", Thread.currentThread().threadId(), supplier);
+            if (log.isDebugEnabled()) {
+                log.debug("{} -> Invoking supplier {}", Thread.currentThread().threadId(), supplier);
+            }
+            var documents = supplier.get();
+            if (telemetry.isEnabled()) {
+                queueSize.addAndGet(documents.size());
+                queueSize.decrementAndGet();
+            }
+            for (var document : documents) {
+                try {
+                    vulcanoDb.add(document);
+                    ingested.incrementAndGet();
+                    if (telemetry.isEnabled()) {
+                        queueSize.decrementAndGet();
+                    }
+                } catch (Throwable throwable) {
+                    errors.add(new IngestionError(document, throwable.getMessage()));
                 }
-                document = supplier.get();
-                vulcanoDb.add(document);
-                ingested.incrementAndGet();
-                if (telemetry.isEnabled()) {
-                    queueSize.decrementAndGet();
-                }
-            } catch (Throwable throwable) {
-                errors.add(new IngestionError(document, throwable.getMessage()));
             }
         }, executorService);
     }

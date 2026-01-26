@@ -26,9 +26,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * A concrete implementation of {@link DownloadFileSupplier} for PDF files.
@@ -42,6 +40,8 @@ import java.util.List;
  */
 public class DownloadPdfSupplier extends DownloadFileSupplier {
 
+    private final Map<String, String> sharedMetadata;
+
     /**
      * Constructs a new {@code DownloadPdfSupplier} with the specified URL and embedding function.
      *
@@ -50,6 +50,19 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
      */
     public DownloadPdfSupplier(URL url, EmbeddingFunction embeddingFunction, HttpClient httpClient) {
         super(url, embeddingFunction, httpClient);
+        this.sharedMetadata = Collections.emptyMap();
+    }
+
+    /**
+     * Constructs a new {@code DownloadPdfSupplier} with the specified URL and embedding function.
+     *
+     * @param url               the URL of the PDF file to download.
+     * @param embeddingFunction the function used to generate embeddings from the PDF text.
+     * @param sharedMetadata    the shared metadata, that will be added to every document produced
+     */
+    public DownloadPdfSupplier(URL url, EmbeddingFunction embeddingFunction, HttpClient httpClient, Map<String, String> sharedMetadata) {
+        super(url, embeddingFunction, httpClient);
+        this.sharedMetadata = new HashMap<>(sharedMetadata);
     }
 
     /**
@@ -84,45 +97,49 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
                 var builder = Document
                         .builder()
                         .withStringField("metadata.created", ZonedDateTime.now().toString())
-
                         .withStringField("metadata.page", String.valueOf(i))
                         .withStringField("metadata.totalpages", String.valueOf(totalPages));
 
+                sharedMetadata
+                        .forEach(
+                                (key, value) -> builder
+                                        .withStringField("metadata." + key, value));
+
                 if (this.getUrl() != null) {
-                    builder.withStringField("metadata.url", this.getUrl().toString());
+                    builder.withStringField("metadata.pdf.url", this.getUrl().toString());
                 }
                 if (information.getTitle() != null && !information.getTitle().isEmpty()) {
-                    builder.withStringField("metadata.title", information.getTitle());
+                    builder.withStringField("metadata.pdf.title", information.getTitle());
                 }
                 if (information.getAuthor() != null && !information.getAuthor().isEmpty()) {
-                    builder.withStringField("metadata.author", information.getAuthor());
+                    builder.withStringField("metadata.pdf.author", information.getAuthor());
                 }
                 if (information.getSubject() != null && !information.getSubject().isEmpty()) {
-                    builder.withStringField("metadata.subject", information.getSubject());
+                    builder.withStringField("metadata.pdf.subject", information.getSubject());
                 }
                 if (information.getKeywords() != null && !information.getKeywords().isEmpty()) {
-                    builder.withStringField("metadata.keywords", information.getKeywords());
+                    builder.withStringField("metadata.pdf.keywords", information.getKeywords());
                 }
                 if (information.getCreator() != null && !information.getCreator().isEmpty()) {
-                    builder.withStringField("metadata.creator", information.getCreator());
+                    builder.withStringField("metadata.pdf.creator", information.getCreator());
                 }
                 if (information.getProducer() != null && !information.getProducer().isEmpty()) {
-                    builder.withStringField("metadata.producer", information.getProducer());
+                    builder.withStringField("metadata.pdf.producer", information.getProducer());
                 }
                 if (information.getCreationDate() != null) {
-                    builder.withStringField("metadata.creationDate", information.getCreationDate().toString());
+                    builder.withStringField("metadata.pdf.creationDate", information.getCreationDate().toString());
                 }
                 if (information.getModificationDate() != null) {
-                    builder.withStringField("metadata.modificationDate", information.getModificationDate().toString());
+                    builder.withStringField("metadata.pdf.modificationDate", information.getModificationDate().toString());
                 }
                 if (information.getTrapped() != null) {
-                    builder.withStringField("metadata.trapped", information.getTrapped());
+                    builder.withStringField("metadata.pdf.trapped", information.getTrapped());
                 }
 
                 for (String key : information.getMetadataKeys()) {
                     String value = information.getCustomMetadataValue(key);
                     if (value != null && !value.isEmpty()) {
-                        builder.withStringField("metadata." + key, value);
+                        builder.withStringField("metadata.pdf." + key, value);
                     }
                 }
 

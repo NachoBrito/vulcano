@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -39,7 +40,10 @@ class DownloadPdfSupplierIT {
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(30))
                 .build());
-        var documents = supplier.generateDocuments(data);
+        var documents = supplier
+                .generateDocuments(data)
+                .map(Supplier::get)
+                .toList();
 
         assertNotNull(documents);
         assertEquals(13, documents.size());

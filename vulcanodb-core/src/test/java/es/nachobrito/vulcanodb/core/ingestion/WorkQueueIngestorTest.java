@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -57,7 +57,7 @@ class WorkQueueIngestorTest {
         try (var vulcanoDb = VulcanoDb.builder().withDataStore(store).withTelemetry(telemetry).build()) {
             IngestionResult result;
             try (var ingestor = vulcanoDb.newDocumentIngestor()) {
-                result = ingestor.ingest(docs);
+                result = ingestor.ingest(Stream.of(() -> docs.stream().map(it -> () -> it)));
             }
             assertEquals(docs.size(), result.ingestedDocuments());
             assertEquals(docs.size(), result.totalDocuments());
@@ -70,39 +70,6 @@ class WorkQueueIngestorTest {
         telemetryAssertions(docs.size(), telemetry);
     }
 
-
-    @Test
-    void testIngestDocumentsFrom() throws InterruptedException {
-        var store = AxonDataStore.builder()
-                .withDataFolder(tempDir)
-                .build();
-        var telemetry = new TelemetrySpy();
-        var exampleDoc = Document.builder()
-                .with(Map.of(
-                        "text", "the text value"
-                )).build();
-
-        var shape = exampleDoc.getShape();
-        var docs = DocumentMother
-                .random(shape, 100)
-                .stream()
-                .map(it -> (DocumentSupplier) () -> List.of(it))
-                .toList();
-        try (var vulcanoDb = VulcanoDb.builder().withDataStore(store).withTelemetry(telemetry).build()) {
-            IngestionResult result;
-            try (var ingestor = vulcanoDb.newDocumentIngestor()) {
-                result = ingestor.ingestFrom(docs);
-            }
-            assertEquals(docs.size(), result.ingestedDocuments());
-            assertEquals(docs.size(), result.totalDocuments());
-            assertEquals(0, result.errors().size());
-            assertEquals(docs.size(), store.getDocumentCount());
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        telemetryAssertions(docs.size(), telemetry);
-    }
 
     private static void telemetryAssertions(int docCount, TelemetrySpy telemetry) throws InterruptedException {
         Thread.sleep(500);

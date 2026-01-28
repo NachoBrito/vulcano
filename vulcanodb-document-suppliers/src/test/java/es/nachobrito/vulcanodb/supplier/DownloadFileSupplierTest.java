@@ -24,13 +24,16 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -69,10 +72,10 @@ class DownloadFileSupplierTest {
             }
         });
 
-        URL url = new URL("http://localhost:" + port + "/test");
+        URL url = new URI("http://localhost:" + port + "/test").toURL();
         TestDownloadFileSupplier supplier = new TestDownloadFileSupplier(url);
-
-        Collection<Document> doc = supplier.get();
+        supplier.initialize();
+        Collection<Document> doc = supplier.getDocuments().map(Supplier::get).collect(Collectors.toSet());
         assertNotNull(doc);
         assertArrayEquals(expectedBytes, supplier.getLastBytes());
     }
@@ -93,10 +96,10 @@ class DownloadFileSupplierTest {
             }
         });
 
-        URL url = new URL("http://localhost:" + port + "/retry");
+        URL url = new URI("http://localhost:" + port + "/retry").toURL();
         TestDownloadFileSupplier supplier = new TestDownloadFileSupplier(url);
-
-        Collection<Document> doc = supplier.get();
+        supplier.initialize();
+        Collection<Document> doc = supplier.getDocuments().map(Supplier::get).collect(Collectors.toSet());
         assertNotNull(doc);
         assertEquals(3, requestCount.get());
         assertArrayEquals(expectedBytes, supplier.getLastBytes());
@@ -110,12 +113,19 @@ class DownloadFileSupplierTest {
             exchange.close();
         });
 
-        URL url = new URL("http://localhost:" + port + "/fail");
+        URL url = new URI("http://localhost:" + port + "/fail").toURL();
         TestDownloadFileSupplier supplier = new TestDownloadFileSupplier(url);
-
-        assertThrows(FileDownloadException.class, supplier::get);
+        assertThrows(FileDownloadException.class, supplier::initialize);
         // Initial attempt + 3 retries = 4 total attempts
         assertEquals(4, requestCount.get());
+    }
+
+    @Test
+    void testFailIfNotInitialized() throws Exception {
+        URL url = new URI("http://localhost:" + port + "/fail").toURL();
+        TestDownloadFileSupplier supplier = new TestDownloadFileSupplier(url);
+        assertThrows(IllegalStateException.class, supplier::getDocuments);
+
     }
 
     @Test
@@ -129,7 +139,7 @@ class DownloadFileSupplierTest {
         URL url = new URL("http://localhost:" + port + "/404");
         TestDownloadFileSupplier supplier = new TestDownloadFileSupplier(url);
 
-        assertThrows(FileDownloadException.class, supplier::get);
+        assertThrows(FileDownloadException.class, supplier::initialize);
         assertEquals(1, requestCount.get()); // Should not retry 4xx
     }
 
@@ -148,10 +158,10 @@ class DownloadFileSupplierTest {
             }
         });
 
-        URL url = new URL("http://localhost:" + port + "/redirect");
+        URL url = new URI("http://localhost:" + port + "/redirect").toURL();
         TestDownloadFileSupplier supplier = new TestDownloadFileSupplier(url);
-
-        Collection<Document> doc = supplier.get();
+        supplier.initialize();
+        Collection<Document> doc = supplier.getDocuments().map(Supplier::get).collect(Collectors.toSet());
         assertNotNull(doc);
         assertArrayEquals(expectedBytes, supplier.getLastBytes());
     }
@@ -167,9 +177,9 @@ class DownloadFileSupplierTest {
         }
 
         @Override
-        protected Collection<Document> generateDocuments(byte[] bytes) {
+        protected Stream<Supplier<Document>> generateDocuments(byte[] bytes) {
             this.lastBytes = bytes;
-            return List.of(Document.builder().build());
+            return Stream.of(() -> Document.builder().build());
         }
 
         public byte[] getLastBytes() {

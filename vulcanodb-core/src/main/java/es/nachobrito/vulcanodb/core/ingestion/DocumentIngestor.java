@@ -16,10 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.ingestion;
 
-import es.nachobrito.vulcanodb.core.document.Document;
-
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 /**
  * Interface for components responsible for importing documents into the database.
@@ -30,19 +28,11 @@ import java.util.concurrent.CompletableFuture;
 public interface DocumentIngestor extends AutoCloseable {
 
     /**
-     * Ingests the provided documents.
-     *
-     * @param documents the documents to ingest
-     * @return a {@link CompletableFuture} that will be completed when the ingestion process finishes
-     */
-    IngestionResult ingest(Collection<Document> documents);
-
-    /**
      * Ingests documents produced by the provided suppliers. Each supplier is invoked
      * within the ingestor's executor service to fetch or create documents before ingestion.
      *
      * @param suppliers the supplier functions that produce the documents to ingest
      * @return a {@link CompletableFuture} that will be completed when all documents have been ingested
      */
-    IngestionResult ingestFrom(Collection<DocumentSupplier> suppliers);
+    IngestionResult ingest(Stream<DocumentSupplier> suppliers);
 }

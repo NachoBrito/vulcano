@@ -23,14 +23,14 @@ import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * A {@link DocumentIngestor} implementation that uses a work queue for background ingestion.
@@ -61,72 +61,13 @@ public class WorkQueueIngestor implements DocumentIngestor {
         }
     }
 
-    @Override
-    public IngestionResult ingest(Collection<Document> documents) {
-        if (telemetry.isEnabled()) {
-            queueSize.addAndGet(documents.size());
-        }
-
-        if (documents.size() < Runtime.getRuntime().availableProcessors()) {
-            return ingestSynchronously(documents);
-        }
-
-        AtomicInteger ingested = new AtomicInteger(0);
-        Set<IngestionError> errors = ConcurrentHashMap.newKeySet();
-
-        var futures = documents
-                .stream()
-                .map(document -> toCompletableFuture(document, ingested, errors))
-                .toArray(CompletableFuture[]::new);
-
-        CompletableFuture
-                .allOf(futures)
-                .join();
-
-        return new IngestionResult(documents.size(), ingested.get(), errors);
-    }
-
-    private CompletableFuture<Void> toCompletableFuture(Document document, AtomicInteger ingested, Set<IngestionError> errors) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                if (log.isDebugEnabled()) {
-                    log.debug("{} -> Ingesting document {}", Thread.currentThread().threadId(), document.id());
-                }
-                vulcanoDb.add(document);
-                ingested.incrementAndGet();
-                if (telemetry.isEnabled()) {
-                    queueSize.decrementAndGet();
-                }
-            } catch (Throwable throwable) {
-                errors.add(new IngestionError(document, throwable.getMessage()));
-            }
-        }, executorService);
-    }
-
-    private IngestionResult ingestSynchronously(Collection<Document> documents) {
-        int ingested = 0;
-        var errors = new HashSet<IngestionError>();
-        for (Document document : documents) {
-            try {
-                vulcanoDb.add(document);
-                ingested++;
-            } catch (Throwable throwable) {
-                errors.add(new IngestionError(document, throwable.getMessage()));
-            }
-        }
-        return new IngestionResult(documents.size(), ingested, errors);
-    }
 
     @Override
-    public IngestionResult ingestFrom(Collection<DocumentSupplier> suppliers) {
-        if (telemetry.isEnabled()) {
-            queueSize.addAndGet(suppliers.size());
-        }
+    public IngestionResult ingest(Stream<DocumentSupplier> suppliers) {
         AtomicInteger ingested = new AtomicInteger(0);
         Set<IngestionError> errors = ConcurrentHashMap.newKeySet();
 
         var futures = suppliers
-                .stream()
                 .map(supplier -> toCompletableFuture(supplier, ingested, errors))
                 .toArray(CompletableFuture[]::new);
 
@@ -134,29 +75,41 @@ public class WorkQueueIngestor implements DocumentIngestor {
                 .allOf(futures)
                 .join();
 
-        return new IngestionResult(suppliers.size(), ingested.get(), errors);
+        var ingestedDocuments = ingested.get();
+        var totalDocuments = ingestedDocuments + errors.size();
+        return new IngestionResult(totalDocuments, ingestedDocuments, errors);
     }
 
     private CompletableFuture<Void> toCompletableFuture(DocumentSupplier supplier, AtomicInteger ingested, Set<IngestionError> errors) {
         return CompletableFuture.runAsync(() -> {
+            supplier.initialize();
+            supplier
+                    .getDocuments()
+                    .map(it -> toCompletableFuture(it, ingested, errors))
+                    .forEach(CompletableFuture::join);
+        }, executorService);
+    }
+
+    private CompletableFuture<Void> toCompletableFuture(Supplier<Document> supplier, AtomicInteger ingested, Set<IngestionError> errors) {
+        if (telemetry.isEnabled()) {
+            queueSize.incrementAndGet();
+        }
+        return CompletableFuture.runAsync(() -> {
             if (log.isDebugEnabled()) {
                 log.debug("{} -> Invoking supplier {}", Thread.currentThread().threadId(), supplier);
             }
-            var documents = supplier.get();
+            var document = supplier.get();
             if (telemetry.isEnabled()) {
-                queueSize.addAndGet(documents.size());
                 queueSize.decrementAndGet();
             }
-            for (var document : documents) {
-                try {
-                    vulcanoDb.add(document);
-                    ingested.incrementAndGet();
-                    if (telemetry.isEnabled()) {
-                        queueSize.decrementAndGet();
-                    }
-                } catch (Throwable throwable) {
-                    errors.add(new IngestionError(document, throwable.getMessage()));
+            try {
+                vulcanoDb.add(document);
+                ingested.incrementAndGet();
+                if (telemetry.isEnabled()) {
+                    queueSize.decrementAndGet();
                 }
+            } catch (Throwable throwable) {
+                errors.add(new IngestionError(document, throwable.getMessage()));
             }
         }, executorService);
     }

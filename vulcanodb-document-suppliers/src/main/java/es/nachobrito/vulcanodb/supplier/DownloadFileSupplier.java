@@ -26,7 +26,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Collection;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * Base class for {@link DocumentSupplier}s that obtain content by downloading files from a remote URL.
@@ -63,6 +64,8 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
      */
     private final HttpClient httpClient;
 
+    private byte[] bytes = null;
+
     /**
      * Constructs a new {@code DownloadFileSupplier} with the specified URL and embedding function.
      *
@@ -75,18 +78,10 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
         this.httpClient = httpClient;
     }
 
-    /**
-     * Downloads the file and builds a {@link Document} from its content.
-     *
-     * @return the built document.
-     * @throws FileDownloadException if the file cannot be downloaded after the maximum number of retries,
-     *                               or if a non-retryable error occurs.
-     */
     @Override
-    public Collection<Document> get() {
+    public void initialize() {
         try {
-            var bytes = downloadFile();
-            return generateDocuments(bytes);
+            this.bytes = downloadFile();
         } catch (IOException | InterruptedException | URISyntaxException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
@@ -94,6 +89,15 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
             throw new FileDownloadException(e);
         }
     }
+
+    @Override
+    public Stream<Supplier<Document>> getDocuments() {
+        if (this.bytes == null) {
+            throw new IllegalStateException("DownloadFileSupplier has not been initialized");
+        }
+        return generateDocuments(this.bytes);
+    }
+
 
     /**
      * Performs the actual file download using the internal HTTP client.
@@ -154,5 +158,5 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
      * @param bytes the raw content of the downloaded file.
      * @return the constructed document.
      */
-    protected abstract Collection<Document> generateDocuments(byte[] bytes);
+    protected abstract Stream<Supplier<Document>> generateDocuments(byte[] bytes);
 }

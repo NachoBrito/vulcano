@@ -18,12 +18,19 @@ package es.nachobrito.vulcanodb.core.ingestion;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 
-import java.util.Collection;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * @author nacho
  */
-@FunctionalInterface
-public interface DocumentSupplier extends Supplier<Collection<Document>> {
+
+public interface DocumentSupplier {
+
+    default void initialize() {
+        //implement this method for download files, or prepare resources.
+        // This will be invoked asynchronously by the DocumentIngestor.
+    }
+
+    Stream<Supplier<Document>> getDocuments();
 }

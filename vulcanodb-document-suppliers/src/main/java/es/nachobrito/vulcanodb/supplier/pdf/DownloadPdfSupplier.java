@@ -21,12 +21,15 @@ import es.nachobrito.vulcanodb.supplier.DownloadFileSupplier;
 import es.nachobrito.vulcanodb.supplier.EmbeddingFunction;
 import es.nachobrito.vulcanodb.supplier.FileProcessException;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
 import java.io.IOException;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * A concrete implementation of {@link DownloadFileSupplier} for PDF files.
@@ -83,8 +86,8 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
      * @throws FileProcessException if an error occurs while parsing the PDF.
      */
     @Override
-    protected Collection<Document> generateDocuments(byte[] bytes) {
-        List<Document> documents = new ArrayList<>();
+    protected Stream<Supplier<Document>> generateDocuments(byte[] bytes) {
+        List<Supplier<Document>> documents = new ArrayList<>();
         try (var pdf = Loader.loadPDF(bytes)) {
             var information = pdf.getDocumentInformation();
             var stripper = new PDFToMarkdownStripper();
@@ -93,63 +96,82 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
                 stripper.setStartPage(i);
                 stripper.setEndPage(i);
                 var pageText = stripper.getText(pdf);
-                var embedding = embed(pageText);
-                var builder = Document
-                        .builder()
-                        .withStringField("metadata.created", ZonedDateTime.now().toString())
-                        .withStringField("metadata.page", String.valueOf(i))
-                        .withStringField("metadata.totalpages", String.valueOf(totalPages));
-
-                sharedMetadata
-                        .forEach(
-                                (key, value) -> builder
-                                        .withStringField("metadata." + key, value));
-
-                if (this.getUrl() != null) {
-                    builder.withStringField("metadata.pdf.url", this.getUrl().toString());
-                }
-                if (information.getTitle() != null && !information.getTitle().isEmpty()) {
-                    builder.withStringField("metadata.pdf.title", information.getTitle());
-                }
-                if (information.getAuthor() != null && !information.getAuthor().isEmpty()) {
-                    builder.withStringField("metadata.pdf.author", information.getAuthor());
-                }
-                if (information.getSubject() != null && !information.getSubject().isEmpty()) {
-                    builder.withStringField("metadata.pdf.subject", information.getSubject());
-                }
-                if (information.getKeywords() != null && !information.getKeywords().isEmpty()) {
-                    builder.withStringField("metadata.pdf.keywords", information.getKeywords());
-                }
-                if (information.getCreator() != null && !information.getCreator().isEmpty()) {
-                    builder.withStringField("metadata.pdf.creator", information.getCreator());
-                }
-                if (information.getProducer() != null && !information.getProducer().isEmpty()) {
-                    builder.withStringField("metadata.pdf.producer", information.getProducer());
-                }
-                if (information.getCreationDate() != null) {
-                    builder.withStringField("metadata.pdf.creationDate", information.getCreationDate().toString());
-                }
-                if (information.getModificationDate() != null) {
-                    builder.withStringField("metadata.pdf.modificationDate", information.getModificationDate().toString());
-                }
-                if (information.getTrapped() != null) {
-                    builder.withStringField("metadata.pdf.trapped", information.getTrapped());
-                }
-
-                for (String key : information.getMetadataKeys()) {
-                    String value = information.getCustomMetadataValue(key);
-                    if (value != null && !value.isEmpty()) {
-                        builder.withStringField("metadata.pdf." + key, value);
-                    }
-                }
-
-                documents.add(builder
-                        .withVectorField("embedding", embedding)
-                        .build());
+                documents.add(new DocumentSupplier(i, totalPages, pageText, information));
             }
         } catch (IOException e) {
             throw new FileProcessException(e);
         }
-        return documents;
+        return documents.stream();
+    }
+
+    private final class DocumentSupplier implements Supplier<Document> {
+        private final String pageText;
+        private final int pageNumber;
+        private final int totalPages;
+        private final PDDocumentInformation information;
+
+        private DocumentSupplier(int pageNumber, int totalPages, String pageText, PDDocumentInformation information) {
+            this.pageText = pageText;
+            this.pageNumber = pageNumber;
+            this.totalPages = totalPages;
+            this.information = information;
+        }
+
+        @Override
+        public Document get() {
+            var embedding = embed(pageText);
+            var builder = Document
+                    .builder()
+                    .withStringField("metadata.created", ZonedDateTime.now().toString())
+                    .withStringField("metadata.page", String.valueOf(pageNumber))
+                    .withStringField("metadata.totalpages", String.valueOf(totalPages));
+
+            sharedMetadata
+                    .forEach(
+                            (key, value) -> builder
+                                    .withStringField("metadata." + key, value));
+
+            if (getUrl() != null) {
+                builder.withStringField("metadata.pdf.url", getUrl().toString());
+            }
+            if (information.getTitle() != null && !information.getTitle().isEmpty()) {
+                builder.withStringField("metadata.pdf.title", information.getTitle());
+            }
+            if (information.getAuthor() != null && !information.getAuthor().isEmpty()) {
+                builder.withStringField("metadata.pdf.author", information.getAuthor());
+            }
+            if (information.getSubject() != null && !information.getSubject().isEmpty()) {
+                builder.withStringField("metadata.pdf.subject", information.getSubject());
+            }
+            if (information.getKeywords() != null && !information.getKeywords().isEmpty()) {
+                builder.withStringField("metadata.pdf.keywords", information.getKeywords());
+            }
+            if (information.getCreator() != null && !information.getCreator().isEmpty()) {
+                builder.withStringField("metadata.pdf.creator", information.getCreator());
+            }
+            if (information.getProducer() != null && !information.getProducer().isEmpty()) {
+                builder.withStringField("metadata.pdf.producer", information.getProducer());
+            }
+            if (information.getCreationDate() != null) {
+                builder.withStringField("metadata.pdf.creationDate", information.getCreationDate().toString());
+            }
+            if (information.getModificationDate() != null) {
+                builder.withStringField("metadata.pdf.modificationDate", information.getModificationDate().toString());
+            }
+            if (information.getTrapped() != null) {
+                builder.withStringField("metadata.pdf.trapped", information.getTrapped());
+            }
+
+            for (String key : information.getMetadataKeys()) {
+                String value = information.getCustomMetadataValue(key);
+                if (value != null && !value.isEmpty()) {
+                    builder.withStringField("metadata.pdf." + key, value);
+                }
+            }
+
+            return builder
+                    .withVectorField("embedding", embedding)
+                    .build();
+        }
     }
 }

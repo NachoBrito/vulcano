@@ -67,7 +67,7 @@ public class LogicalQueryTest {
         var docs = DocumentMother.random(shape, 100);
         docs.forEach(axon::add);
         Thread.sleep(500);
-        assertEquals(100, axon.getDocumentCount());
+        assertEquals(100, axon.getDocumentCount().intValue());
         return axon;
     }
 

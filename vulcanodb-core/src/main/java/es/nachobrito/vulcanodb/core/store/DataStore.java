@@ -20,6 +20,7 @@ import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
+import es.nachobrito.vulcanodb.core.telemetry.MetricValue;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -89,17 +90,15 @@ public interface DataStore extends AutoCloseable {
      *
      * @return off-heap memory usage in bytes
      */
-    default long getOffHeapMemoryUsage() {
-        return 0;
+    default MetricValue getOffHeapMemoryUsage() {
+        return new MetricValue(0);
     }
-
-    ;
 
     /**
      * Returns the total number of documents currently stored in the data store.
      *
      * @return the total document count
      */
-    long getDocumentCount();
+    MetricValue getDocumentCount();
 
 }

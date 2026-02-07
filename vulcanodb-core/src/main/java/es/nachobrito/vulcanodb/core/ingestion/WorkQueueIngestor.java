@@ -19,6 +19,7 @@ package es.nachobrito.vulcanodb.core.ingestion;
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.telemetry.MetricName;
+import es.nachobrito.vulcanodb.core.telemetry.MetricValue;
 import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,7 @@ public class WorkQueueIngestor implements DocumentIngestor {
         this.telemetry = telemetry;
         executorService = Executors.newVirtualThreadPerTaskExecutor();
         if (telemetry.isEnabled()) {
-            telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, queueSize::get);
+            telemetry.registerGauge(MetricName.DOCUMENT_INSERT_QUEUE, new MetricValue(queueSize));
         }
     }
 
@@ -96,12 +97,9 @@ public class WorkQueueIngestor implements DocumentIngestor {
         }
         return CompletableFuture.runAsync(() -> {
             if (log.isDebugEnabled()) {
-                log.debug("{} -> Invoking supplier {}", Thread.currentThread().threadId(), supplier);
+                log.debug("{} -> Invoking document supplier {}", Thread.currentThread().threadId(), supplier);
             }
             var document = supplier.get();
-            if (telemetry.isEnabled()) {
-                queueSize.decrementAndGet();
-            }
             try {
                 vulcanoDb.add(document);
                 ingested.incrementAndGet();

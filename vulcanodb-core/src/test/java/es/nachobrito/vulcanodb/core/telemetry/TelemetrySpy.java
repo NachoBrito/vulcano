@@ -122,11 +122,11 @@ public class TelemetrySpy implements Telemetry {
     }
 
     @Override
-    public void registerGauge(MetricName name, Supplier<Number> valueSupplier) {
+    public void registerGauge(MetricName name, Number value) {
+        Supplier<Number> valueSupplier = value::longValue;
         logger.info("{} -> registerGauge({}, {})", Thread.currentThread().threadId(), name, valueSupplier);
         gauges.put(name, valueSupplier);
         gaugeValues.put(name, new CopyOnWriteArrayList<>());
-
         gaugeValues.get(name).add(valueSupplier.get());
     }
 

@@ -63,15 +63,15 @@ class VulcanoDbTest {
         var docs = DocumentMother.random(shape, 100);
         docs.forEach(vulcanoDb::add);
         Thread.sleep(500);
-        assertEquals(100, vulcanoDb.getDocumentCount());
+        assertEquals(100, vulcanoDb.getDocumentCount().intValue());
 
         vulcanoDb.add(exampleDoc);
         Thread.sleep(500);
-        assertEquals(101, vulcanoDb.getDocumentCount());
+        assertEquals(101, vulcanoDb.getDocumentCount().intValue());
 
         vulcanoDb.remove(exampleDoc.id());
         Thread.sleep(500);
-        assertEquals(100, vulcanoDb.getDocumentCount());
+        assertEquals(100, vulcanoDb.getDocumentCount().intValue());
     }
 
 

@@ -17,42 +17,35 @@
 package es.nachobrito.vulcanodb.core.telemetry;
 
 /**
+ * This class is a read-only view on a Number, typically an AtomicLong, to avoid exposing the mutable value.
+ *
  * @author nacho
  */
-public final class NoOpTelemetry implements Telemetry {
-    @Override
-    public boolean isEnabled() {
-        return false;
+public class MetricValue extends Number {
+
+    private final Number value;
+
+    public MetricValue(Number value) {
+        this.value = value;
     }
 
     @Override
-    public boolean shouldCapture(MetricLevel level) {
-        return false;
+    public int intValue() {
+        return value.intValue();
     }
 
     @Override
-    public boolean shouldCapture(MetricName name) {
-        return false;
+    public long longValue() {
+        return value.longValue();
     }
 
     @Override
-    public void incrementCounter(MetricName name) {
+    public float floatValue() {
+        return value.floatValue();
     }
 
     @Override
-    public void incrementCounter(MetricName name, long amount) {
-    }
-
-    @Override
-    public void recordTimer(MetricName name, long durationNanos) {
-    }
-
-    @Override
-    public void registerGauge(MetricName name, Number valueSupplier) {
-    }
-
-    @Override
-    public void close() throws Exception {
-
+    public double doubleValue() {
+        return value.doubleValue();
     }
 }

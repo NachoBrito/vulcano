@@ -34,6 +34,7 @@ import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
 import es.nachobrito.vulcanodb.core.store.axon.wal.DefaultWalManager;
 import es.nachobrito.vulcanodb.core.store.axon.wal.WalManager;
+import es.nachobrito.vulcanodb.core.telemetry.MetricValue;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,8 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private final WalManager walManager;
     private boolean initialized = false;
     private final AtomicLong storedDocuments = new AtomicLong();
+    private final AtomicLong offHeapBytesCount = new AtomicLong();
+    private Future<Void> pendingOffHeapCountOperation = null;
 
     private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister, WalManager walManager) {
         this.indexes = indexes;
@@ -87,6 +91,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
             recoverUncommitedOperations();
             countDocuments();
+            countOffHeapBytes();
 
             initialized = true;
             log.info("Initialization complete");
@@ -95,6 +100,27 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     private void countDocuments() {
         storedDocuments.set(this.documentPersister.internalIds().count());
+    }
+
+    private void countOffHeapBytes() {
+
+        long documentOffHeapMemory = documentPersister.getOffHeapBytes();
+        long walOffHeapMemory = walManager.offHeapBytes();
+        long indexOffHeapMemory = indexes
+                .values()
+                .stream()
+                .mapToLong(IndexHandler::offHeapBytes)
+                .sum();
+        if (log.isDebugEnabled()) {
+            log.debug("""
+                    ************************
+                    Counting off heap bytes:
+                    - documentOffHeapMemory: {}
+                    - walOffHeapMemory: {}
+                    - indexOffHeapMemory: {}
+                    """, documentOffHeapMemory, walOffHeapMemory, indexOffHeapMemory);
+        }
+        offHeapBytesCount.set(documentOffHeapMemory + walOffHeapMemory + indexOffHeapMemory);
     }
 
     private void recoverUncommitedOperations() {
@@ -128,9 +154,24 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             addInternal(document);
             walManager.commit(txId);
             ExecutorProvider.defaultExecutor().execute(storedDocuments::incrementAndGet);
+            ExecutorProvider.defaultExecutor().execute(this::scheduleOffHeapByteCount);
+
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }
+    }
+
+    private void scheduleOffHeapByteCount() {
+        if (pendingOffHeapCountOperation != null && !pendingOffHeapCountOperation.isDone()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Off heap bytes count operation is already scheduled.");
+            }
+            return;
+        }
+        //noinspection unchecked
+        pendingOffHeapCountOperation = (Future<Void>) ExecutorProvider
+                .defaultExecutor()
+                .submit(this::countOffHeapBytes);
     }
 
     private void addInternal(Document document) {
@@ -184,15 +225,8 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     }
 
     @Override
-    public long getOffHeapMemoryUsage() {
-        long documentOffHeapMemory = documentPersister.getOffHeapBytes();
-        long walOffHeapMemory = walManager.offHeapBytes();
-        long indexOffHeapMemory = indexes
-                .values()
-                .stream()
-                .mapToLong(IndexHandler::offHeapBytes)
-                .sum();
-        return documentOffHeapMemory + walOffHeapMemory + indexOffHeapMemory;
+    public MetricValue getOffHeapMemoryUsage() {
+        return new MetricValue(offHeapBytesCount);
     }
 
 
@@ -229,8 +263,8 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     }
 
     @Override
-    public long getDocumentCount() {
-        return storedDocuments.get();
+    public MetricValue getDocumentCount() {
+        return new MetricValue(storedDocuments);
     }
 
 

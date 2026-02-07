@@ -32,4 +32,8 @@ public record IngestionResult(
         this.ingestedDocuments = ingestedDocuments;
         this.errors = Collections.unmodifiableSet(errors);
     }
+
+    public boolean hasErrors() {
+        return !this.errors.isEmpty();
+    }
 }

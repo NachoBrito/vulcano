@@ -22,6 +22,7 @@ import es.nachobrito.vulcanodb.core.query.Query;
 import es.nachobrito.vulcanodb.core.result.QueryResult;
 import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.naive.queryevaluation.QueryOperations;
+import es.nachobrito.vulcanodb.core.telemetry.MetricValue;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -56,8 +57,8 @@ public class NaiveInMemoryDataStore implements DataStore {
     }
 
     @Override
-    public long getDocumentCount() {
-        return this.documents.size();
+    public MetricValue getDocumentCount() {
+        return new MetricValue(this.documents.size());
     }
 
     @Override

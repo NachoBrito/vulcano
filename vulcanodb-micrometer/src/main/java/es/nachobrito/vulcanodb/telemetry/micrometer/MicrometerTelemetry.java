@@ -21,14 +21,12 @@ import es.nachobrito.vulcanodb.core.telemetry.MetricName;
 import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /**
  * @author nacho
@@ -42,6 +40,7 @@ public abstract class MicrometerTelemetry implements Telemetry {
     // Fast lookup maps to avoid re-binding meters in the hot path
     private final Map<MetricName, Counter> counters = new EnumMap<>(MetricName.class);
     private final Map<MetricName, Timer> timers = new EnumMap<>(MetricName.class);
+    private final Map<MetricName, Number> metricValues = new EnumMap<>(MetricName.class);
 
     public MicrometerTelemetry(MeterRegistry registry, boolean enabled, MetricLevel configLevel, SamplingRate samplingRate) {
         this.registry = registry;
@@ -102,10 +101,9 @@ public abstract class MicrometerTelemetry implements Telemetry {
     }
 
     @Override
-    public void registerGauge(MetricName name, Supplier<Number> valueSupplier) {
-        // Micrometer handles the polling of the supplier automatically
-        Gauge.builder(name.getKey(), valueSupplier)
-                .register(registry);
+    public void registerGauge(MetricName name, Number value) {
+        registry.gauge(name.getKey(), value);
+        metricValues.put(name, value);
     }
 
     @Override

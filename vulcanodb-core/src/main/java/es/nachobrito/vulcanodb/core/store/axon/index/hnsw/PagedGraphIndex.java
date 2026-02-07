@@ -258,6 +258,21 @@ final public class PagedGraphIndex implements AutoCloseable {
     }
 
     public long offHeapBytes() {
-        return (long) pages.size() * blockSize * slotSizeBytes;
+        // Find the last vectorId that has connections to estimate used bytes
+        long lastVectorId = -1;
+        for (int p = pages.size() - 1; p >= 0; p--) {
+            MemorySegment page = pages.get(p);
+            for (int i = blockSize - 1; i >= 0; i--) {
+                long pageStart = (long) i * slotSizeBytes;
+                long count = page.get(ValueLayout.JAVA_LONG, pageStart);
+                if (count > 0) {
+                    lastVectorId = (long) p * blockSize + i;
+                    break;
+                }
+            }
+            if (lastVectorId != -1) break;
+        }
+        if (lastVectorId == -1) return 0;
+        return (lastVectorId + 1) * slotSizeBytes;
     }
 }

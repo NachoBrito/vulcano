@@ -444,7 +444,7 @@ final class DataLog implements AutoCloseable {
     }
 
     public long offHeapBytes() {
-        return segments.size() * segmentSize;
+        return committed.get();
     }
 
 

@@ -62,7 +62,7 @@ class WorkQueueIngestorTest {
             assertEquals(docs.size(), result.ingestedDocuments());
             assertEquals(docs.size(), result.totalDocuments());
             assertEquals(0, result.errors().size());
-            assertEquals(docs.size(), store.getDocumentCount());
+            assertEquals(docs.size(), store.getDocumentCount().intValue());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -76,8 +76,6 @@ class WorkQueueIngestorTest {
 
         assertTrue(telemetry.getIsEnabledInvocations() > 0);
         //assertTrue(telemetry.getShouldCaptureLevelInvocations() > 0);
-        assertTrue(telemetry.getShouldCaptureMetricInvocations(MetricName.OFF_HEAP_MEMORY_USAGE) > 0);
-        assertTrue(telemetry.getShouldCaptureMetricInvocations(MetricName.DOCUMENT_INSERT_LATENCY) > 0);
 //
 //        assertTrue(telemetry.getGaugeStats(MetricName.STORED_DOCUMENTS).getMax() > 0);
 //        assertEquals(docCount, telemetry.getCounter(MetricName.DOCUMENT_INSERT_COUNT));
@@ -89,9 +87,10 @@ class WorkQueueIngestorTest {
 //        assertTrue(memStats.getAverage() > 0);
 //        assertTrue(memStats.getCount() > 0);
 //
-//        var queueStats = telemetry.getGaugeStats(MetricName.DOCUMENT_INSERT_QUEUE);
-//        assertTrue(queueStats.getAverage() > 0);
-//        assertTrue(queueStats.getCount() > 0);
+        var queueStats = telemetry.getGaugeStats(MetricName.DOCUMENT_INSERT_QUEUE);
+        assertTrue(queueStats.getMax() > 0);
+        assertTrue(queueStats.getAverage() > 0);
+        assertTrue(queueStats.getCount() > 0);
     }
 
 }

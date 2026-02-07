@@ -337,9 +337,9 @@ final class HashIndex implements AutoCloseable {
 
     public long offHeapBytes() {
         long total = 0;
-        for (List<Segment> bucket : segments) {
-            if (bucket != null) {
-                total += (long) bucket.size() * segmentSize;
+        for (AtomicLong c : committed) {
+            if (c != null) {
+                total += c.get();
             }
         }
         return total;

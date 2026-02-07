@@ -20,9 +20,9 @@ package es.nachobrito.vulcanodb.core.telemetry;
  * @author nacho
  */
 public enum MetricName {
-    SEARCH_LATENCY("vucanodb.search.latency"),
-    SEARCH_COUNT("vucanodb.search.count"),
-    DOCUMENT_INSERT_QUEUE("vucanodb.document.insert.queue"),
+    SEARCH_LATENCY("vulcanodb.search.latency"),
+    SEARCH_COUNT("vulcanodb.search.count"),
+    DOCUMENT_INSERT_QUEUE("vulcanodb.document.insert.queue"),
     DOCUMENT_INSERT_COUNT("vulcanodb.document.inserts"),
     DOCUMENT_INSERT_LATENCY("vulcanodb.document.insert.latency"),
     DOCUMENT_REMOVE_COUNT("vulcanodb.document.removals"),

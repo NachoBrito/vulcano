@@ -18,6 +18,8 @@ package es.nachobrito.vulcanodb.supplier;
 
 import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.ingestion.DocumentSupplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -44,6 +46,8 @@ import java.util.stream.Stream;
  * @author nacho
  */
 public abstract class DownloadFileSupplier extends EmbeddingSupplier {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
     /**
      * The maximum number of retry attempts for transient errors.
      */
@@ -112,6 +116,7 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
      * @throws URISyntaxException   if the provided URL cannot be converted to a URI.
      */
     private byte[] downloadFile() throws IOException, InterruptedException, URISyntaxException {
+        log.info("Downloading file: {}", url);
         var request = HttpRequest.newBuilder()
                 .uri(url.toURI())
                 .timeout(TIMEOUT)
@@ -128,10 +133,12 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
                 }
 
                 if (status >= 400 && status < 500 || attempt >= MAX_RETRIES) {
+                    log.warn("Download of {} failed with status {}, retrying", url, status);
                     throw new IOException("HTTP error: " + status);
                 }
             } catch (IOException e) {
                 if (attempt >= MAX_RETRIES || e.getMessage() != null && e.getMessage().startsWith("HTTP error: 4")) {
+                    log.error("Download failed after {} retries: {}", MAX_RETRIES, e.getMessage());
                     throw e;
                 }
             }

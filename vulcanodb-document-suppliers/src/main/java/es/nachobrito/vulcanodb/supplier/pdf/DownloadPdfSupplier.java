@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.supplier.pdf;
 
 import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.document.DocumentId;
 import es.nachobrito.vulcanodb.supplier.DownloadFileSupplier;
 import es.nachobrito.vulcanodb.supplier.EmbeddingFunction;
 import es.nachobrito.vulcanodb.supplier.FileProcessException;
@@ -26,9 +27,14 @@ import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import java.io.IOException;
 import java.net.URL;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -65,7 +71,11 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
      */
     public DownloadPdfSupplier(URL url, EmbeddingFunction embeddingFunction, HttpClient httpClient, Map<String, String> sharedMetadata) {
         super(url, embeddingFunction, httpClient);
-        this.sharedMetadata = new HashMap<>(sharedMetadata);
+        this.sharedMetadata = sharedMetadata
+                .entrySet()
+                .stream()
+                .filter(it -> it.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
@@ -169,7 +179,9 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
                 }
             }
 
+            var idBytes = (getUrl().toString() + "#page:" + pageNumber).getBytes(StandardCharsets.UTF_8);
             return builder
+                    .withId(DocumentId.of(idBytes))
                     .withVectorField("embedding", embedding)
                     .build();
         }

@@ -26,6 +26,7 @@ import es.nachobrito.vulcanodb.core.result.QueryResult;
 import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.naive.NaiveInMemoryDataStore;
 import es.nachobrito.vulcanodb.core.telemetry.MetricName;
+import es.nachobrito.vulcanodb.core.telemetry.MetricValue;
 import es.nachobrito.vulcanodb.core.telemetry.NoOpTelemetry;
 import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
 
@@ -50,10 +51,8 @@ public class VulcanoDb implements AutoCloseable {
         this.telemetryDisabled = !telemetry.isEnabled();
 
         if (telemetry.isEnabled()) {
-            telemetry.registerGauge(MetricName.STORED_DOCUMENTS, this::getDocumentCount);
-            if (telemetry.shouldCapture(MetricName.OFF_HEAP_MEMORY_USAGE)) {
-                telemetry.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, dataStore::getOffHeapMemoryUsage);
-            }
+            telemetry.registerGauge(MetricName.STORED_DOCUMENTS, getDocumentCount());
+            telemetry.registerGauge(MetricName.OFF_HEAP_MEMORY_USAGE, dataStore.getOffHeapMemoryUsage());
         }
     }
 
@@ -74,9 +73,8 @@ public class VulcanoDb implements AutoCloseable {
             dataStore.add(document);
         } finally {
             telemetry.incrementCounter(MetricName.DOCUMENT_INSERT_COUNT);
-            if (telemetry.shouldCapture(MetricName.DOCUMENT_INSERT_LATENCY)) {
-                telemetry.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
-            }
+            telemetry.recordTimer(MetricName.DOCUMENT_INSERT_LATENCY, System.nanoTime() - startTime);
+
         }
     }
 
@@ -143,7 +141,7 @@ public class VulcanoDb implements AutoCloseable {
         }
     }
 
-    public long getDocumentCount() {
+    public MetricValue getDocumentCount() {
         return dataStore.getDocumentCount();
     }
 

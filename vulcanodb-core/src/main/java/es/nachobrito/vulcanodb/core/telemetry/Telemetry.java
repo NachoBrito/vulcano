@@ -17,8 +17,6 @@
 package es.nachobrito.vulcanodb.core.telemetry;
 
 
-import java.util.function.Supplier;
-
 /**
  * Core interface for database telemetry and metrics collection.
  * <p>
@@ -124,8 +122,8 @@ public interface Telemetry extends AutoCloseable {
      * Gauges are useful for tracking instantaneous values like memory usage, cache sizes,
      * or queue depths.
      *
-     * @param name          the name of the gauge
-     * @param valueSupplier the supplier providing the current value of the gauge
+     * @param name  the name of the gauge
+     * @param value the supplier providing the current value of the gauge
      */
-    void registerGauge(MetricName name, Supplier<Number> valueSupplier);
+    void registerGauge(MetricName name, Number value);
 }

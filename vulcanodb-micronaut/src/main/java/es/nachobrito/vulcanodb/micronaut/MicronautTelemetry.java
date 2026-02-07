@@ -20,15 +20,18 @@ import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
 import es.nachobrito.vulcanodb.core.telemetry.MetricName;
 import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import es.nachobrito.vulcanodb.core.telemetry.Telemetry;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /**
  * @author nacho
@@ -41,6 +44,10 @@ public class MicronautTelemetry implements Telemetry {
     private final MetricLevel metricLevel;
     private final MeterRegistry meterRegistry;
     private final SamplingRate samplingRate;
+
+    private final Map<MetricName, Counter> counters = new EnumMap<>(MetricName.class);
+    private final Map<MetricName, Timer> timers = new EnumMap<>(MetricName.class);
+    private final Map<MetricName, Number> metricValues = new EnumMap<>(MetricName.class);
 
     public MicronautTelemetry(
             @Property(name = "vulcanodb.telemetry.enabled", defaultValue = "false")
@@ -55,8 +62,28 @@ public class MicronautTelemetry implements Telemetry {
         this.metricLevel = MetricLevel.valueOf(metricLevel);
         this.samplingRate = SamplingRate.valueOf(samplingRate);
         this.meterRegistry = meterRegistry;
-        log.info("VulcanoDb telemetry (level: {}) will be shown in Micronaut metrics", metricLevel);
+        if (this.telemetryEnabled) {
+            log.info("VulcanoDb telemetry (level: {}) will be shown in Micronaut metrics", metricLevel);
+            preRegisterMeters();
+        } else {
+            log.info("VulcanoDb telemetry disabled in Micronaut metrics");
+        }
+
     }
+
+    private void preRegisterMeters() {
+        for (MetricName name : MetricName.values()) {
+            // Check if name has a defined type or is basic enough to pre-bind
+            if (name.name().contains("COUNT")) {
+                counters.put(name, meterRegistry.counter(name.getKey()));
+            } else if (name.name().contains("LATENCY") || name.name().contains("TIMER")) {
+                timers.put(name, Timer.builder(name.getKey())
+                        .publishPercentiles(0.5, 0.9, 0.99) // Built-in histogram support
+                        .register(meterRegistry));
+            }
+        }
+    }
+
 
     @Override
     public boolean isEnabled() {
@@ -65,37 +92,45 @@ public class MicronautTelemetry implements Telemetry {
 
     @Override
     public boolean shouldCapture(MetricLevel level) {
-        return telemetryEnabled && level.ordinal() <= metricLevel.ordinal();
+        var should = telemetryEnabled && level.ordinal() <= metricLevel.ordinal();
+        if (log.isDebugEnabled()) {
+            log.debug("Should Capture Telemetry Level: {}? {}", level, should);
+        }
+        return should;
     }
 
     @Override
     public void incrementCounter(MetricName name) {
-        meterRegistry
-                .counter(name.getKey())
-                .increment();
+        if (log.isDebugEnabled()) {
+            log.debug("Increment Counter for metric {}", name);
+        }
+        counters.get(name).increment();
     }
 
     @Override
     public void incrementCounter(MetricName name, long amount) {
-        meterRegistry
-                .counter(name.getKey())
-                .increment(amount);
+        if (log.isDebugEnabled()) {
+            log.debug("Increment Counter for metric {} by {}", name, amount);
+        }
+        counters.get(name).increment(amount);
     }
 
     @Override
     public void recordTimer(MetricName name, long durationNanos) {
-        meterRegistry
-                .timer(name.getKey())
+        if (log.isDebugEnabled()) {
+            log.debug("Record Timer for metric {}: {} nanos", name, durationNanos);
+        }
+        timers.get(name)
                 .record(durationNanos, TimeUnit.NANOSECONDS);
     }
 
     @Override
-    public void registerGauge(MetricName name, Supplier<Number> valueSupplier) {
-        meterRegistry
-                .gauge(name.getKey(), valueSupplier, (supplier) -> {
-                    Number val = supplier.get();
-                    return val == null ? Double.NaN : val.doubleValue();
-                });
+    public void registerGauge(MetricName name, Number value) {
+        if (log.isDebugEnabled()) {
+            log.debug("Register Gauge for metric {}", name);
+        }
+        meterRegistry.gauge(name.getKey(), value);
+        metricValues.put(name, value);
     }
 
     @Override

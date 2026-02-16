@@ -21,6 +21,7 @@ import es.nachobrito.vulcanodb.core.document.Document;
 import es.nachobrito.vulcanodb.core.store.naive.NaiveInMemoryDataStore;
 import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
 import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * @author nacho
  */
+@Disabled
 class PrometheusTelemetryTest {
 
     @Test

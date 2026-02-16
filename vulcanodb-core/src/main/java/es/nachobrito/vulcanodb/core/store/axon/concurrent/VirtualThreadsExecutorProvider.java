@@ -32,6 +32,7 @@ public class VirtualThreadsExecutorProvider implements ExecutorProvider {
     public ExecutorService getExecutor() {
         if (executor == null || executor.isShutdown()) {
             executor = Executors.newVirtualThreadPerTaskExecutor();
+
         }
         return executor;
     }

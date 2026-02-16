@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -95,7 +96,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
             initialized = true;
             log.info("Initialization complete");
-        }, ExecutorProvider.defaultExecutor());
+        }, ExecutorProvider.ingestionExecutor());
     }
 
     private void countDocuments() {
@@ -153,8 +154,8 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             long txId = walManager.recordAdd(document);
             addInternal(document);
             walManager.commit(txId);
-            ExecutorProvider.defaultExecutor().execute(storedDocuments::incrementAndGet);
-            ExecutorProvider.defaultExecutor().execute(this::scheduleOffHeapByteCount);
+            ExecutorProvider.ingestionExecutor().execute(this::countDocuments);
+            ExecutorProvider.ingestionExecutor().execute(this::scheduleOffHeapByteCount);
 
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
@@ -170,7 +171,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         }
         //noinspection unchecked
         pendingOffHeapCountOperation = (Future<Void>) ExecutorProvider
-                .defaultExecutor()
+                .maintenanceExecutor()
                 .submit(this::countOffHeapBytes);
     }
 
@@ -192,8 +193,19 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     @Override
     public QueryResult search(Query query, int maxResults) {
-        var logicalQueryRoot = LogicalNode.of(query);
-        return queryExecutor.execute(logicalQueryRoot, maxResults);
+        QueryResult result = null;
+        var task = ExecutorProvider.queryExecutor().submit(() -> {
+            var logicalQueryRoot = LogicalNode.of(query);
+            return queryExecutor.execute(logicalQueryRoot, maxResults);
+        });
+        try {
+            result = task.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            throw new AxonDataStoreException(e);
+        }
+        return result;
     }
 
 
@@ -203,7 +215,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                 .filter(field -> isIndexed(field.key()))
                 .map(field -> CompletableFuture.runAsync(
                         () -> indexes.get(field.key()).index(internalId, document),
-                        ExecutorProvider.defaultExecutor()))
+                        ExecutorProvider.indexExecutor()))
                 .toArray(CompletableFuture[]::new);
 
         if (futures.length > 0) {
@@ -218,7 +230,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             long txId = walManager.recordRemove(documentId.toString());
             this.documentPersister.remove(documentId);
             walManager.commit(txId);
-            ExecutorProvider.defaultExecutor().execute(storedDocuments::decrementAndGet);
+            ExecutorProvider.ingestionExecutor().execute(this::countDocuments);
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }
@@ -249,7 +261,10 @@ public class AxonDataStore implements DataStore, IndexRegistry {
             log.error("Could not close datastore.");
             throw new AxonDataStoreCloseException("Some Index Handlers could not  be closed", errors);
         }
-        ExecutorProvider.defaultExecutor().close();
+        ExecutorProvider.ingestionExecutor().close();
+        ExecutorProvider.indexExecutor().close();
+        ExecutorProvider.maintenanceExecutor().close();
+        ExecutorProvider.queryExecutor().close();
         log.info("Axon Datastore closed successfully.");
     }
 

@@ -29,5 +29,11 @@
 
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
+    <Match>
+        <Or>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.concurrent.ForkJoinPoolProvider"/>
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
 
 </FindBugsFilter>

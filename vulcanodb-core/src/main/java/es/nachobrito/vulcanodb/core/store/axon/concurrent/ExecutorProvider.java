@@ -24,7 +24,21 @@ import java.util.concurrent.ExecutorService;
 public interface ExecutorProvider {
     ExecutorService getExecutor();
 
-    static ExecutorService defaultExecutor() {
-        return VirtualThreadsExecutorProvider.INSTANCE.getExecutor();
+    static ExecutorService ingestionExecutor() {
+        return IngestionExecutorProvider.INSTANCE.getExecutor();
     }
+
+    static ExecutorService indexExecutor() {
+        return IndexExecutorProvider.INSTANCE.getExecutor();
+    }
+
+    static ExecutorService queryExecutor() {
+        return QueryExecutorProvider.INSTANCE.getExecutor();
+    }
+
+    static ExecutorService maintenanceExecutor() {
+        return MaintenanceExecutorProvider.INSTANCE.getExecutor();
+    }
+
+
 }

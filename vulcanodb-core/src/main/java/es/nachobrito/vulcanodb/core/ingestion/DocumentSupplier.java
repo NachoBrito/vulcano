@@ -27,6 +27,9 @@ import java.util.stream.Stream;
 
 public interface DocumentSupplier {
 
+    String FIELD_EMBEDDING = "embedding";
+    String FIELD_TEXT = "text";
+
     default void initialize() {
         //implement this method for download files, or prepare resources.
         // This will be invoked asynchronously by the DocumentIngestor.

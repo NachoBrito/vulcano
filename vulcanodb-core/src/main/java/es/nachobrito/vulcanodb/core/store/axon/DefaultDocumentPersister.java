@@ -67,7 +67,7 @@ public final class DefaultDocumentPersister implements DocumentPersister {
         if (logger.isDebugEnabled()) {
             logger.debug("Writing document {}", document.id());
         }
-        var executor = ExecutorProvider.defaultExecutor();
+        var executor = ExecutorProvider.ingestionExecutor();
 
         //1. Save all the field values (with commit=false for batching)
         var fieldCallables = document

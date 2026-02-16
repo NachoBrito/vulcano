@@ -60,7 +60,7 @@ public abstract class MicrometerTelemetry implements Telemetry {
                 counters.put(name, registry.counter(name.getKey()));
             } else if (name.name().contains("LATENCY") || name.name().contains("TIMER")) {
                 timers.put(name, Timer.builder(name.getKey())
-                        .publishPercentiles(0.5, 0.9, 0.99) // Built-in histogram support
+                        .publishPercentiles(0.5, 0.99) // Client-side percentiles
                         .register(registry));
             }
         }

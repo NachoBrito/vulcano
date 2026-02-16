@@ -16,11 +16,15 @@
 
 package es.nachobrito.vulcanodb.telemetry.micrometer;
 
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
 import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import io.prometheus.metrics.config.PrometheusProperties;
 import io.prometheus.metrics.exporter.httpserver.HTTPServer;
+import io.prometheus.metrics.exporter.httpserver.MetricsHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +33,8 @@ import java.io.IOException;
 /**
  * @author nacho
  */
-public class PrometheusTelemetry extends MicrometerTelemetry {
-    private final Logger log = LoggerFactory.getLogger(PrometheusTelemetry.class);
+public final class PrometheusTelemetry extends MicrometerTelemetry {
+    private static final Logger log = LoggerFactory.getLogger(PrometheusTelemetry.class);
     private final HTTPServer httpServer;
 
     /**
@@ -51,13 +55,33 @@ public class PrometheusTelemetry extends MicrometerTelemetry {
             httpServer = HTTPServer.builder()
                     .port(port)
                     .registry(registry.getPrometheusRegistry())
+                    .defaultHandler(new CorsHandler(new MetricsHandler(PrometheusProperties.get(), registry.getPrometheusRegistry())))
                     .buildAndStart();
-            log.info("HTTP telemetry exposed on port {}", port);
+            log.info("HTTP telemetry exposed: http://localhost:{}", port);
             return httpServer;
         } catch (IOException e) {
             log.error("Could not start HTTP server on port {}", port, e);
         }
         return null;
+    }
+
+    private record CorsHandler(HttpHandler delegate) implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("OPTIONS request intercepted to the metrics endpoint.");
+                }
+                exchange.sendResponseHeaders(204, -1);
+            } else {
+                delegate.handle(exchange);
+            }
+        }
     }
 
 

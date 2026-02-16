@@ -19,9 +19,12 @@ package es.nachobrito.vulcanodb.micronaut;
 import es.nachobrito.vulcanodb.core.VulcanoDb;
 import es.nachobrito.vulcanodb.core.store.DataStore;
 import es.nachobrito.vulcanodb.core.store.axon.AxonDataStore;
+import es.nachobrito.vulcanodb.core.telemetry.MetricLevel;
+import es.nachobrito.vulcanodb.core.telemetry.SamplingRate;
+import es.nachobrito.vulcanodb.telemetry.micrometer.PrometheusTelemetry;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,20 +43,35 @@ public final class VulcanoDbFactory {
     private final Path dataFolder;
     private final String[] vectorIndexes;
     private final String[] stringIndexes;
-    private final MicronautTelemetry micronautTelemetry;
+
+    private final int telemetryPort;
+    private final boolean telemetryEnabled;
+    private final MetricLevel telemetryMetricLevel;
+    private final SamplingRate telemetrySamplingRate;
 
     public VulcanoDbFactory(
-            @Value("${vulcanodb.datafolder:./vulcanodb-data}")
+            @Property(name = "vulcanodb.datafolder", defaultValue = "./vulcanodb-data")
             String dataFolder,
-            @Value("${vulcanodb.index.vector:}")
+            @Property(name = "vulcanodb.index.vector", defaultValue = "")
             String vectorIndexes,
-            @Value("${vulcanodb.index.string:}")
-            String stringIndexes, MicronautTelemetry micronautTelemetry) {
+            @Property(name = "vulcanodb.index.string", defaultValue = "")
+            String stringIndexes,
+            @Property(name = "vulcanodb.telemetry.port", defaultValue = "9999")
+            String telemetryPort,
+            @Property(name = "vulcanodb.telemetry.enabled", defaultValue = "true")
+            String telemetryEnabled,
+            @Property(name = "vulcanodb.telemetry.string", defaultValue = "BASIC")
+            String telemetryMetricLevel,
+            @Property(name = "vulcanodb.telemetry.string", defaultValue = "MEDIUM")
+            String telemetrySamplingRate) {
 
         this.dataFolder = Path.of(dataFolder);
         this.vectorIndexes = vectorIndexes.split(",");
         this.stringIndexes = stringIndexes.split(",");
-        this.micronautTelemetry = micronautTelemetry;
+        this.telemetryPort = Integer.parseInt(telemetryPort);
+        this.telemetryEnabled = Boolean.parseBoolean(telemetryEnabled);
+        this.telemetryMetricLevel = MetricLevel.valueOf(telemetryMetricLevel);
+        this.telemetrySamplingRate = SamplingRate.valueOf(telemetrySamplingRate);
     }
 
     @Singleton
@@ -65,10 +83,17 @@ public final class VulcanoDbFactory {
                 - string indexes: {}
                 *******************************
                 """, dataFolder, vectorIndexes, stringIndexes);
+
+        var telemetry = new PrometheusTelemetry(
+                telemetryPort,
+                telemetryEnabled,
+                telemetryMetricLevel,
+                telemetrySamplingRate
+        );
         return VulcanoDb
                 .builder()
                 .withDataStore(buildDataStore())
-                .withTelemetry(micronautTelemetry)
+                .withTelemetry(telemetry)
                 .build();
     }
 

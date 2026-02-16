@@ -75,10 +75,13 @@ public class MicronautTelemetry implements Telemetry {
         for (MetricName name : MetricName.values()) {
             // Check if name has a defined type or is basic enough to pre-bind
             if (name.name().contains("COUNT")) {
+                log.info("Registering counter: {}", name);
                 counters.put(name, meterRegistry.counter(name.getKey()));
             } else if (name.name().contains("LATENCY") || name.name().contains("TIMER")) {
+                log.info("Registering timer: {}", name);
                 timers.put(name, Timer.builder(name.getKey())
-                        .publishPercentiles(0.5, 0.9, 0.99) // Built-in histogram support
+                        .publishPercentiles(0.5, 0.9, 0.99) // Client-side percentiles
+                        .publishPercentileHistogram(true) // Histogram buckets for server-side percentiles
                         .register(meterRegistry));
             }
         }

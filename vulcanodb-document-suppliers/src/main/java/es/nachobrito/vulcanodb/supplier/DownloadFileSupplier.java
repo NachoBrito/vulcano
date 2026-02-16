@@ -99,6 +99,9 @@ public abstract class DownloadFileSupplier extends EmbeddingSupplier {
         if (this.bytes == null) {
             throw new IllegalStateException("DownloadFileSupplier has not been initialized");
         }
+        if (log.isDebugEnabled()) {
+            log.debug("Generating documents for {}", getUrl());
+        }
         return generateDocuments(this.bytes);
     }
 

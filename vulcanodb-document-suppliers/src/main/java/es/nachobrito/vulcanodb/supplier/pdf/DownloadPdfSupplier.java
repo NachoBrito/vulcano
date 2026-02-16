@@ -23,6 +23,8 @@ import es.nachobrito.vulcanodb.supplier.EmbeddingFunction;
 import es.nachobrito.vulcanodb.supplier.FileProcessException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
@@ -48,7 +50,7 @@ import java.util.stream.Stream;
  * @author nacho
  */
 public class DownloadPdfSupplier extends DownloadFileSupplier {
-
+    private final Logger logger = LoggerFactory.getLogger(DownloadPdfSupplier.class);
     private final Map<String, String> sharedMetadata;
 
     /**
@@ -102,6 +104,9 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
             var information = pdf.getDocumentInformation();
             var stripper = new PDFToMarkdownStripper();
             int totalPages = pdf.getNumberOfPages();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Document has {} total pages, generating one document per page.", totalPages);
+            }
             for (int i = 1; i <= totalPages; i++) {
                 stripper.setStartPage(i);
                 stripper.setEndPage(i);
@@ -182,7 +187,8 @@ public class DownloadPdfSupplier extends DownloadFileSupplier {
             var idBytes = (getUrl().toString() + "#page:" + pageNumber).getBytes(StandardCharsets.UTF_8);
             return builder
                     .withId(DocumentId.of(idBytes))
-                    .withVectorField("embedding", embedding)
+                    .withVectorField(FIELD_EMBEDDING, embedding)
+                    .withStringField(FIELD_TEXT, pageText)
                     .build();
         }
     }

@@ -22,7 +22,7 @@
 -->
 <FindBugsFilter>
     <Match>
-        <Class name="es.nachobrito.vulcanodb.langchain4j.VulcanoDbEmbedStore"/>
+        <Class name="es.nachobrito.vulcanodb.langchain4j.VulcanoDbEmbeddingStore"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
 

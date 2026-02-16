@@ -39,3 +39,5 @@ build/
 .DS_Store
 vulcanodb.log
 /examples/RAG/backend/vulcanodb-data
+/examples/RAG/frontend/.vite/deps/_metadata.json
+/examples/RAG/frontend/.vite/deps/package.json

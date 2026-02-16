@@ -1,6 +1,8 @@
+import { marked } from "marked";
 import { socketManager } from "./socket.js";
 import { telemetryCharts } from "./charts/index.js";
 import { ChartjsProvider } from "./charts/chartjs.js";
+import { telemetryPoller } from "./telemetry.js";
 
 const chatHistory = document.querySelector("#chat-history");
 const queryInput = document.querySelector("#query");
@@ -10,16 +12,39 @@ const telemetryToggle = document.querySelector("#telemetry-toggle");
 const statusIndicator = document.querySelector("#connection-status");
 const statusTerminal = document.querySelector("#status-terminal");
 const reindexLink = document.querySelector("#reindex-link");
+const statusSection = document.querySelector("#status-collapsible");
+const toggleStatusBtn = document.querySelector("#toggle-status");
 
 /**
  * UI Functions
  */
-function addChatMessage(text, isBot = false) {
-  const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message");
-  messageDiv.classList.add(isBot ? "bot-message" : "user-message");
-  messageDiv.textContent = text;
-  chatHistory.appendChild(messageDiv);
+function addChatMessage(text, isBot = false, responseId = null) {
+  let messageDiv;
+  let currentContent = "";
+
+  if (responseId) {
+    messageDiv = document.getElementById(responseId);
+    if (messageDiv) {
+      // Store raw markdown in a data attribute to reconstruct the full text for re-parsing
+      currentContent = messageDiv.getAttribute("data-raw") || "";
+      currentContent += text;
+      messageDiv.setAttribute("data-raw", currentContent);
+      messageDiv.innerHTML = marked.parse(currentContent);
+    }
+  }
+
+  if (!messageDiv) {
+    messageDiv = document.createElement("div");
+    messageDiv.classList.add("message");
+    messageDiv.classList.add(isBot ? "bot-message" : "user-message");
+    if (responseId) {
+      messageDiv.id = responseId;
+      messageDiv.setAttribute("data-raw", text);
+    }
+    messageDiv.innerHTML = marked.parse(text);
+    chatHistory.appendChild(messageDiv);
+  }
+
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
@@ -54,7 +79,7 @@ function handleSearch() {
   if (!query) return;
 
   addChatMessage(query, false);
-  socketManager.send("chat", { query });
+  socketManager.send("chat", { message: query });
   queryInput.value = "";
 }
 
@@ -68,6 +93,10 @@ queryInput.addEventListener("keypress", (e) => {
 
 telemetryToggle.addEventListener("click", () => {
   telemetrySidebar.classList.toggle("open");
+});
+
+toggleStatusBtn.addEventListener("click", () => {
+  statusSection.classList.toggle("collapsed");
 });
 
 reindexLink.addEventListener("click", (e) => {
@@ -100,7 +129,7 @@ window.addEventListener("vulcano:status", (e) => {
 });
 
 window.addEventListener("vulcano:chat", (e) => {
-  addChatMessage(e.detail.response, true);
+  addChatMessage(e.detail.response, true, e.detail.responseId);
 });
 
 window.addEventListener("vulcano:telemetry", (e) => {
@@ -124,7 +153,7 @@ function initCharts() {
     "vector-search",
     "vector-search-chart",
     "multiaxis",
-    "Vector Search",
+    "Queue Latency (P99, ms)",
     { latencyColor: "#646cff", countColor: "#ffb300" }
   );
 
@@ -133,7 +162,7 @@ function initCharts() {
     "doc-insert",
     "doc-insert-chart",
     "multiaxis",
-    "Document Insert",
+    "Insert Latency (P99, ms)",
     { latencyColor: "#4caf50", countColor: "#ffb300" }
   );
 
@@ -144,10 +173,11 @@ function initCharts() {
 
   // Set initial indicator values
   telemetryCharts.setIndicator("off-heap", "00");
-  telemetryCharts.setIndicator("dist-calcs", "00");
   telemetryCharts.setIndicator("doc-count", "00");
+  telemetryCharts.setIndicator("insert-queue", "00");
 }
 
 // Initialize
 initCharts();
 socketManager.connect();
+telemetryPoller.start();

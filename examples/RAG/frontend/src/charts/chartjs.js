@@ -2,6 +2,8 @@ import {
   Chart,
   LineController,
   LineElement,
+  BarController,
+  BarElement,
   PointElement,
   LinearScale,
   CategoryScale,
@@ -17,6 +19,8 @@ import { BaseChart } from "./index.js";
 Chart.register(
   LineController,
   LineElement,
+  BarController,
+  BarElement,
   PointElement,
   LinearScale,
   CategoryScale,
@@ -42,6 +46,7 @@ class ChartjsMultiAxis extends BaseChart {
         labels: [],
         datasets: [
           {
+            type: "line",
             label: "Latency",
             data: [],
             borderColor: options.latencyColor || "#646cff",
@@ -52,15 +57,13 @@ class ChartjsMultiAxis extends BaseChart {
             pointRadius: 0,
           },
           {
+            type: "bar",
             label: "Count",
             data: [],
             borderColor: options.countColor || "#ffb300",
             backgroundColor: (options.countColor || "#ffb300") + "33",
             yAxisID: "y-count",
-            tension: 0.3,
-            fill: false,
-            pointRadius: 0,
-            borderDash: [5, 5],
+            hidden: true,
           },
         ],
       },
@@ -82,7 +85,7 @@ class ChartjsMultiAxis extends BaseChart {
           },
           "y-count": {
             type: "linear",
-            display: true,
+            display: false,
             position: "right",
             beginAtZero: true,
             grid: { drawOnChartArea: false },

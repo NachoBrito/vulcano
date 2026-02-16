@@ -14,13 +14,21 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.domain.rag;
 
-import io.micronaut.runtime.Micronaut;
+import jakarta.inject.Singleton;
 
-public class Application {
-
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
+/**
+ * @author nacho
+ */
+@Singleton
+public class DefaultPromptGenerator implements PromptGenerator {
+    @Override
+    public String generate(RagQuery query) {
+        return
+                """
+                        %s
+                        """
+                        .formatted(query.text());
     }
 }

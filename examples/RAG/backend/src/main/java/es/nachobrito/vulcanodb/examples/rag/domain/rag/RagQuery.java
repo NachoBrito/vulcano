@@ -14,13 +14,20 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.domain.rag;
 
-import io.micronaut.runtime.Micronaut;
+import java.util.UUID;
 
-public class Application {
+/**
+ * @author nacho
+ */
+public record RagQuery(UUID uuid, String text) {
 
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
+    public static RagQuery of(String uuid, String text) {
+        return new RagQuery(UUID.fromString(uuid), text);
+    }
+
+    public static RagQuery of(String text) {
+        return new RagQuery(UUID.randomUUID(), text);
     }
 }

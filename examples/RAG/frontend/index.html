@@ -31,6 +31,20 @@
           </div>
           <button id="search">Send</button>
         </div>
+
+        <section class="status-section" id="status-collapsible">
+          <div class="status-header">
+            <h2>System Status</h2>
+            <button id="toggle-status" class="toggle-button" aria-label="Toggle Status">
+              <span class="toggle-icon">▼</span>
+            </button>
+          </div>
+          <div id="status-terminal-container" class="status-terminal-container">
+            <div id="status-terminal" class="status-terminal">
+              <div class="terminal-line system-line">[SYSTEM] Initializing...</div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <aside id="telemetry-sidebar" class="telemetry-column">
@@ -42,49 +56,43 @@
             <h2>Telemetry</h2>
             <div class="telemetry-grid">
               <div class="graph-placeholder span-2">
-                <p>Vector Search</p>
+                <p>P99 Vector Search Latency (ms)</p>
                 <div class="chart-container">
                   <canvas id="vector-search-chart"></canvas>
                 </div>
               </div>
               <div class="graph-placeholder span-2">
-                <p>Document Insert</p>
+                <p>P99 Insert Latency (ms)</p>
                 <div class="chart-container">
                   <canvas id="doc-insert-chart"></canvas>
                 </div>
               </div>
-              
+
+              <div class="indicator-box">
+                <span class="indicator-label">Insert Queue</span>
+                <span id="stat-insert-queue" class="indicator-value">00</span>
+              </div>
+
               <div class="graph-placeholder">
                 <p>Recall</p>
                 <div class="chart-container gauge-container">
                   <canvas id="recall-gauge"></canvas>
                 </div>
               </div>
-              
-              <div class="indicator-box">
-                <span class="indicator-label">Distance Calcs</span>
-                <span id="stat-dist-calcs" class="indicator-value">00</span>
-              </div>
-              
+
+
               <div class="indicator-box">
                 <span class="indicator-label">Doc Count</span>
                 <span id="stat-doc-count" class="indicator-value">00</span>
               </div>
-              
+
               <div class="indicator-box">
                 <span class="indicator-label">Off-heap Memory</span>
                 <div class="indicator-row">
                   <span id="stat-off-heap" class="indicator-value">00</span>
-                  <span class="indicator-unit">MB</span>
+                  <span class="indicator-unit">GB</span>
                 </div>
               </div>
-            </div>
-          </section>
-
-          <section class="status-section">
-            <h2>System Status</h2>
-            <div id="status-terminal" class="status-terminal">
-              <div class="terminal-line system-line">[SYSTEM] Initializing...</div>
             </div>
           </section>
         </div>

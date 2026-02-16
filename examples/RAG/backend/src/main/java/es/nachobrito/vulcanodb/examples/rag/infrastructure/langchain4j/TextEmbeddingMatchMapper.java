@@ -14,13 +14,18 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.infrastructure.langchain4j;
 
-import io.micronaut.runtime.Micronaut;
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.store.embedding.EmbeddingMatch;
 
-public class Application {
+/**
+ * @author nacho
+ */
+public class TextEmbeddingMatchMapper implements EmbeddingMatchMapper {
 
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
+    @Override
+    public String apply(EmbeddingMatch<TextSegment> textSegmentEmbeddingMatch) {
+        return textSegmentEmbeddingMatch.embedded().text();
     }
 }

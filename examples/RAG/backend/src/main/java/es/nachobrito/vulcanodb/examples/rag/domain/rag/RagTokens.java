@@ -14,13 +14,19 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.domain.rag;
 
-import io.micronaut.runtime.Micronaut;
+import java.util.UUID;
 
-public class Application {
+/**
+ * @author nacho
+ */
+public record RagTokens(UUID queryUuid, String tokens, boolean isComplete) {
+    public static RagTokens partialResponse(UUID queryUuid, String tokens) {
+        return new RagTokens(queryUuid, tokens, false);
+    }
 
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
+    public static RagTokens completeResponse(UUID queryUuid) {
+        return new RagTokens(queryUuid, "", true);
     }
 }

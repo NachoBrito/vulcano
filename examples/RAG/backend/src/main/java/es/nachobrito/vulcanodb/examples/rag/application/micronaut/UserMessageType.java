@@ -14,13 +14,29 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.application.micronaut;
 
-import io.micronaut.runtime.Micronaut;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.micronaut.serde.annotation.Serdeable;
 
-public class Application {
+/**
+ * @author nacho
+ */
+@Serdeable
+public enum UserMessageType {
+    @JsonProperty("reindex") REINDEX("reindex"),
+    @JsonProperty("chat") CHAT("chat"),
+    @JsonProperty("status") STATUS("status");
 
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
+    private final String value;
+
+    UserMessageType(String value) {
+        this.value = value;
+    }
+
+
+    @Override
+    public String toString() {
+        return value;
     }
 }

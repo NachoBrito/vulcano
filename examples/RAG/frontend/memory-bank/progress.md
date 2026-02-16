@@ -24,7 +24,7 @@
 - [x] Create `src/charts/` abstraction layer to avoid vendor lock-in.
 - [x] Implement `ChartjsProvider` in `src/charts/chartjs.js`.
 - [x] Connect WebSocket telemetry events to the generic chart abstraction.
-- [x] Implement Multi-Axis charts for "Vector search" and "Document insert".
+- [x] Implement Multi-Axis charts for "Vector search" and "Insert Queue/Latency".
 - [x] Implement Recall Gauge (0-100%).
 - [x] Add numeric indicators for Off-heap memory, Distance calculations, and Document count.
 - [x] Refactor telemetry panel to 2-column grid:
@@ -32,3 +32,5 @@
     - Index (2 cols)
     - Recall | Distance calcs
     - Doc count | Off-heap Memory
+- [x] Implement real-time telemetry polling module (`src/telemetry.js`).
+- [x] Update telemetry to Prometheus format and P99 latency.

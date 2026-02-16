@@ -14,13 +14,19 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.domain.rag.dataset.arxiv;
 
-import io.micronaut.runtime.Micronaut;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.micronaut.serde.annotation.Serdeable;
 
-public class Application {
-
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
-    }
+/**
+ * @author nacho
+ */
+@Serdeable
+public record ArxivVersion(
+        @JsonProperty("version")
+        String version,
+        @JsonProperty("created")
+        String created
+) {
 }

@@ -2,7 +2,7 @@
  * WebSocket Manager for VulcanoDB RAG Frontend
  */
 export class VulcanoSocket {
-  constructor(url = `ws://${window.location.host}/ws`) {
+  constructor(url = `ws://localhost:8080/ws`) {
     this.url = url;
     this.socket = null;
     this.reconnectAttempts = 0;
@@ -68,7 +68,8 @@ export class VulcanoSocket {
 
   send(type, payload) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({ type, payload }));
+        const json = JSON.stringify({ type, payload });
+      this.socket.send(json);
     } else {
       console.error("WebSocket is not open. Cannot send message.");
       this.dispatchEvent("vulcano:status", {

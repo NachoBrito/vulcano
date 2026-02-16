@@ -83,6 +83,40 @@ html {
   line-height: 1.4;
 }
 
+.message p:first-child {
+  margin-top: 0;
+}
+
+.message p:last-child {
+  margin-bottom: 0;
+}
+
+.message code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.message pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.message pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.message ul, .message ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
 .bot-message {
   align-self: flex-start;
   background-color: #333;
@@ -271,9 +305,57 @@ html {
 
 /* Status Terminal */
 .status-section {
-  margin-top: auto;
+  padding: 1rem 2rem;
+  background-color: #1a1a1a;
   border-top: 1px solid #333;
-  padding-top: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.status-header h2 {
+  font-size: 0.8rem;
+  margin: 0;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.toggle-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.toggle-button:hover {
+  color: #646cff;
+}
+
+.status-terminal-container {
+  max-height: 200px;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease;
+}
+
+.status-section.collapsed .status-terminal-container {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+}
+
+.status-section.collapsed .toggle-icon {
+  transform: rotate(-90deg);
 }
 
 .status-terminal {

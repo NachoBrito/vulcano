@@ -14,13 +14,14 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.examples;
+package es.nachobrito.vulcanodb.examples.rag.domain.rag.dataset;
 
-import io.micronaut.runtime.Micronaut;
+import java.util.stream.Stream;
 
-public class Application {
+/**
+ * @author nacho
+ */
+public interface DatasetLoader {
 
-    static void main(String[] args) {
-        Micronaut.run(Application.class, args);
-    }
+    Stream<DatasetEntry> getDocumentUrls();
 }

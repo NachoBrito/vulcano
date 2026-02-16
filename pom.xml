@@ -31,6 +31,8 @@
         <module>vulcano-mcp</module>
         <module>vulcanodb-micrometer</module>
         <module>vulcanodb-micronaut</module>
+        <module>vulcanodb-langchain4j</module>
+        <module>vulcanodb-document-suppliers</module>
     </modules>
 
     <properties>

@@ -16,64 +16,13 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.kvstore;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Key-Value Store. Stores values of supported types (currently string, int, float[], float[][]) associated to
- * arbitrary string keys.
- * <p>
- * This class also provides access to internal Long ids (i.e. offsets) for rapid data access when the key is not needed.
- *
  * @author nacho
  */
-public final class KeyValueStore implements AutoCloseable {
-
-    private final Metadata metadata;
-    private final DataLog dataLog;
-    private final HashIndex index;
-
-    /**
-     * Creates a new KVStore that will use provided path for data storage.
-     *
-     * @param baseDir the data store folder
-     * @throws IOException if the store setup fails.
-     */
-    public KeyValueStore(Path baseDir) throws IOException {
-        Files.createDirectories(baseDir);
-        Files.createDirectories(baseDir.resolve("data", "segment"));
-        Files.createDirectories(baseDir.resolve("index"));
-
-        // ---- Metadata ----
-        metadata = new Metadata(baseDir.resolve("metadata.dat"));
-
-        long committedDataOffset = metadata.dataOffset();
-        long committedIndexOffset = metadata.indexOffset();
-
-        // ---- Data log ----
-        dataLog = new DataLog(
-                baseDir.resolve("data/segment"),
-                256L * 1024 * 1024,      // 256 MB segments
-                committedDataOffset
-        );
-
-        // ---- Hash index ----
-        int bucketCount = 1 << 16;     // 65k buckets
-        long segmentSize = 16L * 1024 * 1024;
-
-        index = new HashIndex(
-                baseDir.resolve("index"),
-                bucketCount,
-                segmentSize,
-                committedIndexOffset,
-                dataLog
-        );
-    }
-
-
+public interface KeyValueStore extends AutoCloseable {
     /**
      * Saves a string associated to the given key. The stored value can be retrieved by the provided key, or by the
      * returned offset, using the corresponding {@link #getString(String)} or {@link #getStringAt(long)} methods.
@@ -82,9 +31,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param value the value
      * @return the offset of the new value.
      */
-    public long putString(String key, String value) {
-        return putString(key, value, true);
-    }
+    long putString(String key, String value);
 
     /**
      * Saves a string associated to the given key.
@@ -94,21 +41,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param commit whether to commit metadata (fsync) after the operation.
      * @return the offset of the new value.
      */
-    public long putString(String key, String value, boolean commit) {
-
-        // 1. Append to data log (returns global offset)
-        long dataOffset = dataLog.writeString(key, value);
-
-        // 2. Append to index AFTER data is committed
-        index.put(key, dataOffset);
-
-        // 3. Persist committed offsets (crash boundary)
-        if (commit) {
-            commit();
-        }
-
-        return dataOffset;
-    }
+    long putString(String key, String value, boolean commit);
 
     /**
      * Retrieves the String associated to the given key
@@ -116,13 +49,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param key the key
      * @return the associated value, if it exists.
      */
-    public Optional<String> getString(String key) {
-        long offset = index.get(key);
-        if (offset < 0) {
-            return Optional.empty();
-        }
-        return Optional.of(dataLog.readString(offset));
-    }
+    Optional<String> getString(String key);
 
     /**
      * Saves an int associated to the given key. The stored value can be retrieved by the provided key, or by the
@@ -132,9 +59,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param value the value
      * @return the offset of the new value.
      */
-    public long putInt(String key, int value) {
-        return putInt(key, value, true);
-    }
+    long putInt(String key, int value);
 
     /**
      * Saves an int associated to the given key.
@@ -144,14 +69,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param commit whether to commit metadata (fsync) after the operation.
      * @return the offset of the new value.
      */
-    public long putInt(String key, int value, boolean commit) {
-        long dataOffset = dataLog.writeInteger(key, value);
-        index.put(key, dataOffset);
-        if (commit) {
-            commit();
-        }
-        return dataOffset;
-    }
+    long putInt(String key, int value, boolean commit);
 
     /**
      * Retrieves the Integer associated to the given key
@@ -159,14 +77,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param key the key
      * @return the associated value, if it exists.
      */
-    public Optional<Integer> getInt(String key) {
-        long offset = index.get(key);
-        if (offset < 0) {
-            return Optional.empty();
-        }
-
-        return Optional.of(dataLog.readInteger(offset));
-    }
+    Optional<Integer> getInt(String key);
 
     /**
      * Saves a float array associated to the given key. The stored value can be retrieved by the provided key, or by the
@@ -176,9 +87,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param value the value
      * @return the offset of the new value.
      */
-    public long putFloatArray(String key, float[] value) {
-        return putFloatArray(key, value, true);
-    }
+    long putFloatArray(String key, float[] value);
 
     /**
      * Saves a float array associated to the given key.
@@ -188,14 +97,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param commit whether to commit metadata (fsync) after the operation.
      * @return the offset of the new value.
      */
-    public long putFloatArray(String key, float[] value, boolean commit) {
-        long dataOffset = dataLog.writeFloatArray(key, value);
-        index.put(key, dataOffset);
-        if (commit) {
-            commit();
-        }
-        return dataOffset;
-    }
+    long putFloatArray(String key, float[] value, boolean commit);
 
     /**
      * Saves a float matrix associated to the given key. The stored value can be retrieved by the provided key, or by the
@@ -205,9 +107,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param value the value
      * @return the offset of the new value.
      */
-    public long putFloatMatrix(String key, float[][] value) {
-        return putFloatMatrix(key, value, true);
-    }
+    long putFloatMatrix(String key, float[][] value);
 
     /**
      * Saves a float matrix associated to the given key.
@@ -217,14 +117,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param commit whether to commit metadata (fsync) after the operation.
      * @return the offset of the new value.
      */
-    public long putFloatMatrix(String key, float[][] value, boolean commit) {
-        long dataOffset = dataLog.writeFloatMatrix(key, value);
-        index.put(key, dataOffset);
-        if (commit) {
-            commit();
-        }
-        return dataOffset;
-    }
+    long putFloatMatrix(String key, float[][] value, boolean commit);
 
     /**
      * Retrieves the float array associated to the given key
@@ -232,13 +125,7 @@ public final class KeyValueStore implements AutoCloseable {
      * @param key the key
      * @return the associated value, if it exists.
      */
-    public Optional<float[]> getFloatArray(String key) {
-        long offset = index.get(key);
-        if (offset < 0) {
-            return Optional.empty();
-        }
-        return Optional.of(dataLog.readFloatArray(offset));
-    }
+    Optional<float[]> getFloatArray(String key);
 
     /**
      * Retrieves the float array associated to the given key
@@ -246,74 +133,27 @@ public final class KeyValueStore implements AutoCloseable {
      * @param key the key
      * @return the associated value, if it exists.
      */
-    public Optional<float[][]> getFloatMatrix(String key) {
-        long offset = index.get(key);
-        if (offset < 0) {
-            return Optional.empty();
-        }
-        return Optional.of(dataLog.readFloatMatrix(offset));
-    }
+    Optional<float[][]> getFloatMatrix(String key);
 
-    public long putBytes(String key, byte[] value) {
-        return putBytes(key, value, true);
-    }
+    long putBytes(String key, byte[] value);
 
-    public long putBytes(String key, byte[] value, boolean commit) {
-        long dataOffset = dataLog.writeBytes(key, value);
-        index.put(key, dataOffset);
-        if (commit) {
-            commit();
-        }
-        return dataOffset;
-    }
+    long putBytes(String key, byte[] value, boolean commit);
 
     /**
      * Commits the current state of the data log and index to metadata (fsync).
      */
-    public void commit() {
-        metadata.commit(
-                dataLog.committedOffset(),
-                index.committedOffset()
-        );
-    }
+    void commit();
 
-    public Optional<byte[]> getBytes(String key) {
-        long offset = index.get(key);
-        if (offset < 0) {
-            return Optional.empty();
-        }
-        return Optional.of(dataLog.readBytes(offset));
-    }
+    Optional<byte[]> getBytes(String key);
 
     /**
      * Removes the value associated to the provided key
      *
      * @param key the key to remove.
      */
-    public void remove(String key) {
-        index.put(key, -1);
-    }
+    void remove(String key);
 
-    public long offHeapBytes() {
-        return dataLog.offHeapBytes() + index.offHeapBytes();
-    }
-
-    @Override
-    public void close() throws Exception {
-        // 1. Capture durable boundaries
-        long dataOffset = dataLog.committedOffset();
-        long indexOffset = index.committedOffset();
-
-        // 2. Persist metadata atomically
-        metadata.commit(dataOffset, indexOffset);
-
-        // 3. Force metadata to disk
-        metadata.fsync();
-
-        // 4. Close segments / arenas
-        dataLog.close();
-        index.close();
-    }
+    long offHeapBytes();
 
     /**
      * Returns a Stream that provides valid offsets where keys of this store can be found. Values can then be read by
@@ -322,31 +162,17 @@ public final class KeyValueStore implements AutoCloseable {
      *
      * @return a Stream of valid Long offsets.
      */
-    public Stream<Long> getOffsetStream() {
-        return index.valueOffsets();
-    }
+    Stream<Long> getOffsetStream();
 
-    public String getStringAt(long offset) {
-        return dataLog.readString(offset);
-    }
+    String getStringAt(long offset);
 
-    public String getKeyAt(long offset) {
-        return dataLog.readKey(offset);
-    }
+    String getKeyAt(long offset);
 
-    public int getIntAt(long offset) {
-        return dataLog.readInteger(offset);
-    }
+    int getIntAt(long offset);
 
-    public float[] getFloatArrayAt(long offset) {
-        return dataLog.readFloatArray(offset);
-    }
+    float[] getFloatArrayAt(long offset);
 
-    public float[][] getFloatMatrixAt(long offset) {
-        return dataLog.readFloatMatrix(offset);
-    }
+    float[][] getFloatMatrixAt(long offset);
 
-    public byte[] getBytesAt(long offset) {
-        return dataLog.readBytes(offset);
-    }
+    byte[] getBytesAt(long offset);
 }

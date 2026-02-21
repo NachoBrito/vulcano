@@ -23,6 +23,7 @@ import es.nachobrito.vulcanodb.core.document.FieldValueType;
 import es.nachobrito.vulcanodb.core.store.axon.concurrent.ExecutorProvider;
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly.AOLKeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,7 @@ public final class DefaultDocumentPersister implements DocumentPersister {
     public DefaultDocumentPersister(Path dataFolder) {
         this.fieldDiskStore = new FieldDiskStore(dataFolder);
         try {
-            this.dictionary = new KeyValueStore(dataFolder.resolve("dictionary"));
+            this.dictionary = new AOLKeyValueStore(dataFolder.resolve("dictionary"));
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }

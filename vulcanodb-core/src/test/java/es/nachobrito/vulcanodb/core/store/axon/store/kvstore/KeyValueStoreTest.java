@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon.store.kvstore;
 
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly.AOLKeyValueStore;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +40,7 @@ class KeyValueStoreTest {
     @BeforeEach
     void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test");
-        kvstore = new KeyValueStore(path);
+        kvstore = new AOLKeyValueStore(path);
     }
 
     @AfterEach

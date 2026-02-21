@@ -19,6 +19,7 @@ package es.nachobrito.vulcanodb.core.store.axon;
 import es.nachobrito.vulcanodb.core.document.*;
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly.AOLKeyValueStore;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +103,7 @@ class FieldDiskStore implements AutoCloseable {
 
     private KeyValueStore createValueStore(FieldIdentity<?> fieldIdentity) {
         try {
-            return new KeyValueStore(getDestinationPath(fieldIdentity));
+            return new AOLKeyValueStore(getDestinationPath(fieldIdentity));
         } catch (IOException e) {
             throw new AxonDataStoreException(e);
         }

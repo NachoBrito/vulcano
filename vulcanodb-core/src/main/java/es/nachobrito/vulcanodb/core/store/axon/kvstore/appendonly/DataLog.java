@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -95,7 +95,7 @@ final class DataLog implements AutoCloseable {
         // Solution: reserve enough for the worst-case padding (7 bytes)
         // Or better: use a simpler approach if possible.
         // Given the constraints, let's keep the alignment but calculate it safely.
-        
+
         int rawPayloadHeaderSize = 12 + kb.length;
         int maxEntrySize = (int) align(rawPayloadHeaderSize + 7 + vb.length, 8);
 
@@ -107,7 +107,7 @@ final class DataLog implements AutoCloseable {
         long payloadOffset = p + 12 + kb.length;
         long alignedPayloadOffset = align(payloadOffset, 8);
         int internalPadding = (int) (alignedPayloadOffset - payloadOffset);
-        
+
         int rawSize = 12 + kb.length + internalPadding + vb.length;
 
         m.set(INT, p + 4, type.id);
@@ -387,7 +387,7 @@ final class DataLog implements AutoCloseable {
         long alignedPayloadOffset = align(payloadOffset, 8);
 
         // vlen is accurately calculated from the stored len minus the distance to the aligned payload
-        int vlen = len - (int)(alignedPayloadOffset - p);
+        int vlen = len - (int) (alignedPayloadOffset - p);
 
         byte[] out = new byte[vlen];
         MemorySegment.copy(m, alignedPayloadOffset, MemorySegment.ofArray(out), 0, vlen);

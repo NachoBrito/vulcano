@@ -14,32 +14,23 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly;
+
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.nio.channels.FileChannel;
 
 /**
  * @author nacho
  */
-enum ValueType {
-    STRING(1),
-    INTEGER(2),
-    FLOAT_ARRAY(3),
-    FLOAT_MATRIX(4),
-    BYTES(5);
-
-    final int id;
-
-    ValueType(int id) {
-        this.id = id;
-    }
-
-    static ValueType fromId(int id) {
-        return switch (id) {
-            case 1 -> STRING;
-            case 2 -> INTEGER;
-            case 3 -> FLOAT_ARRAY;
-            case 4 -> FLOAT_MATRIX;
-            case 5 -> BYTES;
-            default -> throw new IllegalStateException("Unknown type " + id);
-        };
+record Segment(
+        FileChannel channel,
+        Arena arena,
+        MemorySegment memory
+) implements AutoCloseable {
+    @Override
+    public void close() throws Exception {
+        arena.close();
+        channel.close();
     }
 }

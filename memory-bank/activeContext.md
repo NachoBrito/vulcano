@@ -4,17 +4,21 @@
 Completing the high-performance attribute indexing system and ensuring storage layer atomicity under concurrent load.
 
 ## Recent changes
-- **String Field Indexing**: Implemented `StringIndexHandler` using a persistent `InvertedIndex`. Added full support for `EQUALS`, `STARTS_WITH`, `ENDS_WITH`, and `CONTAINS` operators.
-- **DataLog Data Integrity**: Standardized on storing `rawSize` in entry headers and refined `readBytes` to account for internal alignment padding. This fixed corruption issues when reading string IDs.
-- **Concurrency Fixes**: Resolved a race condition in `DataLog` by implementing atomic space reservation (`getAndAdd`) with safety margins, ensuring thread-safe concurrent document ingestion via virtual threads.
+- **Tucana Key-Value Store**: Implemented a high-performance Java 25 implementation based on the USENIX ATC '16 paper.
+    - **Architecture**: Leverages FFM API for direct memory-mapped access and Copy-on-Write (CoW) for persistence.
+    - **Bε-tree Index**: Implemented a write-optimized index with leaf-level buffering, node splitting, and $O(\log N)$ binary pivot search.
+    - **Robustness**: Integrated `VarHandle` for atomic memory access and CRC32 checksumming for superblock integrity.
+    - **Scalability**: Added multi-segment storage with asynchronous background pre-allocation of 64MB segment files.
+    - **Versioning**: Implemented epoch-based point-in-time queries (`getStringAtEpoch`) using the inherent CoW snapshotting.
+- **String Field Indexing**: Implemented `StringIndexHandler` using a persistent `InvertedIndex`.
 - **Binary Optimized WAL**: Integrated high-performance binary logging and automatic crash recovery.
 
 ## Next steps
+- **Tucana Performance Tuning**: Develop JMH benchmarks to quantify the CPU efficiency gains of the new Tucana store against `AOLKeyValueStore`.
 - **WAL Robustness**: Implement background checkpointing to truncate the WAL and manage disk space.
 - **RAG API Layer**:
     - Design and implement `Collection` and `Schema` management classes.
     - Create `Embedder` abstractions for seamless integration with ONNX and other embedding models.
-- **Query Optimization**: Further refine the `QueryCompiler` for hybrid searches, potentially adding a sorted index (B-Tree) for faster prefix matches.
 
 ## Active decisions and considerations
 - **Indexing Strategy**: Using a hash-based inverted index for strings currently. While O(1) for exact matches, partial matches require term iteration. A future B-Tree implementation could optimize range and prefix queries.

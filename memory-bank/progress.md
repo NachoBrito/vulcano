@@ -11,6 +11,9 @@
 - **MCP Integration**: Exposing database tools to AI agents.
 
 ## What's left to build
+- **Tucana Key-Value Store**: 
+    - [ ] Define interfaces for `TucanaIndex`, `TucanaStorage`, and `TucanaBuffer`.
+    - [ ] Implement `TucanaKeyValueStore` using B&epsilon;-trees and FFM API.
 - **RAG-First API**:
     - **Collections & Schemas**: Higher-level management of related documents.
     - **Automated Embedding**: `Embedder` interface and ONNX-based implementations for text-to-vector conversion.
@@ -26,7 +29,7 @@
 - **Binary Optimized WAL** is fully integrated and tested for crash consistency.
 - **String Field Indexing** is completed and integrated into the query engine.
 - Database provides **Durability and Atomicity** even under high concurrent load.
-- Moving towards **RAG-layer usability** and high-level abstractions.
+- **Tucana Key-Value Store** implementation has started with an initial interface-first (TDD) approach.
 
 ## Known issues
 - WAL can grow indefinitely without manual deletion; background checkpointing is required.
@@ -37,3 +40,4 @@
 - **Binary Format**: Switched from string-based logging to binary serialization to handle high-dimensional vector data efficiently.
 - **Paged Scalability**: Adopted paged structures for HNSW to support datasets that exceed available RAM.
 - **Attribute Indexing**: Integrated persistent inverted indexes into the core storage layer to support efficient attribute-based filtering alongside vector search.
+- **Tucana Integration**: Decided to implement a write-optimized key-value store based on Tucana to further optimize ingestion and memory mapping using the FFM API.

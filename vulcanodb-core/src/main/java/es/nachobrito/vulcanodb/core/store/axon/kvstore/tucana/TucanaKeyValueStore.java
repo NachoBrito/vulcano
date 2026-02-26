@@ -17,335 +17,199 @@
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
-
-import java.io.IOException;
-import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
-import java.nio.file.Path;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
-import java.util.zip.CRC32;
 
 /**
- * Java 25 implementation of Tucana Key-Value Store.
- * Uses Bε-trees, Copy-on-Write persistence, and multi-segment storage.
- *
- * @author nacho
+ * Implementation of {@link KeyValueStore} based on the Tucana architecture.
  */
-public final class TucanaKeyValueStore implements KeyValueStore {
+public class TucanaKeyValueStore implements KeyValueStore {
 
-    private final StorageManager storageManager;
-    private final DataLog dataLog;
-    private final BεTree index;
+    private final TucanaIndex index;
+    private final TucanaStorage storage;
 
-    private final ReentrantLock writeLock = new ReentrantLock();
-
-    /**
-     * Map of historical epoch roots for versioned queries.
-     */
-    private final java.util.Map<Long, Long> epochHistory = new java.util.concurrent.ConcurrentHashMap<>();
-
-    public TucanaKeyValueStore(Path baseDir) throws IOException {
-        this(baseDir, 64L * 1024 * 1024); // Default 64 MB segments
-    }
-
-    public TucanaKeyValueStore(Path baseDir, long segmentSize) throws IOException {
-        this.storageManager = new StorageManager(baseDir, segmentSize);
-
-        // Recovery Logic (Superblock is always in Segment 0, Page 0)
-        MemorySegment superblock = storageManager.getSegment(0).getPage(0);
-        long magic = (long) Layout.SB_MAGIC.get(superblock, 0L);
-        long rootOffset = 0;
-        long logTail = 0;
-
-        if (magic == 0x545543414E41L) {
-            if (verifySuperblockChecksum(superblock)) {
-                rootOffset = (long) Layout.SB_ROOT.get(superblock, 0L);
-                logTail = (long) Layout.SB_LOG_TAIL.get(superblock, 0L);
-                loadEpochHistory(superblock);
-            } else {
-                throw new IOException("Tucana superblock checksum mismatch. Data might be corrupted.");
-            }
-        }
-
-        this.dataLog = new DataLog(storageManager, logTail);
-        this.index = new BεTree(storageManager, dataLog, rootOffset);
-    }
-
-    private void loadEpochHistory(MemorySegment superblock) {
-        long historyOffset = (long) Layout.SB_HISTORY.get(superblock, 0L);
-        if (historyOffset == 0) return;
-
-        // Simplified history loading: read from history log page
-        MemorySegment historyPage = storageManager.getSegmentForOffset(historyOffset).getPage(storageManager.localOffset(historyOffset));
-        int numEntries = (int) (Layout.PAGE_SIZE / Layout.HISTORY_ENTRY.byteSize());
-        for (int i = 0; i < numEntries; i++) {
-            long offset = (long) i * Layout.HISTORY_ENTRY.byteSize();
-            long epoch = historyPage.get(ValueLayout.JAVA_LONG, offset);
-            long root = historyPage.get(ValueLayout.JAVA_LONG, offset + 8);
-            if (root != 0) {
-                epochHistory.put(epoch, root);
-            }
-        }
-    }
-
-    private boolean verifySuperblockChecksum(MemorySegment superblock) {
-        long storedChecksum = (long) Layout.SB_CHECKSUM.get(superblock, 0L);
-        return storedChecksum == calculateSuperblockChecksum(superblock);
-    }
-
-    private long calculateSuperblockChecksum(MemorySegment superblock) {
-        CRC32 crc = new CRC32();
-        // Checksum everything except the checksum field itself
-        byte[] data = superblock.asSlice(0, Layout.SUPERBLOCK.byteSize() - 8).toArray(ValueLayout.JAVA_BYTE);
-        crc.update(data);
-        return crc.getValue();
+    public TucanaKeyValueStore(TucanaIndex index, TucanaStorage storage) {
+        this.index = index;
+        this.storage = storage;
     }
 
     @Override
     public long putString(String key, String value) {
-        return putString(key, value, true);
+        return putString(key, value, false);
     }
 
     @Override
     public long putString(String key, String value, boolean commit) {
-        writeLock.lock();
-        try {
-            byte[] bytes = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            long dataOffset = dataLog.write(key, bytes, (byte) 1);
-            index.insert(key, dataOffset);
-
-            if (commit) {
-                commit();
-            }
-            return dataOffset;
-        } finally {
-            writeLock.unlock();
+        index.upsert(key.getBytes(StandardCharsets.UTF_8), value.getBytes(StandardCharsets.UTF_8));
+        if (commit) {
+            commit();
         }
+        return index.rootOffset();
     }
 
     @Override
     public Optional<String> getString(String key) {
-        return getStringAtEpoch(key, storageManager.currentEpoch() - 1);
-    }
-
-    /**
-     * Retrieves the String associated to the given key as it existed at the end of the specified epoch.
-     */
-    public Optional<String> getStringAtEpoch(String key, long epoch) {
-        long root = (epoch == storageManager.currentEpoch() - 1) 
-                ? index.getRootOffset() 
-                : epochHistory.getOrDefault(epoch, -1L);
-
-        if (root == -1L) {
-            return Optional.empty();
-        }
-
-        long offset = index.searchAtRoot(key, root);
-        if (offset == -1) {
-            return Optional.empty();
-        }
-        return Optional.of(new String(dataLog.readValue(offset), java.nio.charset.StandardCharsets.UTF_8));
+        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> new String(bytes, StandardCharsets.UTF_8));
     }
 
     @Override
     public long putInt(String key, int value) {
-        return putInt(key, value, true);
+        return putInt(key, value, false);
     }
 
     @Override
     public long putInt(String key, int value, boolean commit) {
-        writeLock.lock();
-        try {
-            java.nio.ByteBuffer bb = java.nio.ByteBuffer.allocate(4);
-            bb.putInt(value);
-            long dataOffset = dataLog.write(key, bb.array(), (byte) 2);
-            index.insert(key, dataOffset);
-            if (commit) commit();
-            return dataOffset;
-        } finally {
-            writeLock.unlock();
+        byte[] bytes = new byte[4];
+        ByteBuffer.wrap(bytes).putInt(value);
+        index.upsert(key.getBytes(StandardCharsets.UTF_8), bytes);
+        if (commit) {
+            commit();
         }
+        return index.rootOffset();
     }
 
     @Override
     public Optional<Integer> getInt(String key) {
-        long offset = index.search(key);
-        if (offset == -1) return Optional.empty();
-        return Optional.of(java.nio.ByteBuffer.wrap(dataLog.readValue(offset)).getInt());
+        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> ByteBuffer.wrap(bytes).getInt());
     }
 
     @Override
     public long putFloatArray(String key, float[] value) {
-        return putFloatArray(key, value, true);
+        return putFloatArray(key, value, false);
     }
 
     @Override
     public long putFloatArray(String key, float[] value, boolean commit) {
-        writeLock.lock();
-        try {
-            java.nio.ByteBuffer bb = java.nio.ByteBuffer.allocate(value.length * 4);
-            for (float f : value) bb.putFloat(f);
-            long dataOffset = dataLog.write(key, bb.array(), (byte) 3);
-            index.insert(key, dataOffset);
-            if (commit) commit();
-            return dataOffset;
-        } finally {
-            writeLock.unlock();
+        byte[] bytes = new byte[value.length * 4];
+        ByteBuffer.wrap(bytes).asFloatBuffer().put(value);
+        index.upsert(key.getBytes(StandardCharsets.UTF_8), bytes);
+        if (commit) {
+            commit();
         }
+        return index.rootOffset();
     }
 
     @Override
     public long putFloatMatrix(String key, float[][] value) {
-        return 0;
+        return putFloatMatrix(key, value, false);
     }
 
     @Override
     public long putFloatMatrix(String key, float[][] value, boolean commit) {
-        return 0;
+        int rows = value.length;
+        int cols = rows > 0 ? value[0].length : 0;
+        byte[] bytes = new byte[8 + rows * cols * 4];
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        buffer.putInt(rows);
+        buffer.putInt(cols);
+        for (float[] row : value) {
+            buffer.asFloatBuffer().put(row);
+            buffer.position(buffer.position() + row.length * 4);
+        }
+        index.upsert(key.getBytes(StandardCharsets.UTF_8), bytes);
+        if (commit) {
+            commit();
+        }
+        return index.rootOffset();
     }
 
     @Override
     public Optional<float[]> getFloatArray(String key) {
-        long offset = index.search(key);
-        if (offset == -1) return Optional.empty();
-        byte[] bytes = dataLog.readValue(offset);
-        float[] result = new float[bytes.length / 4];
-        java.nio.ByteBuffer.wrap(bytes).asFloatBuffer().get(result);
-        return Optional.of(result);
+        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> {
+            float[] floats = new float[bytes.length / 4];
+            ByteBuffer.wrap(bytes).asFloatBuffer().get(floats);
+            return floats;
+        });
     }
 
     @Override
     public Optional<float[][]> getFloatMatrix(String key) {
-        return Optional.empty();
+        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            int rows = buffer.getInt();
+            int cols = buffer.getInt();
+            float[][] matrix = new float[rows][cols];
+            for (int i = 0; i < rows; i++) {
+                buffer.asFloatBuffer().get(matrix[i]);
+                buffer.position(buffer.position() + cols * 4);
+            }
+            return matrix;
+        });
     }
 
     @Override
     public long putBytes(String key, byte[] value) {
-        return putBytes(key, value, true);
+        return putBytes(key, value, false);
     }
 
     @Override
     public long putBytes(String key, byte[] value, boolean commit) {
-        writeLock.lock();
-        try {
-            long dataOffset = dataLog.write(key, value, (byte) 0);
-            index.insert(key, dataOffset);
-            if (commit) commit();
-            return dataOffset;
-        } finally {
-            writeLock.unlock();
+        index.upsert(key.getBytes(StandardCharsets.UTF_8), value);
+        if (commit) {
+            commit();
         }
+        return index.rootOffset();
     }
 
     @Override
     public void commit() {
-        writeLock.lock();
-        try {
-            MemorySegment superblock = storageManager.getSegment(0).getPage(0);
-            long newEpoch = storageManager.currentEpoch();
-            long rootOffset = index.getRootOffset();
-
-            // Store in history
-            epochHistory.put(newEpoch, rootOffset);
-            updatePersistentHistory(newEpoch, rootOffset);
-
-            Layout.SB_MAGIC.set(superblock, 0L, 0x545543414E41L);
-            Layout.SB_EPOCH.set(superblock, 0L, newEpoch);
-            Layout.SB_ROOT.set(superblock, 0L, rootOffset);
-            Layout.SB_LOG_TAIL.set(superblock, 0L, dataLog.getTailOffset());
-
-            long checksum = calculateSuperblockChecksum(superblock);
-            Layout.SB_CHECKSUM.set(superblock, 0L, checksum);
-
-            storageManager.fsyncAll();
-            storageManager.processFreeLog(newEpoch);
-            storageManager.incrementEpoch();
-        } finally {
-            writeLock.unlock();
-        }
-    }
-
-    private void updatePersistentHistory(long epoch, long rootOffset) throws IOException {
-        // Simple persistent history: use page 1 of segment 0 for now
-        MemorySegment superblock = storageManager.getSegment(0).getPage(0);
-        long historyOffset = (long) Layout.SB_HISTORY.get(superblock, 0L);
-        if (historyOffset == 0) {
-            historyOffset = storageManager.allocatePage();
-            Layout.SB_HISTORY.set(superblock, 0L, historyOffset);
-        }
-
-        MemorySegment historyPage = storageManager.getSegmentForOffset(historyOffset).getPage(storageManager.localOffset(historyOffset));
-        // Find slot for this epoch
-        long slot = (epoch % (Layout.PAGE_SIZE / Layout.HISTORY_ENTRY.byteSize())) * Layout.HISTORY_ENTRY.byteSize();
-        historyPage.set(ValueLayout.JAVA_LONG, slot, epoch);
-        historyPage.set(ValueLayout.JAVA_LONG, slot + 8, rootOffset);
+        storage.commit();
     }
 
     @Override
     public Optional<byte[]> getBytes(String key) {
-        long offset = index.search(key);
-        if (offset == -1) return Optional.empty();
-        return Optional.of(dataLog.readValue(offset));
+        return index.get(key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public void remove(String key) {
-        writeLock.lock();
-        try {
-            index.insert(key, -1);
-        } finally {
-            writeLock.unlock();
-        }
+        index.delete(key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public long offHeapBytes() {
-        return storageManager.totalSize();
+        return 0; // Simplified for now
     }
 
     @Override
     public Stream<Long> getOffsetStream() {
-        return Stream.empty();
+        return Stream.empty(); // Simplified for now
     }
 
     @Override
     public String getStringAt(long offset) {
-        return new String(dataLog.readValue(offset), java.nio.charset.StandardCharsets.UTF_8);
+        throw new UnsupportedOperationException("Offset-based retrieval not implemented in Tucana yet");
     }
 
     @Override
     public String getKeyAt(long offset) {
-        return dataLog.readKey(offset);
+        throw new UnsupportedOperationException("Offset-based retrieval not implemented in Tucana yet");
     }
 
     @Override
     public int getIntAt(long offset) {
-        return java.nio.ByteBuffer.wrap(dataLog.readValue(offset)).getInt();
+        throw new UnsupportedOperationException("Offset-based retrieval not implemented in Tucana yet");
     }
 
     @Override
     public float[] getFloatArrayAt(long offset) {
-        byte[] bytes = dataLog.readValue(offset);
-        float[] result = new float[bytes.length / 4];
-        java.nio.ByteBuffer.wrap(bytes).asFloatBuffer().get(result);
-        return result;
+        throw new UnsupportedOperationException("Offset-based retrieval not implemented in Tucana yet");
     }
 
     @Override
     public float[][] getFloatMatrixAt(long offset) {
-        return new float[0][0];
+        throw new UnsupportedOperationException("Offset-based retrieval not implemented in Tucana yet");
     }
 
     @Override
     public byte[] getBytesAt(long offset) {
-        return dataLog.readValue(offset);
+        throw new UnsupportedOperationException("Offset-based retrieval not implemented in Tucana yet");
     }
 
     @Override
     public void close() throws Exception {
-        commit();
-        storageManager.close();
+        storage.close();
     }
 }

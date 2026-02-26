@@ -25,6 +25,8 @@
         <Or>
             <Class name="es.nachobrito.vulcanodb.core.VulcanoDb$Builder"/>
             <Class name="es.nachobrito.vulcanodb.core.ingestion.WorkQueueIngestor"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaKeyValueStore"/>
+
         </Or>
 
         <Bug pattern="EI_EXPOSE_REP2"/>

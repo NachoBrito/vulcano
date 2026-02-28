@@ -16,17 +16,11 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
-import java.lang.foreign.MemorySegment;
-
 /**
  * Abstraction for memory-mapped buffers using the FFM API.
- * Provides low-level access to the underlying storage.
+ * Provides low-level access to the underlying storage via offset-based methods.
  */
 public interface TucanaBuffer {
-    /**
-     * Returns the memory segment for this buffer.
-     */
-    MemorySegment segment();
 
     /**
      * Reads a byte at the given offset.

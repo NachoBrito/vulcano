@@ -1,5 +1,11 @@
 # Tech Context
 
+## Industrial Design Principles
+VulcanoDB development is guided by these production-ready mandates:
+- **No Simplistic Implementations**: All code must be optimized for production performance, concurrency, and reliability.
+- **Resource Efficiency**: Use low-level APIs (`MemorySegment`, virtual threads) for maximum resource utilization.
+- **Zero-Trust Stability**: Implement aggressive error handling, recovery logs (WAL), and concurrency safety (Atomic/Spinlocks).
+
 ## Technologies used
 - **Java 21+**: Primary programming language.
     - **Virtual Threads**: For high-concurrency document ingestion and query execution.

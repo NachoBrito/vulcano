@@ -1,7 +1,10 @@
 # System Patterns
 
+## Core Philosophy: Industrial Excellence
+VulcanoDB is not a teaching project or a simplistic example. It is a **production-ready engine** where every line of code is evaluated for performance, scalability, and robustness. **Simple or "naive" implementations are prohibited** in the core modules, except when strictly necessary for isolated unit testing comparison.
+
 ## System architecture
-VulcanoDB is modular, consisting of:
+VulcanoDB is modular and engineered for high throughput:
 - **Core Module**: Provides the fundamental database engine, document model, and query API.
 - **Axon Storage Engine**: A specialized disk-based storage system within Core that implements paged storage, indexing, and WAL.
 - **MCP Module**: A Multi-Client Protocol server (Micronaut-based) that exposes VulcanoDB capabilities to AI agents.

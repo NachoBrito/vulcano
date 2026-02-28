@@ -16,40 +16,25 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
-import java.util.Optional;
-import java.util.stream.Stream;
+import java.lang.foreign.MemorySegment;
 
 /**
- * Interface for the Bε-tree index used in Tucana.
+ * Manages the lifecycle and retrieval of memory segments (pages).
  */
-public interface TucanaIndex {
+public interface PageManager {
     /**
-     * Inserts or updates a message in the tree.
+     * Returns the memory segment for the given page index.
+     * Implementations may create the page on-demand if it doesn't exist.
      */
-    void upsert(byte[] key, byte[] value);
+    MemorySegment getPage(int pageIndex);
 
     /**
-     * Deletes a key from the tree.
+     * Returns the fixed size of each page.
      */
-    void delete(byte[] key);
+    int pageSize();
 
     /**
-     * Searches for a key in the tree.
+     * Persists all dirty pages to the underlying storage.
      */
-    Optional<byte[]> get(byte[] key);
-
-    /**
-     * Searches for a key in the tree at a specific epoch.
-     */
-    Optional<byte[]> getAtEpoch(byte[] key, long epoch);
-
-    /**
-     * Returns the current root offset of the tree.
-     */
-    long rootOffset();
-
-    /**
-     * Returns a stream of all valid data offsets currently indexed.
-     */
-    Stream<Long> allOffsets();
+    void flush();
 }

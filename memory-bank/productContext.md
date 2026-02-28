@@ -1,22 +1,22 @@
 # Product Context
 
 ## Why this project exists
-VulcanoDB aims to provide a high-performance, scalable solution for managing and querying vector data, which is increasingly vital for AI, machine learning, and semantic search applications.
+VulcanoDB exists to provide a **production-grade, industrial-strength** solution for managing and querying massive-scale vector data. It is built to meet the rigorous demands of high-traffic AI, machine learning, and semantic search ecosystems where performance and reliability are non-negotiable.
 
 ## Problems it solves
-- **Inefficient vector search**: Traditional databases are not optimized for similarity search on high-dimensional vector data.
-- **Complex data management**: Simplifies the storage and retrieval of document-based data with diverse field types.
-- **Performance bottlenecks**: Addresses latency issues with multi-threaded execution and advanced indexing.
+- **Inefficient vector search at scale**: Traditional databases fail under the pressure of high-dimensional similarity search at production volumes.
+- **Fragile data management**: Replaces "toy" implementations with a robust, ACID-compliant storage engine (Axon).
+- **Latency bottlenecks**: Eliminates bottlenecks through deep technical optimizations, including Java 21 virtual threads and off-heap memory management.
 
 ## How it should work
-Users should be able to:
-- Store documents containing various data types, including vectors.
-- Perform fast vector similarity searches using HNSW indexing.
-- Execute complex queries efficiently.
-- Scale their data storage and query capabilities.
+VulcanoDB provides a mission-critical infrastructure where users can:
+- Persist millions of high-dimensional vectors with ACID durability.
+- Execute sub-millisecond similarity searches using a production-hardened HNSW implementation.
+- Perform complex, multi-field queries across massive datasets without performance degradation.
+- Scale seamlessly as data volumes grow, utilizing efficient disk-based paged storage.
 
 ## User experience goals
-- **Ease of use**: Provide intuitive APIs for data interaction.
-- **High performance**: Ensure fast query response times.
-- **Reliability**: Guarantee data integrity and system stability.
-- **Flexibility**: Support a wide range of use cases and data models.
+- **Industrial Reliability**: Zero data loss and consistent performance under load.
+- **Extreme Performance**: Low-latency, high-throughput query and ingestion pipelines.
+- **Production Readiness**: Built-in monitoring, recovery, and standard protocol support (MCP).
+- **Professional Flexibility**: A system that adapts to complex data models without sacrificing speed or stability.

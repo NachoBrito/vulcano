@@ -56,4 +56,9 @@ public interface TucanaStorage extends AutoCloseable {
      * Sets the root offset for the current epoch.
      */
     void setRootOffset(long offset);
+
+    /**
+     * Reads a byte array from the storage at the specified offset.
+     */
+    byte[] read(long offset);
 }

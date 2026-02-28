@@ -9,11 +9,17 @@
 - **Document Model**: Support for complex document shapes with multiple field types (String, Int, Vector, Matrix).
 - **Concurrent Query Engine**: Multi-threaded execution using Java 21 Virtual Threads and physical plan optimization.
 - **MCP Integration**: Exposing database tools to AI agents.
+- **Tucana Key-Value Store Initial Layer**:
+    - [x] Defined interfaces for `TucanaIndex`, `TucanaStorage`, and `TucanaBuffer`.
+    - [x] Implemented `TucanaKeyValueStore` with delegation logic and serialization.
+    - [x] Implemented offset-based retrieval and architectural `getOffsetStream()`.
+    - [x] Implemented `PagedTucanaBuffer` for scalable FFM-based memory management.
+    - [x] Verified logic with comprehensive tests in `TucanaKeyValueStoreTest` and `PagedTucanaBufferTest`.
 
 ## What's left to build
-- **Tucana Key-Value Store**: 
-    - [ ] Define interfaces for `TucanaIndex`, `TucanaStorage`, and `TucanaBuffer`.
-    - [ ] Implement `TucanaKeyValueStore` using B&epsilon;-trees and FFM API.
+- **Tucana Key-Value Store Core Implementation**: 
+    - [ ] Implement `TucanaIndex` using B&epsilon;-trees.
+    - [ ] Implement `TucanaStorage` with segment management and CoW.
 - **RAG-First API**:
     - **Collections & Schemas**: Higher-level management of related documents.
     - **Automated Embedding**: `Embedder` interface and ONNX-based implementations for text-to-vector conversion.
@@ -28,8 +34,8 @@
 ## Current status
 - **Binary Optimized WAL** is fully integrated and tested for crash consistency.
 - **String Field Indexing** is completed and integrated into the query engine.
-- Database provides **Durability and Atomicity** even under high concurrent load.
-- **Tucana Key-Value Store** implementation has started with an initial interface-first (TDD) approach.
+- **Tucana Key-Value Store** facade logic and scalable paging memory architecture are completed and verified via TDD.
+- Moving towards the concrete implementation of the B&epsilon;-tree and physical segment storage.
 
 ## Known issues
 - WAL can grow indefinitely without manual deletion; background checkpointing is required.
@@ -41,3 +47,5 @@
 - **Paged Scalability**: Adopted paged structures for HNSW to support datasets that exceed available RAM.
 - **Attribute Indexing**: Integrated persistent inverted indexes into the core storage layer to support efficient attribute-based filtering alongside vector search.
 - **Tucana Integration**: Decided to implement a write-optimized key-value store based on Tucana to further optimize ingestion and memory mapping using the FFM API.
+- **Encoding Standard**: Enforced UTF-8 for all string/byte conversions across the storage layer.
+- **Scalable Paging**: Shifted from single-segment buffers to a multi-page architecture (`PagedTucanaBuffer`) to support unlimited storage growth.

@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
+import java.nio.ByteBuffer;
 import java.util.Optional;
 
 /**
@@ -58,7 +59,12 @@ public interface TucanaStorage extends AutoCloseable {
     void setRootOffset(long offset);
 
     /**
-     * Reads a byte array from the storage at the specified offset.
+     * Reads a {@link ByteBuffer} from the storage at the specified offset.
      */
-    byte[] read(long offset);
+    ByteBuffer read(long offset);
+
+    /**
+     * Writes the given data to the storage and returns the offset.
+     */
+    long write(byte[] data);
 }

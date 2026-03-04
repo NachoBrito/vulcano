@@ -281,6 +281,44 @@ public interface Entry {
     }
 
     /**
+     * Creates a {@link ByteBuffer} containing an entry with a {@code String} key and a {@code byte[]} value.
+     *
+     * @param key   the key for the entry
+     * @param value the byte array value for the entry
+     * @return a buffer containing the serialized entry
+     */
+    static ByteBuffer of(String key, byte[] value) {
+        var keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        var keyLength = keyBytes.length;
+        var valueLength = value.length;
+        var buffer = ByteBuffer.allocate(HEADER_LENGTH + keyLength + valueLength);
+        buffer.putInt(keyLength);
+        buffer.putInt(valueLength);
+        buffer.put(Type.BYTE_ARRAY.value);
+        buffer.putInt(value.length);
+        buffer.putInt(0);
+        buffer.put(keyBytes);
+        buffer.put(value);
+        return buffer;
+    }
+
+    /**
+     * Reads the byte array value from the provided entry buffer.
+     *
+     * @param entry the buffer containing the serialized entry
+     * @return the byte array stored in the entry
+     * @throws IllegalStateException if the entry data type is not {@link Type#BYTE_ARRAY}
+     */
+    static byte[] readByteArrayValue(ByteBuffer entry) {
+        Type.BYTE_ARRAY.validate(entry);
+        int keyLength = entry.getInt(HEADER_KEY_LENGTH_INDEX);
+        int valueLength = entry.getInt(HEADER_VALUE_LENGTH_INDEX);
+        var value = new byte[valueLength];
+        entry.get(HEADER_LENGTH + keyLength, value);
+        return value;
+    }
+
+    /**
      * Defines the supported data types for entry values.
      */
     enum Type {
@@ -303,7 +341,12 @@ public interface Entry {
         /**
          * A two-dimensional matrix of 32-bit floating-point numbers.
          */
-        FLOAT_MATRIX((byte) 5);
+        FLOAT_MATRIX((byte) 5),
+
+        /**
+         * A raw byte array.
+         */
+        BYTE_ARRAY((byte) 6);
 
         /**
          * The byte value representing the data type.
@@ -328,6 +371,7 @@ public interface Entry {
                 case 3 -> FLOAT;
                 case 4 -> FLOAT_ARRAY;
                 case 5 -> FLOAT_MATRIX;
+                case 6 -> BYTE_ARRAY;
                 default -> throw new IllegalArgumentException("Unknown type: " + b);
             };
         }

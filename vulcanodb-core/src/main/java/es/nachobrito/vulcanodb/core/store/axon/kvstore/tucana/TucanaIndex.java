@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Stream;
 
 /**
@@ -24,9 +25,9 @@ import java.util.stream.Stream;
  */
 public interface TucanaIndex {
     /**
-     * Inserts or updates a message in the tree.
+     * Inserts or updates a key with its data offset in the tree.
      */
-    void upsert(byte[] key, byte[] value);
+    void upsert(byte[] key, long offset);
 
     /**
      * Deletes a key from the tree.
@@ -34,14 +35,14 @@ public interface TucanaIndex {
     void delete(byte[] key);
 
     /**
-     * Searches for a key in the tree.
+     * Searches for a key in the tree and returns its data offset.
      */
-    Optional<byte[]> get(byte[] key);
+    OptionalLong get(byte[] key);
 
     /**
-     * Searches for a key in the tree at a specific epoch.
+     * Searches for a key in the tree at a specific epoch and returns its data offset.
      */
-    Optional<byte[]> getAtEpoch(byte[] key, long epoch);
+    OptionalLong getAtEpoch(byte[] key, long epoch);
 
     /**
      * Returns the current root offset of the tree.

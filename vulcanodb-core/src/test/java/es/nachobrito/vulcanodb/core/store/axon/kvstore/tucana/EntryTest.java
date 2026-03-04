@@ -70,4 +70,13 @@ class EntryTest {
         assertEquals(key, Entry.readKey(entry));
         assertArrayEquals(value, Entry.readFloatMatrixValue(entry));
     }
+
+    @Test
+    void expectByteArrayEntriesCreatedProperly() {
+        var key = "theKey";
+        var value = new byte[]{1, 2, 3};
+        var entry = Entry.of(key, value);
+        assertEquals(key, Entry.readKey(entry));
+        assertArrayEquals(value, Entry.readByteArrayValue(entry));
+    }
 }

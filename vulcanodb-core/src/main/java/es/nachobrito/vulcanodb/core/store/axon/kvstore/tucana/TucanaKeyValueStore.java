@@ -1,5 +1,5 @@
 /*
- *    Copyright 2026 Nacho Brito
+ *    Copyright 2025 Nacho Brito
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -42,16 +43,16 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public long putString(String key, String value, boolean commit) {
-        index.upsert(key.getBytes(StandardCharsets.UTF_8), value.getBytes(StandardCharsets.UTF_8));
-        if (commit) {
-            commit();
-        }
-        return index.rootOffset();
+        return persist(key, Entry.of(key, value), commit);
     }
 
     @Override
     public Optional<String> getString(String key) {
-        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> new String(bytes, StandardCharsets.UTF_8));
+        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        if (offsetOpt.isPresent()) {
+            return Optional.of(Entry.readStringValue(storage.read(offsetOpt.getAsLong())));
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -61,18 +62,16 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public long putInt(String key, int value, boolean commit) {
-        byte[] bytes = new byte[4];
-        ByteBuffer.wrap(bytes).putInt(value);
-        index.upsert(key.getBytes(StandardCharsets.UTF_8), bytes);
-        if (commit) {
-            commit();
-        }
-        return index.rootOffset();
+        return persist(key, Entry.of(key, value), commit);
     }
 
     @Override
     public Optional<Integer> getInt(String key) {
-        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> ByteBuffer.wrap(bytes).getInt());
+        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        if (offsetOpt.isPresent()) {
+            return Optional.of(Entry.readIntValue(storage.read(offsetOpt.getAsLong())));
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -82,13 +81,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public long putFloatArray(String key, float[] value, boolean commit) {
-        byte[] bytes = new byte[value.length * 4];
-        ByteBuffer.wrap(bytes).asFloatBuffer().put(value);
-        index.upsert(key.getBytes(StandardCharsets.UTF_8), bytes);
-        if (commit) {
-            commit();
-        }
-        return index.rootOffset();
+        return persist(key, Entry.of(key, value), commit);
     }
 
     @Override
@@ -98,45 +91,25 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public long putFloatMatrix(String key, float[][] value, boolean commit) {
-        int rows = value.length;
-        int cols = rows > 0 ? value[0].length : 0;
-        byte[] bytes = new byte[8 + rows * cols * 4];
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        buffer.putInt(rows);
-        buffer.putInt(cols);
-        for (float[] row : value) {
-            buffer.asFloatBuffer().put(row);
-            buffer.position(buffer.position() + row.length * 4);
-        }
-        index.upsert(key.getBytes(StandardCharsets.UTF_8), bytes);
-        if (commit) {
-            commit();
-        }
-        return index.rootOffset();
+        return persist(key, Entry.of(key, value), commit);
     }
 
     @Override
     public Optional<float[]> getFloatArray(String key) {
-        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> {
-            float[] floats = new float[bytes.length / 4];
-            ByteBuffer.wrap(bytes).asFloatBuffer().get(floats);
-            return floats;
-        });
+        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        if (offsetOpt.isPresent()) {
+            return Optional.of(Entry.readFloatArrayValue(storage.read(offsetOpt.getAsLong())));
+        }
+        return Optional.empty();
     }
 
     @Override
     public Optional<float[][]> getFloatMatrix(String key) {
-        return index.get(key.getBytes(StandardCharsets.UTF_8)).map(bytes -> {
-            ByteBuffer buffer = ByteBuffer.wrap(bytes);
-            int rows = buffer.getInt();
-            int cols = buffer.getInt();
-            float[][] matrix = new float[rows][cols];
-            for (int i = 0; i < rows; i++) {
-                buffer.asFloatBuffer().get(matrix[i]);
-                buffer.position(buffer.position() + cols * 4);
-            }
-            return matrix;
-        });
+        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        if (offsetOpt.isPresent()) {
+            return Optional.of(Entry.readFloatMatrixValue(storage.read(offsetOpt.getAsLong())));
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -146,7 +119,13 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public long putBytes(String key, byte[] value, boolean commit) {
-        index.upsert(key.getBytes(StandardCharsets.UTF_8), value);
+        return persist(key, Entry.of(key, value), commit);
+    }
+
+    private long persist(String key, ByteBuffer entry, boolean commit) {
+        byte[] bytes = entry.array();
+        long offset = storage.write(bytes);
+        index.upsert(key.getBytes(StandardCharsets.UTF_8), offset);
         if (commit) {
             commit();
         }
@@ -160,7 +139,14 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public Optional<byte[]> getBytes(String key) {
-        return index.get(key.getBytes(StandardCharsets.UTF_8));
+        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        if (offsetOpt.isPresent()) {
+            var buffer = storage.read(offsetOpt.getAsLong());
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            return Optional.of(bytes);
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -180,47 +166,35 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public String getStringAt(long offset) {
-        return new String(storage.read(offset), StandardCharsets.UTF_8);
+        return Entry.readStringValue(storage.read(offset));
     }
 
     @Override
     public String getKeyAt(long offset) {
-        // In Tucana, the stored record at an offset might be just the value, 
-        // or it might include the key. For now, we assume it's recoverable or 
-        // we'll refine this once the storage layout is finalized.
-        // Assuming for now it's just the value or handled similarly to getStringAt
-        return getStringAt(offset);
+        return Entry.readKey(storage.read(offset));
     }
 
     @Override
     public int getIntAt(long offset) {
-        return ByteBuffer.wrap(storage.read(offset)).getInt();
+        return Entry.readIntValue(storage.read(offset));
     }
 
     @Override
     public float[] getFloatArrayAt(long offset) {
-        byte[] bytes = storage.read(offset);
-        float[] floats = new float[bytes.length / 4];
-        ByteBuffer.wrap(bytes).asFloatBuffer().get(floats);
-        return floats;
+        return Entry.readFloatArrayValue(storage.read(offset));
     }
 
     @Override
     public float[][] getFloatMatrixAt(long offset) {
-        ByteBuffer buffer = ByteBuffer.wrap(storage.read(offset));
-        int rows = buffer.getInt();
-        int cols = buffer.getInt();
-        float[][] matrix = new float[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            buffer.asFloatBuffer().get(matrix[i]);
-            buffer.position(buffer.position() + cols * 4);
-        }
-        return matrix;
+        return Entry.readFloatMatrixValue(storage.read(offset));
     }
 
     @Override
     public byte[] getBytesAt(long offset) {
-        return storage.read(offset);
+        var buffer = storage.read(offset);
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        return bytes;
     }
 
     @Override

@@ -14,7 +14,15 @@
     - [x] Implemented `TucanaKeyValueStore` with delegation logic and serialization.
     - [x] Implemented offset-based retrieval and architectural `getOffsetStream()`.
     - [x] Implemented `PagedTucanaBuffer` for scalable FFM-based memory management.
+    - [x] Refactored for strict separation of concerns (Index vs Storage).
+    - [x] Optimized storage API with `ByteBuffer` return types.
     - [x] Verified logic with comprehensive tests in `TucanaKeyValueStoreTest` and `PagedTucanaBufferTest`.
+>>>>>>> SEARCH
+- **Tucana Key-Value Store facade logic and scalable paging memory architecture are completed and verified via TDD.**
+- Moving towards the concrete implementation of the B&epsilon;-tree and physical segment storage.
+- **Tucana Key-Value Store facade logic and scalable paging memory architecture are completed and verified via TDD.**
+- **Strict Separation of Concerns and API optimizations** are fully integrated.
+- Moving towards the concrete implementation of the B&epsilon;-tree and physical segment storage.
 
 ## What's left to build
 - **Tucana Key-Value Store Core Implementation**: 

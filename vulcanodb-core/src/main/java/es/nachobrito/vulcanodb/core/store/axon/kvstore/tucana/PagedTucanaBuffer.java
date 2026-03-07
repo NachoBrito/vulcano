@@ -71,6 +71,16 @@ public class PagedTucanaBuffer implements TucanaBuffer {
     }
 
     @Override
+    public java.nio.ByteBuffer getBytes(long offset, int length) {
+        return getPage(offset).asSlice(getPageOffset(offset), length).asByteBuffer();
+    }
+
+    @Override
+    public long offset() {
+        return 0; // PagedTucanaBuffer is currently used for the entire storage, offset is relative
+    }
+
+    @Override
     public void force() {
         pageManager.flush();
     }

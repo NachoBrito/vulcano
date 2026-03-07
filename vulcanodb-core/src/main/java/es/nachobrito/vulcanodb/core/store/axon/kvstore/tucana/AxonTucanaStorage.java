@@ -17,9 +17,11 @@
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
 import java.lang.foreign.MemorySegment;
+
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -48,7 +50,7 @@ public class AxonTucanaStorage implements TucanaStorage {
     /** The two superblocks used for the atomic commit protocol. */
     private final Superblock[] superblocks = new Superblock[2];
     /** The index (0 or 1) of the currently active and consistent superblock. */
-    private int activeSuperblockIndex = -1;
+    private final AtomicInteger activeSuperblockIndex = new AtomicInteger(-1);
 
     /** The current write offset within the data region for the current epoch. */
     private final AtomicLong allocatorOffset = new AtomicLong(0);
@@ -82,14 +84,14 @@ public class AxonTucanaStorage implements TucanaStorage {
 
         if (sb0Valid && sb1Valid) {
             // Both valid: choose the one with the higher epoch
-            activeSuperblockIndex = superblocks[0].epoch() >= superblocks[1].epoch() ? 0 : 1;
+            activeSuperblockIndex.set(superblocks[0].epoch() >= superblocks[1].epoch() ? 0 : 1);
         } else if (sb0Valid) {
-            activeSuperblockIndex = 0;
+            activeSuperblockIndex.set(0);
         } else if (sb1Valid) {
-            activeSuperblockIndex = 1;
+            activeSuperblockIndex.set(1);
         } else {
             // First time initialization: setup SB0
-            activeSuperblockIndex = 0;
+            activeSuperblockIndex.set(0);
             superblocks[0].setMagic();
             superblocks[0].setEpoch(0);
             superblocks[0].setRootOffset(-1);
@@ -97,37 +99,38 @@ public class AxonTucanaStorage implements TucanaStorage {
             superblocks[0].updateChecksum();
         }
         // Restore allocator position from the active state
-        allocatorOffset.set(superblocks[activeSuperblockIndex].allocatorOffset());
+        allocatorOffset.set(superblocks[activeSuperblockIndex.get()].allocatorOffset());
     }
 
     /** @return the currently active superblock. */
     private Superblock activeSB() {
-        return superblocks[activeSuperblockIndex];
+        return superblocks[activeSuperblockIndex.get()];
     }
 
     /** @return the inactive superblock used for the next commit. */
     private Superblock inactiveSB() {
-        return superblocks[1 - activeSuperblockIndex];
+        return superblocks[1 - activeSuperblockIndex.get()];
     }
 
     /**
      * {@inheritDoc}
      * <p>
-     * In this implementation, it returns the global paged buffer.
+     * Allocates space from the data region and returns a bounded buffer.
      */
     @Override
     public TucanaBuffer allocate(long size) {
-        return buffer;
+        long offset = allocatorOffset.getAndAdd(size);
+        return new BoundedTucanaBuffer(buffer, DATA_REGION_OFFSET + offset);
     }
 
     /**
      * {@inheritDoc}
      * <p>
-     * In this implementation, it returns the global paged buffer.
+     * Returns a bounded buffer for the specified offset.
      */
     @Override
     public TucanaBuffer getBuffer(long offset, long size) {
-        return buffer;
+        return new BoundedTucanaBuffer(buffer, DATA_REGION_OFFSET + offset);
     }
 
     /**
@@ -150,7 +153,7 @@ public class AxonTucanaStorage implements TucanaStorage {
         nextSB.updateChecksum();
 
         pageManager.flush(); // Sync all data pages before swapping the superblock
-        activeSuperblockIndex = 1 - activeSuperblockIndex;
+        activeSuperblockIndex.updateAndGet(index -> 1 - index);
     }
 
     /**
@@ -179,6 +182,8 @@ public class AxonTucanaStorage implements TucanaStorage {
     @Override
     public void setRootOffset(long offset) {
         activeSB().setRootOffset(offset);
+        inactiveSB().setRootOffset(offset);
+        pageManager.flush(); // Ensure root offset update is visible on disk
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2026 Nacho Brito
+ *    Copyright 2025 Nacho Brito
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -36,20 +36,29 @@ import java.util.concurrent.ConcurrentHashMap;
  * Pages are mapped lazily upon the first request to {@link #getPage(int)} and are cached for
  * subsequent access.
  */
-public class FilePageManager implements PageManager, AutoCloseable {
+public final class FilePageManager implements PageManager, AutoCloseable {
 
-    /** The fixed size of each page in bytes. */
+    /**
+     * The fixed size of each page in bytes.
+     */
     private final int pageSize;
-    /** The file channel used to perform mapping operations. */
+    /**
+     * The file channel used to perform mapping operations.
+     */
     private final FileChannel channel;
-    /** The arena that manages the lifecycle of all mapped memory segments. */
+    /**
+     * The arena that manages the lifecycle of all mapped memory segments.
+     */
     private final Arena arena;
-    /** A cache of currently mapped pages, indexed by their page index. */
+    /**
+     * A cache of currently mapped pages, indexed by their page index.
+     */
     private final Map<Integer, MemorySegment> pages = new ConcurrentHashMap<>();
 
     /**
      * Creates a new FilePageManager for the specified file.
-     * @param path the path to the database file.
+     *
+     * @param path     the path to the database file.
      * @param pageSize the size of each page in bytes.
      * @throws UncheckedIOException if the file cannot be opened.
      */
@@ -100,6 +109,7 @@ public class FilePageManager implements PageManager, AutoCloseable {
 
     /**
      * Closes the manager, flushes all pages to disk, and releases all memory mappings.
+     *
      * @throws Exception if an error occurs during closing.
      */
     @Override

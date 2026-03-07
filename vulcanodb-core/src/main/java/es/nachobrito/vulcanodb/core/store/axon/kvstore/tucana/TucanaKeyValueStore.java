@@ -48,7 +48,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public Optional<String> getString(String key) {
-        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
         if (offsetOpt.isPresent()) {
             return Optional.of(Entry.readStringValue(storage.read(offsetOpt.getAsLong())));
         }
@@ -67,7 +67,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public Optional<Integer> getInt(String key) {
-        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
         if (offsetOpt.isPresent()) {
             return Optional.of(Entry.readIntValue(storage.read(offsetOpt.getAsLong())));
         }
@@ -96,7 +96,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public Optional<float[]> getFloatArray(String key) {
-        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
         if (offsetOpt.isPresent()) {
             return Optional.of(Entry.readFloatArrayValue(storage.read(offsetOpt.getAsLong())));
         }
@@ -105,7 +105,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public Optional<float[][]> getFloatMatrix(String key) {
-        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
         if (offsetOpt.isPresent()) {
             return Optional.of(Entry.readFloatMatrixValue(storage.read(offsetOpt.getAsLong())));
         }
@@ -125,7 +125,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
     private long persist(String key, ByteBuffer entry, boolean commit) {
         byte[] bytes = entry.array();
         long offset = storage.write(bytes);
-        index.upsert(key.getBytes(StandardCharsets.UTF_8), offset);
+        index.upsert(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)), offset);
         if (commit) {
             commit();
         }
@@ -139,7 +139,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public Optional<byte[]> getBytes(String key) {
-        var offsetOpt = index.get(key.getBytes(StandardCharsets.UTF_8));
+        var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
         if (offsetOpt.isPresent()) {
             var buffer = storage.read(offsetOpt.getAsLong());
             byte[] bytes = new byte[buffer.remaining()];
@@ -151,7 +151,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
 
     @Override
     public void remove(String key) {
-        index.delete(key.getBytes(StandardCharsets.UTF_8));
+        index.delete(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override

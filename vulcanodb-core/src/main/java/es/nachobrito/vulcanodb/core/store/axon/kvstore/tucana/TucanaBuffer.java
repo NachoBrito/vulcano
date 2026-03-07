@@ -53,6 +53,22 @@ public interface TucanaBuffer {
     void putLong(long offset, long value);
 
     /**
+     * Returns a {@link java.nio.ByteBuffer} view of a slice of this buffer.
+     *
+     * @param offset the starting offset of the slice
+     * @param length the length of the slice
+     * @return a ByteBuffer view of the slice
+     */
+    java.nio.ByteBuffer getBytes(long offset, int length);
+
+    /**
+     * Returns the base offset of this buffer within the global storage.
+     *
+     * @return the base offset
+     */
+    long offset();
+
+    /**
      * Forces changes to be written to the underlying storage.
      */
     void force();

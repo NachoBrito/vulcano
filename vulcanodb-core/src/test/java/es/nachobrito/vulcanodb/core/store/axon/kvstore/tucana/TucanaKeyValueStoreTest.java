@@ -51,13 +51,13 @@ class TucanaKeyValueStoreTest {
     void testPutAndGetString() {
         String key = "testKey";
         String value = "testValue";
-        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         byte[] entryBytes = Entry.of(key, value).array();
         long offset = 100L;
 
         // Mock behavior: when getting a key, return the offset, then read from storage
         when(storage.write(entryBytes)).thenReturn(offset);
-        when(index.get(keyBytes)).thenReturn(OptionalLong.of(offset));
+        when(index.get(any(ByteBuffer.class))).thenReturn(OptionalLong.of(offset));
         when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
 
         kvStore.putString(key, value);
@@ -67,19 +67,19 @@ class TucanaKeyValueStoreTest {
         assertEquals(value, result.get());
 
         verify(storage).write(eq(entryBytes));
-        verify(index).upsert(eq(keyBytes), eq(offset));
+        verify(index).upsert(eq(keyBuffer), eq(offset));
     }
 
     @Test
     void testPutAndGetInt() {
         String key = "intKey";
-        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         int value = 42;
         byte[] entryBytes = Entry.of(key, value).array();
         long offset = 200L;
 
         when(storage.write(entryBytes)).thenReturn(offset);
-        when(index.get(keyBytes)).thenReturn(OptionalLong.of(offset));
+        when(index.get(any(ByteBuffer.class))).thenReturn(OptionalLong.of(offset));
         when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
 
         kvStore.putInt(key, value);
@@ -89,17 +89,17 @@ class TucanaKeyValueStoreTest {
         assertEquals(value, result.get());
 
         verify(storage).write(eq(entryBytes));
-        verify(index).upsert(eq(keyBytes), eq(offset));
+        verify(index).upsert(eq(keyBuffer), eq(offset));
     }
 
     @Test
     void testRemove() {
         String key = "removeKey";
-        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
 
         kvStore.remove(key);
 
-        verify(index).delete(keyBytes);
+        verify(index).delete(eq(keyBuffer));
     }
 
     @Test
@@ -119,36 +119,36 @@ class TucanaKeyValueStoreTest {
     @Test
     void testPutFloatArray() {
         String key = "floatArray";
-        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         float[] value = {1.0f, 2.0f, 3.0f};
 
         kvStore.putFloatArray(key, value);
 
         verify(storage).write(any(byte[].class));
-        verify(index).upsert(eq(keyBytes), anyLong());
+        verify(index).upsert(eq(keyBuffer), anyLong());
     }
 
     @Test
     void testPutFloatMatrix() {
         String key = "floatMatrix";
-        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         float[][] value = {{1.0f, 2.0f}, {3.0f, 4.0f}};
 
         kvStore.putFloatMatrix(key, value);
 
         verify(storage).write(any(byte[].class));
-        verify(index).upsert(eq(keyBytes), anyLong());
+        verify(index).upsert(eq(keyBuffer), anyLong());
     }
 
     @Test
     void testGetBytes() {
         String key = "bytesKey";
-        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         byte[] value = {0x01, 0x02, 0x03};
         long offset = 300L;
 
         when(storage.write(any(byte[].class))).thenReturn(offset);
-        when(index.get(keyBytes)).thenReturn(OptionalLong.of(offset));
+        when(index.get(any(ByteBuffer.class))).thenReturn(OptionalLong.of(offset));
         when(storage.read(offset)).thenReturn(ByteBuffer.wrap(value));
 
         kvStore.putBytes(key, value);

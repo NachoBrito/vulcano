@@ -26,14 +26,16 @@
             <Class name="es.nachobrito.vulcanodb.core.VulcanoDb$Builder"/>
             <Class name="es.nachobrito.vulcanodb.core.ingestion.WorkQueueIngestor"/>
             <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaKeyValueStore"/>
-
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaBeTree"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.BoundedTucanaBuffer"/>
         </Or>
-
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
     <Match>
         <Or>
             <Class name="es.nachobrito.vulcanodb.core.store.axon.concurrent.ForkJoinPoolProvider"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.AxonTucanaStorage"/>
         </Or>
         <Bug pattern="EI_EXPOSE_REP"/>
     </Match>

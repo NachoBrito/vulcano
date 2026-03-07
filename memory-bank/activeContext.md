@@ -4,6 +4,11 @@
 Implementing a new high-performance `KeyValueStore` based on the Tucana architecture (USENIX ATC '16).
 
 ## Recent changes
+- **Tucana Key-Value Store Core Components**:
+    - Implemented `AxonTucanaStorage`: A persistent, Copy-on-Write storage layer with atomic commits.
+    - Implemented `Superblock`: Manages dual-header metadata (Epoch, Root, Checksum) for crash consistency.
+    - Implemented `FilePageManager`: Handles on-demand memory mapping of a single database file using the FFM API.
+    - Integrated these components into `TucanaKeyValueStore` and verified with `AxonTucanaStorageTest`.
 - **Tucana Key-Value Store Refactoring for Separation of Concerns**:
     - Refactored `TucanaIndex` to strictly map keys to `long` offsets (using `OptionalLong`).
     - Enhanced `TucanaStorage` with a `write(byte[] data)` method, making it the sole owner of data persistence.
@@ -24,9 +29,7 @@ Implementing a new high-performance `KeyValueStore` based on the Tucana architec
 
 ## Next steps
 - **Implement Tucana Components**: 
-    - Create a concrete implementation of `PageManager` (likely file-backed for persistence).
     - Create a concrete implementation of `TucanaIndex` (B&epsilon;-tree).
-    - Create a concrete implementation of `TucanaStorage` (Segment-based with CoW).
 - **WAL Robustness**: Implement background checkpointing to truncate the WAL and manage disk space.
 - **RAG API Layer**:
     - Design and implement `Collection` and `Schema` management classes.

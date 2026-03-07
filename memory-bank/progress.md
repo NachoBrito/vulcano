@@ -17,17 +17,14 @@
     - [x] Refactored for strict separation of concerns (Index vs Storage).
     - [x] Optimized storage API with `ByteBuffer` return types.
     - [x] Verified logic with comprehensive tests in `TucanaKeyValueStoreTest` and `PagedTucanaBufferTest`.
->>>>>>> SEARCH
-- **Tucana Key-Value Store facade logic and scalable paging memory architecture are completed and verified via TDD.**
-- Moving towards the concrete implementation of the B&epsilon;-tree and physical segment storage.
-- **Tucana Key-Value Store facade logic and scalable paging memory architecture are completed and verified via TDD.**
-- **Strict Separation of Concerns and API optimizations** are fully integrated.
-- Moving towards the concrete implementation of the B&epsilon;-tree and physical segment storage.
+    - [x] Implemented concrete `AxonTucanaStorage` with atomic commits.
+    - [x] Implemented `FilePageManager` for persistent paged storage using Java 21 FFM API.
+    - [x] Integrated `Superblock` with CRC32 checksums for crash consistency.
+- **Tucana Key-Value Store core persistence and scalable paging memory architecture are completed and verified.**
 
 ## What's left to build
 - **Tucana Key-Value Store Core Implementation**: 
     - [ ] Implement `TucanaIndex` using B&epsilon;-trees.
-    - [ ] Implement `TucanaStorage` with segment management and CoW.
 - **RAG-First API**:
     - **Collections & Schemas**: Higher-level management of related documents.
     - **Automated Embedding**: `Embedder` interface and ONNX-based implementations for text-to-vector conversion.
@@ -42,8 +39,8 @@
 ## Current status
 - **Binary Optimized WAL** is fully integrated and tested for crash consistency.
 - **String Field Indexing** is completed and integrated into the query engine.
-- **Tucana Key-Value Store** facade logic and scalable paging memory architecture are completed and verified via TDD.
-- Moving towards the concrete implementation of the B&epsilon;-tree and physical segment storage.
+- **Tucana Key-Value Store** persistence and scalable paging memory architecture are completed and verified.
+- Moving towards the concrete implementation of the B&epsilon;-tree.
 
 ## Known issues
 - WAL can grow indefinitely without manual deletion; background checkpointing is required.
@@ -57,3 +54,4 @@
 - **Tucana Integration**: Decided to implement a write-optimized key-value store based on Tucana to further optimize ingestion and memory mapping using the FFM API.
 - **Encoding Standard**: Enforced UTF-8 for all string/byte conversions across the storage layer.
 - **Scalable Paging**: Shifted from single-segment buffers to a multi-page architecture (`PagedTucanaBuffer`) to support unlimited storage growth.
+- **Atomic Commits**: Adopted the dual-superblock mechanism from the Tucana paper to ensure crash consistency without a separate WAL for the metadata layer.

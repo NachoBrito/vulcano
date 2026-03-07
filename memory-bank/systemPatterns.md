@@ -21,6 +21,8 @@ The system leverages a disk-based storage engine with paged memory-mapped files 
 - **Paged Memory Management**: Uses `MemorySegment` and paged arrays (`PagedLongArray`) to manage large datasets beyond heap limits.
 - **Atomic Space Reservation**: `DataLog` uses atomic `getAndAdd` with safety margins to ensure thread-safe concurrent writes to memory-mapped segments.
 - **Tucana Separation of Concerns**: `TucanaIndex` manages the logical B&epsilon;-tree structure (key-to-offset), while `TucanaStorage` manages physical block allocation and persistence for both data and nodes.
+- **Tucana Atomic Commits**: Uses a dual-superblock mechanism (`Superblock`) at the start of the database file. Commits swap the active superblock only after data and index nodes have been successfully flushed to disk.
+- **Tucana Paged Storage**: `AxonTucanaStorage` leverages a `FilePageManager` to map fixed-size pages (1MB) of a single database file into memory on-demand using the FFM API.
 
 ## Design patterns in use
 - **Builder Pattern**: Extensive use for `Document`, `Query`, and `QueryResult`.

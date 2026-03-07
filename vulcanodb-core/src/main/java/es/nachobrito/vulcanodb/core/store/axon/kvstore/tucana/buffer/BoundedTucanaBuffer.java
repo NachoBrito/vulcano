@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer;
 
 import java.nio.ByteBuffer;
 

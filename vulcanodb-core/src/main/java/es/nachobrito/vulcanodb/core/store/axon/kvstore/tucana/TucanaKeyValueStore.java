@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -31,21 +32,36 @@ public class TucanaKeyValueStore implements KeyValueStore {
     private final TucanaIndex index;
     private final TucanaStorage storage;
 
+    /**
+     * Constructs a new TucanaKeyValueStore.
+     *
+     * @param index   the index to use for key lookups
+     * @param storage the storage to use for persisting data
+     */
     public TucanaKeyValueStore(TucanaIndex index, TucanaStorage storage) {
         this.index = index;
         this.storage = storage;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putString(String key, String value) {
         return putString(key, value, false);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putString(String key, String value, boolean commit) {
         return persist(key, Entry.of(key, value), commit);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<String> getString(String key) {
         var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
@@ -55,16 +71,25 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return Optional.empty();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putInt(String key, int value) {
         return putInt(key, value, false);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putInt(String key, int value, boolean commit) {
         return persist(key, Entry.of(key, value), commit);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<Integer> getInt(String key) {
         var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
@@ -74,26 +99,41 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return Optional.empty();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putFloatArray(String key, float[] value) {
         return putFloatArray(key, value, false);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putFloatArray(String key, float[] value, boolean commit) {
         return persist(key, Entry.of(key, value), commit);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putFloatMatrix(String key, float[][] value) {
         return putFloatMatrix(key, value, false);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putFloatMatrix(String key, float[][] value, boolean commit) {
         return persist(key, Entry.of(key, value), commit);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<float[]> getFloatArray(String key) {
         var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
@@ -103,6 +143,9 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return Optional.empty();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<float[][]> getFloatMatrix(String key) {
         var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
@@ -112,11 +155,17 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return Optional.empty();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putBytes(String key, byte[] value) {
         return putBytes(key, value, false);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long putBytes(String key, byte[] value, boolean commit) {
         return persist(key, Entry.of(key, value), commit);
@@ -132,11 +181,17 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return index.rootOffset();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void commit() {
         storage.commit();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<byte[]> getBytes(String key) {
         var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
@@ -149,46 +204,73 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return Optional.empty();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void remove(String key) {
         index.delete(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long offHeapBytes() {
         return 0; // Simplified for now
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Stream<Long> getOffsetStream() {
         return index.allOffsets();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getStringAt(long offset) {
         return Entry.readStringValue(storage.read(offset));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getKeyAt(long offset) {
         return Entry.readKey(storage.read(offset));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getIntAt(long offset) {
         return Entry.readIntValue(storage.read(offset));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public float[] getFloatArrayAt(long offset) {
         return Entry.readFloatArrayValue(storage.read(offset));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public float[][] getFloatMatrixAt(long offset) {
         return Entry.readFloatMatrixValue(storage.read(offset));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public byte[] getBytesAt(long offset) {
         var buffer = storage.read(offset);
@@ -197,6 +279,9 @@ public class TucanaKeyValueStore implements KeyValueStore {
         return bytes;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void close() throws Exception {
         storage.close();

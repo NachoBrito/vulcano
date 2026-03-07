@@ -14,8 +14,12 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer.BoundedTucanaBuffer;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer.PagedTucanaBuffer;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer.TucanaBuffer;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.paging.FilePageManager;
 import java.lang.foreign.MemorySegment;
 
 import java.nio.ByteBuffer;
@@ -53,7 +57,7 @@ public class AxonTucanaStorage implements TucanaStorage {
     private final AtomicInteger activeSuperblockIndex = new AtomicInteger(-1);
 
     /** The current write offset within the data region for the current epoch. */
-    private final AtomicLong allocatorOffset = new AtomicLong(0);
+    private final AtomicLong allocatorOffset = new AtomicLong(DATA_REGION_OFFSET);
 
     /**
      * Initializes the storage using the specified file path.
@@ -95,7 +99,7 @@ public class AxonTucanaStorage implements TucanaStorage {
             superblocks[0].setMagic();
             superblocks[0].setEpoch(0);
             superblocks[0].setRootOffset(-1);
-            superblocks[0].setAllocatorOffset(0);
+            superblocks[0].setAllocatorOffset(DATA_REGION_OFFSET);
             superblocks[0].updateChecksum();
         }
         // Restore allocator position from the active state
@@ -120,7 +124,7 @@ public class AxonTucanaStorage implements TucanaStorage {
     @Override
     public TucanaBuffer allocate(long size) {
         long offset = allocatorOffset.getAndAdd(size);
-        return new BoundedTucanaBuffer(buffer, DATA_REGION_OFFSET + offset);
+        return new BoundedTucanaBuffer(buffer, offset);
     }
 
     /**
@@ -130,7 +134,7 @@ public class AxonTucanaStorage implements TucanaStorage {
      */
     @Override
     public TucanaBuffer getBuffer(long offset, long size) {
-        return new BoundedTucanaBuffer(buffer, DATA_REGION_OFFSET + offset);
+        return new BoundedTucanaBuffer(buffer, offset);
     }
 
     /**
@@ -196,12 +200,12 @@ public class AxonTucanaStorage implements TucanaStorage {
     @Override
     public ByteBuffer read(long offset) {
         // Read size prefix from the data region
-        int size = buffer.getInt(DATA_REGION_OFFSET + offset);
+        int size = buffer.getInt(offset);
         long dataOffset = offset + 4;
 
         ByteBuffer result = ByteBuffer.allocate(size);
         for (int i = 0; i < size; i++) {
-            result.put(buffer.getByte(DATA_REGION_OFFSET + dataOffset + i));
+            result.put(buffer.getByte(dataOffset + i));
         }
         return result.flip();
     }
@@ -220,9 +224,9 @@ public class AxonTucanaStorage implements TucanaStorage {
         long totalSize = 4 + size; // 4 bytes for length prefix
         long offset = allocatorOffset.getAndAdd(totalSize);
 
-        buffer.putInt(DATA_REGION_OFFSET + offset, (int) size);
+        buffer.putInt(offset, (int) size);
         for (int i = 0; i < data.length; i++) {
-            buffer.putByte(DATA_REGION_OFFSET + offset + 4 + i, data[i]);
+            buffer.putByte(offset + 4 + i, data[i]);
         }
 
         return offset;

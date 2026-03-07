@@ -16,6 +16,7 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

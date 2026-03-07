@@ -9,68 +9,111 @@ The `tucana` package implements a high-performance, write-optimized Key-Value St
 - **Write Optimization (Bε-tree)**: Unlike traditional B-trees that update leaves immediately, Bε-trees buffer updates (UPSERT/DELETE messages) in internal nodes. These messages are lazily flushed down to the leaves, converting random writes into efficient sequential-like I/O.
 - **Crash Consistency**: Atomic commits are guaranteed via a dual-superblock mechanism and strict Copy-on-Write (CoW) of all data and index nodes.
 
+## Package Structure
+
+The implementation is organized into the following subpackages:
+
+- **`es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana`**: Core API and data models (`TucanaKeyValueStore`, `TucanaIndex`, `Entry`).
+- **`...tucana.storage`**: Storage management, file I/O, and transaction support (`TucanaStorage`, `AxonTucanaStorage`, `Superblock`).
+- **`...tucana.storage.paging`**: Low-level page management (`PageManager`, `FilePageManager`).
+- **`...tucana.buffer`**: Memory buffer abstractions over FFM (`TucanaBuffer`, `PagedTucanaBuffer`, `BoundedTucanaBuffer`).
+- **`...tucana.index`**: B-Tree implementation details (`TucanaBeTree`, `BeTreeNodeLayout`).
+
 ## Class Diagram
 
 ```mermaid
 classDiagram
-    class KeyValueStore {
-        <<interface>>
-    }
-    class TucanaIndex {
-        <<interface>>
-        +upsert(ByteBuffer, long)
-        +delete(ByteBuffer)
-        +get(ByteBuffer) OptionalLong
-        +allOffsets() Stream
-    }
-    class TucanaStorage {
-        <<interface>>
-        +allocate(long) TucanaBuffer
-        +write(byte[]) long
-        +read(long) ByteBuffer
-        +commit()
-    }
-    class TucanaBuffer {
-        <<interface>>
-        +getByte(long) byte
-        +putByte(long, byte)
-        +getBytes(long, int) ByteBuffer
-        +offset() long
+    namespace tucana {
+        class KeyValueStore {
+            <<interface>>
+        }
+        class TucanaKeyValueStore {
+            +putString(String, String)
+            +getString(String)
+            +commit()
+        }
+        class TucanaIndex {
+            <<interface>>
+            +upsert(ByteBuffer, long)
+            +delete(ByteBuffer)
+            +get(ByteBuffer)
+        }
+        class Entry {
+            <<interface>>
+            +readStringValue(ByteBuffer)
+            +of(String, String)
+        }
     }
 
-    class TucanaKeyValueStore {
-        -TucanaIndex index
-        -TucanaStorage storage
+    namespace storage {
+        class TucanaStorage {
+            <<interface>>
+            +allocate(long)
+            +read(long)
+            +write(byte[])
+            +commit()
+        }
+        class AxonTucanaStorage {
+            -Superblock[] superblocks
+            -AtomicInteger activeSuperblockIndex
+        }
+        class Superblock {
+            +epoch()
+            +rootOffset()
+        }
     }
-    class TucanaBeTree {
-        -TucanaStorage storage
-        -long rootOffset
-        -collectOffsets(long, List)
+
+    namespace storage_paging {
+        class PageManager {
+            <<interface>>
+            +getPage(int)
+        }
+        class FilePageManager {
+            -FileChannel channel
+            -Arena arena
+        }
     }
-    class AxonTucanaStorage {
-        -FilePageManager pageManager
-        -PagedTucanaBuffer buffer
-        -Superblock[] superblocks
+
+    namespace buffer {
+        class TucanaBuffer {
+            <<interface>>
+            +putInt(long, int)
+            +getInt(long)
+        }
+        class PagedTucanaBuffer
+        class BoundedTucanaBuffer
     }
-    class BeTreeNodeLayout {
-        <<utility>>
-        +MAGIC_INTERNAL
-        +MAGIC_LEAF
-        +OFFSET_MAGIC
-        +OFFSET_COUNT
-        +OFFSET_BUFFER_START
-        +isLeaf(TucanaBuffer)
+
+    namespace index {
+        class TucanaBeTree {
+            -long rootOffset
+        }
+        class BeTreeNodeLayout {
+            <<utility>>
+            +isLeaf(TucanaBuffer)
+        }
     }
 
     KeyValueStore <|.. TucanaKeyValueStore
-    TucanaIndex <|.. TucanaBeTree
-    TucanaStorage <|.. AxonTucanaStorage
     TucanaKeyValueStore --> TucanaIndex
     TucanaKeyValueStore --> TucanaStorage
-    TucanaBeTree --> TucanaStorage
-    TucanaBeTree ..> BeTreeNodeLayout : uses
+    TucanaKeyValueStore ..> Entry
+
+    TucanaStorage <|.. AxonTucanaStorage
+    AxonTucanaStorage --> Superblock
+    AxonTucanaStorage --> PageManager
     AxonTucanaStorage --> TucanaBuffer
+
+    PageManager <|.. FilePageManager
+
+    TucanaIndex <|.. TucanaBeTree
+    TucanaBeTree --> TucanaStorage
+    TucanaBeTree ..> BeTreeNodeLayout
+
     TucanaBuffer <|.. PagedTucanaBuffer
+    TucanaBuffer <|.. BoundedTucanaBuffer
+    PagedTucanaBuffer --> PageManager
+    BoundedTucanaBuffer --> TucanaBuffer : delegates
 ```
 
 ## Physical Data Layout
@@ -84,7 +127,7 @@ The database is contained in a single file, organized into 1MB pages managed by 
 | **Page 1...N: Data/Index** | Mixed region containing Bε-tree nodes and physical data blocks. |
 
 ### Node Binary Layout (Bε-tree)
-Each node is a fixed-size block within a `TucanaBuffer`:
+Each node is a fixed-size block within a `TucanaBuffer` (managed by `BeTreeNodeLayout`):
 
 ```text
 [0-3]   Magic Number (Internal: 0xBE77EE11, Leaf: 0xBE77EE22)
@@ -97,27 +140,81 @@ Each node is a fixed-size block within a `TucanaBuffer`:
         Leaf:     [Sorted Key-Value Entries] + [Message Buffer Area]
 ```
 
-## Data Lifecycle & Consistency
+## Sequence Diagrams
 
-### The Copy-on-Write (CoW) Path
-Every mutation in Tucana follows a strict CoW protocol:
-1.  **Data Write**: New values are written to a fresh offset in the storage.
-2.  **Node Update**: Instead of modifying an existing index node, a new `TucanaBuffer` is allocated.
-3.  **Path Re-linking**: The parent node is also re-allocated to point to the new child offset. This recurses up to the root.
-4.  **Root Swap**: The new root offset is stored in the active (but not yet committed) state.
+### 1. Upsert Operation (Write Path)
 
-### Atomic Commit Protocol
-Tucana uses two Superblocks to guarantee atomicity:
-1.  **Preparation**: All new data and nodes are persisted to disk.
-2.  **Superblock Sync**: The *inactive* `Superblock` is updated with the new `rootOffset`, `allocatorOffset`, and an incremented `epoch`.
-3.  **Atomic Swap**: The index of the active superblock is flipped. On restart, the system always picks the valid superblock with the highest epoch.
+When a key-value pair is inserted, data is first persisted to storage, and then the index is updated. The index update triggers a Copy-on-Write (CoW) operation for the path from the modified node to the root.
 
-## Search and Buffering Logic
+```mermaid
+sequenceDiagram
+    participant Client
+    participant KV as TucanaKeyValueStore
+    participant Store as AxonTucanaStorage
+    participant Index as TucanaBeTree
+    participant Layout as BeTreeNodeLayout
 
-When querying a key:
-1.  **Message Buffer Search**: The system first scans the current node's message buffer *backwards*. If an `UPSERT` or `DELETE` message for the key is found, it is returned immediately (Bε-trees always prioritize buffered updates).
-2.  **Pivot/Child Navigation**: If not found in the buffer and the node is internal, the key is compared against pivots to select the correct child, and the search recurses.
-3.  **Leaf Search**: In leaf nodes, the sorted entries are searched after checking the buffer.
+    Client->>KV: putString("key", "value")
+    
+    %% 1. Persist Data
+    KV->>Store: write(entryBytes)
+    Store->>Store: allocate(size) (CoW: new offset)
+    Store->>Store: write data to buffer
+    Store-->>KV: return dataOffset
+
+    %% 2. Update Index
+    KV->>Index: upsert("key", dataOffset)
+    Index->>Store: getBuffer(rootOffset)
+    Store-->>Index: return oldRootBuffer
+
+    %% 3. Copy-on-Write Node
+    Index->>Store: allocate(nodeSize) (New Root)
+    Store-->>Index: return newRootBuffer
+    Index->>Index: Copy oldRoot header/content to newRoot
+    
+    %% 4. Append Message
+    Index->>Layout: append message to newRoot
+    Index->>Store: setRootOffset(newRootOffset)
+    
+    KV-->>Client: return offset
+```
+
+### 2. Get Operation (Read Path)
+
+Reading involves querying the index to find the data offset, then reading the data from storage.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant KV as TucanaKeyValueStore
+    participant Index as TucanaBeTree
+    participant Store as AxonTucanaStorage
+    participant Entry as Entry (Utility)
+
+    Client->>KV: getString("key")
+    
+    %% 1. Index Search
+    KV->>Index: get("key")
+    loop Search Tree
+        Index->>Store: getBuffer(nodeOffset)
+        Index->>Index: Search Message Buffer (Backwards)
+        opt Not Found in Buffer
+            Index->>Index: Search Pivots / Recurse to Child
+        end
+    end
+    Index-->>KV: return OptionalLong(dataOffset)
+
+    %% 2. Data Retrieval
+    alt Found
+        KV->>Store: read(dataOffset)
+        Store-->>KV: return ByteBuffer
+        KV->>Entry: readStringValue(buffer)
+        Entry-->>KV: return "value"
+        KV-->>Client: return Optional.of("value")
+    else Not Found
+        KV-->>Client: return Optional.empty()
+    end
+```
 
 ## Memory Management (FFM API)
 

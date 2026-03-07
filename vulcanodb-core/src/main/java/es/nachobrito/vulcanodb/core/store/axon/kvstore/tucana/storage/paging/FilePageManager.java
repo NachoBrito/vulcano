@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.paging;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

@@ -20,11 +20,14 @@
     - [x] Implemented concrete `AxonTucanaStorage` with atomic commits.
     - [x] Implemented `FilePageManager` for persistent paged storage using Java 21 FFM API.
     - [x] Integrated `Superblock` with CRC32 checksums for crash consistency.
+    - [x] Implemented `TucanaBeTree` basic structure with support for Upsert, Delete, and Get operations.
+    - [x] Fixed offset addressing mismatch between `AxonTucanaStorage` and `TucanaBeTree`.
+    - [x] Verified B&epsilon;-tree persistence and recovery with `TucanaBeTreeTest`.
 - **Tucana Key-Value Store core persistence and scalable paging memory architecture are completed and verified.**
 
 ## What's left to build
 - **Tucana Key-Value Store Core Implementation**: 
-    - [ ] Implement `TucanaIndex` using B&epsilon;-trees.
+    - [ ] Enhance `TucanaBeTree` with node splitting and merging.
 - **RAG-First API**:
     - **Collections & Schemas**: Higher-level management of related documents.
     - **Automated Embedding**: `Embedder` interface and ONNX-based implementations for text-to-vector conversion.

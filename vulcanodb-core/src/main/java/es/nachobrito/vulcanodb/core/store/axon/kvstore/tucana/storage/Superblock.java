@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage;
 
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;

@@ -28,8 +28,9 @@ Implementing a new high-performance `KeyValueStore` based on the Tucana architec
 - **TDD Workflow**: Developed `TucanaKeyValueStoreTest` first and iteratively implemented the store logic to pass all tests.
 
 ## Next steps
-- **Implement Tucana Components**: 
-    - Create a concrete implementation of `TucanaIndex` (B&epsilon;-tree).
+- **Refine Tucana B&epsilon;-tree**:
+    - Implement full node splitting and merging logic (currently using simplistic append/rewrite).
+    - Implement child traversal in `collectActiveEntries` for complete tree scanning.
 - **WAL Robustness**: Implement background checkpointing to truncate the WAL and manage disk space.
 - **RAG API Layer**:
     - Design and implement `Collection` and `Schema` management classes.
@@ -37,6 +38,7 @@ Implementing a new high-performance `KeyValueStore` based on the Tucana architec
 
 ## Active decisions and considerations
 - **Strict Separation of Concerns**: Enforced a clear boundary where `TucanaIndex` only handles key-to-offset mappings (B&epsilon;-tree structure), while `TucanaStorage` manages all physical data blocks and node persistence.
+- **Absolute Offset Addressing**: Standardized `AxonTucanaStorage` to use absolute file offsets (relative to the start of the file) rather than offsets relative to `DATA_REGION_OFFSET`. This aligns the storage layer with `TucanaBuffer.offset()` return values, preventing coordinate system mismatches in the B&epsilon;-tree implementation.
 - **Tucana API Optimization**: Optimized `TucanaStorage.read()` to return `ByteBuffer`, enabling direct deserialization of `Entry` objects without extra allocations.
 - **Strict Encapsulation**: Refactored `TucanaBuffer` to remove direct exposure of the underlying memory segments (`segment()`). All access is now strictly offset-based, allowing `PagedTucanaBuffer` and `PageManager` to manage physical storage without leaking implementation details.
 - **Tucana Architecture**: Leveraging B&epsilon;-trees and Java's Foreign Function & Memory (FFM) API for a write-optimized, low-latency store.

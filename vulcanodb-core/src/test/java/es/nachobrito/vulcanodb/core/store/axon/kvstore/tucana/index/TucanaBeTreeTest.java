@@ -14,8 +14,10 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.index;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.AxonTucanaStorage;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

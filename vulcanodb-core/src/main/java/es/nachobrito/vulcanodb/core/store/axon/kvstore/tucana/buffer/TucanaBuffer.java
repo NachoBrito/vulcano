@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
+package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer;
 
 /**
  * Abstraction for memory-mapped buffers using the FFM API.
@@ -24,31 +24,49 @@ public interface TucanaBuffer {
 
     /**
      * Reads a byte at the given offset.
+     *
+     * @param offset the offset from which to read
+     * @return the byte value
      */
     byte getByte(long offset);
 
     /**
      * Writes a byte at the given offset.
+     *
+     * @param offset the offset at which to write
+     * @param value  the byte value to write
      */
     void putByte(long offset, byte value);
 
     /**
      * Reads an int at the given offset.
+     *
+     * @param offset the offset from which to read
+     * @return the int value
      */
     int getInt(long offset);
 
     /**
      * Writes an int at the given offset.
+     *
+     * @param offset the offset at which to write
+     * @param value  the int value to write
      */
     void putInt(long offset, int value);
 
     /**
      * Reads a long at the given offset.
+     *
+     * @param offset the offset from which to read
+     * @return the long value
      */
     long getLong(long offset);
 
     /**
      * Writes a long at the given offset.
+     *
+     * @param offset the offset at which to write
+     * @param value  the long value to write
      */
     void putLong(long offset, long value);
 

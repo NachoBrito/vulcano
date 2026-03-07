@@ -27,31 +27,47 @@ import java.util.stream.Stream;
 public interface TucanaIndex {
     /**
      * Inserts or updates a key with its data offset in the tree.
+     *
+     * @param key    the key to insert or update
+     * @param offset the data offset associated with the key
      */
     void upsert(ByteBuffer key, long offset);
 
     /**
      * Deletes a key from the tree.
+     *
+     * @param key the key to delete
      */
     void delete(ByteBuffer key);
 
     /**
      * Searches for a key in the tree and returns its data offset.
+     *
+     * @param key the key to search for
+     * @return an {@link OptionalLong} containing the offset if found, or empty otherwise
      */
     OptionalLong get(ByteBuffer key);
 
     /**
      * Searches for a key in the tree at a specific epoch and returns its data offset.
+     *
+     * @param key   the key to search for
+     * @param epoch the epoch at which to perform the search
+     * @return an {@link OptionalLong} containing the offset if found, or empty otherwise
      */
     OptionalLong getAtEpoch(ByteBuffer key, long epoch);
 
     /**
      * Returns the current root offset of the tree.
+     *
+     * @return the offset of the root node
      */
     long rootOffset();
 
     /**
      * Returns a stream of all valid data offsets currently indexed.
+     *
+     * @return a stream of offsets
      */
     Stream<Long> allOffsets();
 }

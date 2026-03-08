@@ -219,15 +219,13 @@ public class AxonTucanaStorage implements TucanaStorage {
      * @return the offset where the block was written.
      */
     @Override
-    public long write(byte[] data) {
-        long size = data.length;
+    public long write(ByteBuffer data) {
+        long size = data.remaining();
         long totalSize = 4 + size; // 4 bytes for length prefix
         long offset = allocatorOffset.getAndAdd(totalSize);
 
         buffer.putInt(offset, (int) size);
-        for (int i = 0; i < data.length; i++) {
-            buffer.putByte(offset + 4 + i, data[i]);
-        }
+        buffer.putBuffer(offset + 4, data);
 
         return offset;
     }

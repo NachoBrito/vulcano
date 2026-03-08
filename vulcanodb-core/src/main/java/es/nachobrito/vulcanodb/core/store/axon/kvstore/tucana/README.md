@@ -60,7 +60,7 @@ classDiagram
             <<interface>>
             +allocate(long)
             +read(long)
-            +write(byte[])
+            +write(ByteBuffer)
             +commit()
         }
         class AxonTucanaStorage {
@@ -89,6 +89,7 @@ classDiagram
             <<interface>>
             +putInt(long, int)
             +getInt(long)
+            +putBuffer(long, ByteBuffer)
         }
         class PagedTucanaBuffer
         class BoundedTucanaBuffer
@@ -170,7 +171,7 @@ sequenceDiagram
     Client->>KV: putString("key", "value")
     
     %% 1. Persist Data
-    KV->>Store: write(entryBytes)
+    KV->>Store: write(entryBuffer)
     Store->>Store: allocate(size) (CoW: new offset)
     Store->>Store: write data to buffer
     Store-->>KV: return dataOffset

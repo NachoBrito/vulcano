@@ -67,6 +67,11 @@ public class BoundedTucanaBuffer implements TucanaBuffer {
     }
 
     @Override
+    public void putBuffer(long offset, ByteBuffer buffer) {
+        delegate.putBuffer(baseOffset + offset, buffer);
+    }
+
+    @Override
     public long offset() {
         return baseOffset;
     }

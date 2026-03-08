@@ -86,7 +86,7 @@ public interface Entry {
         buffer.putInt(0);
         buffer.put(keyBytes);
         buffer.putInt(value);
-        return buffer;
+        return buffer.flip();
     }
 
 
@@ -123,7 +123,7 @@ public interface Entry {
         buffer.putInt(0);
         buffer.put(keyBytes);
         buffer.put(valueBytes);
-        return buffer;
+        return buffer.flip();
     }
 
 
@@ -162,7 +162,7 @@ public interface Entry {
         buffer.putInt(0);
         buffer.put(keyBytes);
         buffer.putFloat(value);
-        return buffer;
+        return buffer.flip();
     }
 
     /**
@@ -197,7 +197,8 @@ public interface Entry {
         buffer.putInt(0);
         buffer.put(keyBytes);
         buffer.asFloatBuffer().put(value);
-        return buffer;
+        buffer.position(buffer.position() + valueLength);
+        return buffer.flip();
     }
 
     /**
@@ -242,7 +243,8 @@ public interface Entry {
         for (float[] row : value) {
             floatBuffer.put(row);
         }
-        return buffer;
+        buffer.position(buffer.position() + valueLength);
+        return buffer.flip();
     }
 
     /**
@@ -299,7 +301,7 @@ public interface Entry {
         buffer.putInt(0);
         buffer.put(keyBytes);
         buffer.put(value);
-        return buffer;
+        return buffer.flip();
     }
 
     /**

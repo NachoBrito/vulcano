@@ -35,8 +35,8 @@ class AxonTucanaStorageTest {
         Path storagePath = tempDir.resolve("tucana.db");
         try (AxonTucanaStorage storage = new AxonTucanaStorage(storagePath)) {
             byte[] data = "Hello Tucana".getBytes();
-            long offset = storage.write(data);
-            
+            long offset = storage.write(ByteBuffer.wrap(data));
+
             ByteBuffer readBuffer = storage.read(offset);
             byte[] readData = new byte[readBuffer.remaining()];
             readBuffer.get(readData);
@@ -52,7 +52,7 @@ class AxonTucanaStorageTest {
         
         try (AxonTucanaStorage storage = new AxonTucanaStorage(storagePath)) {
             byte[] data = "Persistent Data".getBytes();
-            offset = storage.write(data);
+            offset = storage.write(ByteBuffer.wrap(data));
             storage.setRootOffset(12345L);
             storage.commit();
             assertEquals(1, storage.currentEpoch());
@@ -75,14 +75,14 @@ class AxonTucanaStorageTest {
         Path storagePath = tempDir.resolve("tucana_rollback.db");
         
         try (AxonTucanaStorage storage = new AxonTucanaStorage(storagePath)) {
-            storage.write("Initial Data".getBytes());
+            storage.write(ByteBuffer.wrap("Initial Data".getBytes()));
             storage.commit(); // Epoch 1
-            
-            long preRollbackOffset = storage.write("Dirty Data".getBytes());
+
+            long preRollbackOffset = storage.write(ByteBuffer.wrap("Dirty Data".getBytes()));
             storage.rollback();
-            
+
             // Writing again should reuse the offset if rollback worked (linear allocator)
-            long postRollbackOffset = storage.write("Clean Data".getBytes());
+            long postRollbackOffset = storage.write(ByteBuffer.wrap("Clean Data".getBytes()));
             assertEquals(preRollbackOffset, postRollbackOffset);
         }
     }
@@ -96,10 +96,10 @@ class AxonTucanaStorageTest {
             for (int i = 0; i < largeData.length; i++) {
                 largeData[i] = (byte) (i % 256);
             }
-            
-            long offset = storage.write(largeData);
+
+            long offset = storage.write(ByteBuffer.wrap(largeData));
             storage.commit();
-            
+
             ByteBuffer readBuffer = storage.read(offset);
             assertEquals(largeData.length, readBuffer.remaining());
             for (int i = 0; i < largeData.length; i++) {

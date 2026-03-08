@@ -172,8 +172,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
     }
 
     private long persist(String key, ByteBuffer entry, boolean commit) {
-        byte[] bytes = entry.array();
-        long offset = storage.write(bytes);
+        long offset = storage.write(entry);
         index.upsert(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)), offset);
         if (commit) {
             commit();

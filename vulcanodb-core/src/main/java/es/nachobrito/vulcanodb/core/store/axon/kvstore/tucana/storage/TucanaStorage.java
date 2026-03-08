@@ -87,5 +87,5 @@ public interface TucanaStorage extends AutoCloseable {
      * @param data the data to write
      * @return the offset where the data was written
      */
-    long write(byte[] data);
+    long write(ByteBuffer data);
 }

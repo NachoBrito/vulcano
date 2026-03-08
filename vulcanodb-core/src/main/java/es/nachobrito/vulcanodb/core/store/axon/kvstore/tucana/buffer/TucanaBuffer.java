@@ -80,6 +80,14 @@ public interface TucanaBuffer {
     java.nio.ByteBuffer getBytes(long offset, int length);
 
     /**
+     * Writes the content of the given {@link ByteBuffer} to this buffer at the specified offset.
+     *
+     * @param offset the offset at which to start writing
+     * @param buffer the buffer containing the data to write
+     */
+    void putBuffer(long offset, java.nio.ByteBuffer buffer);
+
+    /**
      * Returns the base offset of this buffer within the global storage.
      *
      * @return the base offset

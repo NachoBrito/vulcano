@@ -77,6 +77,26 @@ public class PagedTucanaBuffer implements TucanaBuffer {
     }
 
     @Override
+    public void putBuffer(long offset, java.nio.ByteBuffer buffer) {
+        int pageSize = pageManager.pageSize();
+
+        while (buffer.hasRemaining()) {
+            long pageOffset = getPageOffset(offset);
+            int remainingInPage = (int) (pageSize - pageOffset);
+            int toWrite = Math.min(buffer.remaining(), remainingInPage);
+
+            // Copy chunk to the page
+            MemorySegment page = getPage(offset);
+            MemorySegment chunk = MemorySegment.ofBuffer(buffer.slice(buffer.position(), toWrite));
+            MemorySegment.copy(chunk, 0, page, pageOffset, toWrite);
+
+            // Advance
+            buffer.position(buffer.position() + toWrite);
+            offset += toWrite;
+        }
+    }
+
+    @Override
     public long offset() {
         return 0; // PagedTucanaBuffer is currently used for the entire storage, offset is relative
     }

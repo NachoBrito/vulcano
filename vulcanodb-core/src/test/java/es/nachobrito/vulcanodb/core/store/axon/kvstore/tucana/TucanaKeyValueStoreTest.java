@@ -1,5 +1,5 @@
 /*
- *    Copyright 2026 Nacho Brito
+ *    Copyright 2025 Nacho Brito
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.index.TucanaBeTree;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.AxonTucanaStorage;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link TucanaKeyValueStore}.
@@ -37,14 +38,18 @@ import static org.mockito.Mockito.*;
  */
 class TucanaKeyValueStoreTest {
 
-    private TucanaIndex index;
-    private TucanaStorage storage;
+    @TempDir
+    Path tempDir;
+
     private TucanaKeyValueStore kvStore;
+    private static final long NODE_SIZE = 4096;
 
     @BeforeEach
     void setUp() {
-        index = mock(TucanaIndex.class);
-        storage = mock(TucanaStorage.class);
+        Path storagePath = tempDir.resolve("vulcano.db");
+        TucanaStorage storage = new AxonTucanaStorage(storagePath);
+        TucanaIndex index = new TucanaBeTree(storage, NODE_SIZE);
+
         kvStore = new TucanaKeyValueStore(index, storage);
     }
 
@@ -52,69 +57,39 @@ class TucanaKeyValueStoreTest {
     void testPutAndGetString() {
         String key = "testKey";
         String value = "testValue";
-        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
-        byte[] entryBytes = Entry.of(key, value).array();
-        long offset = 100L;
-
-        // Mock behavior: when getting a key, return the offset, then read from storage
-        when(storage.write(entryBytes)).thenReturn(offset);
-        when(index.get(any(ByteBuffer.class))).thenReturn(OptionalLong.of(offset));
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
 
         kvStore.putString(key, value);
-
         Optional<String> result = kvStore.getString(key);
+
         assertTrue(result.isPresent());
         assertEquals(value, result.get());
-
-        verify(storage).write(eq(entryBytes));
-        verify(index).upsert(eq(keyBuffer), eq(offset));
     }
 
     @Test
     void testPutAndGetInt() {
         String key = "intKey";
-        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         int value = 42;
-        byte[] entryBytes = Entry.of(key, value).array();
-        long offset = 200L;
-
-        when(storage.write(entryBytes)).thenReturn(offset);
-        when(index.get(any(ByteBuffer.class))).thenReturn(OptionalLong.of(offset));
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
-
         kvStore.putInt(key, value);
 
         Optional<Integer> result = kvStore.getInt(key);
         assertTrue(result.isPresent());
         assertEquals(value, result.get());
 
-        verify(storage).write(eq(entryBytes));
-        verify(index).upsert(eq(keyBuffer), eq(offset));
     }
 
     @Test
     void testRemove() {
-        String key = "removeKey";
-        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
+        String key = "intKey";
+        int value = 42;
+        kvStore.putInt(key, value);
+
+        Optional<Integer> result = kvStore.getInt(key);
+        assertTrue(result.isPresent());
+        assertEquals(value, result.get());
 
         kvStore.remove(key);
-
-        verify(index).delete(eq(keyBuffer));
-    }
-
-    @Test
-    void testCommit() {
-        kvStore.commit();
-
-        verify(storage).commit();
-    }
-
-    @Test
-    void testClose() throws Exception {
-        kvStore.close();
-
-        verify(storage).close();
+        result = kvStore.getInt(key);
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -125,32 +100,26 @@ class TucanaKeyValueStoreTest {
 
         kvStore.putFloatArray(key, value);
 
-        verify(storage).write(any(byte[].class));
-        verify(index).upsert(eq(keyBuffer), anyLong());
+        var result = kvStore.getFloatArray(key);
+        assertTrue(result.isPresent());
+        assertArrayEquals(value, result.get());
     }
 
     @Test
     void testPutFloatMatrix() {
         String key = "floatMatrix";
-        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         float[][] value = {{1.0f, 2.0f}, {3.0f, 4.0f}};
 
         kvStore.putFloatMatrix(key, value);
-
-        verify(storage).write(any(byte[].class));
-        verify(index).upsert(eq(keyBuffer), anyLong());
+        var result = kvStore.getFloatMatrix(key);
+        assertTrue(result.isPresent());
+        assertArrayEquals(value, result.get());
     }
 
     @Test
     void testGetBytes() {
         String key = "bytesKey";
-        ByteBuffer keyBuffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
         byte[] value = {0x01, 0x02, 0x03};
-        long offset = 300L;
-
-        when(storage.write(any(byte[].class))).thenReturn(offset);
-        when(index.get(any(ByteBuffer.class))).thenReturn(OptionalLong.of(offset));
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(value));
 
         kvStore.putBytes(key, value);
         Optional<byte[]> result = kvStore.getBytes(key);
@@ -161,12 +130,10 @@ class TucanaKeyValueStoreTest {
 
     @Test
     void testGetStringAt() {
-        long offset = 1234L;
-        String key = "key";
+        String key = "stringAtKey";
         String value = "atValue";
-        byte[] entryBytes = Entry.of(key, value).array();
 
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
+        var offset = kvStore.putString(key, value);
 
         String result = kvStore.getStringAt(offset);
         assertEquals(value, result);
@@ -174,39 +141,27 @@ class TucanaKeyValueStoreTest {
 
     @Test
     void testGetIntAt() {
-        long offset = 5678L;
         String key = "key";
         int value = 99;
-        byte[] entryBytes = Entry.of(key, value).array();
-
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
-
+        var offset = kvStore.putInt(key, value);
         int result = kvStore.getIntAt(offset);
         assertEquals(value, result);
     }
 
     @Test
     void testGetFloatArrayAt() {
-        long offset = 9012L;
         String key = "key";
         float[] value = {1.1f, 2.2f};
-        byte[] entryBytes = Entry.of(key, value).array();
-
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
-
+        var offset = kvStore.putFloatArray(key, value);
         float[] result = kvStore.getFloatArrayAt(offset);
         assertArrayEquals(value, result);
     }
 
     @Test
     void testGetFloatMatrixAt() {
-        long offset = 3456L;
         String key = "key";
         float[][] value = {{1.1f, 2.2f}, {3.3f, 4.4f}};
-        byte[] entryBytes = Entry.of(key, value).array();
-
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(entryBytes));
-
+        var offset = kvStore.putFloatMatrix(key, value);
         float[][] result = kvStore.getFloatMatrixAt(offset);
         assertArrayEquals(value[0], result[0]);
         assertArrayEquals(value[1], result[1]);
@@ -214,25 +169,29 @@ class TucanaKeyValueStoreTest {
 
     @Test
     void testGetBytesAt() {
-        long offset = 7890L;
+        var key = "key";
         byte[] value = {0x0A, 0x0B, 0x0C};
 
-        when(storage.read(offset)).thenReturn(ByteBuffer.wrap(value));
-
+        var offset = kvStore.putBytes(key, value);
         byte[] result = kvStore.getBytesAt(offset);
         assertArrayEquals(value, result);
     }
 
     @Test
     void testGetOffsetStream() {
-        List<Long> expectedOffsets = List.of(100L, 200L, 300L);
-        when(index.allOffsets()).thenReturn(expectedOffsets.stream());
+
+        var intValue = 43;
+        var stringValue = "stringValue";
+        var floatArrayValue = new float[]{1.0f, 2.0f, 3.0f};
+
+        var intOffset = kvStore.putInt("intOffset", intValue);
+        var stringOffset = kvStore.putString("stringOffset", stringValue);
+        var floatArrayOffset = kvStore.putFloatArray("floatArrayOffset", floatArrayValue);
 
         Stream<Long> offsetStream = kvStore.getOffsetStream();
         List<Long> actualOffsets = offsetStream.toList();
 
-        assertEquals(expectedOffsets.size(), actualOffsets.size());
-        assertTrue(actualOffsets.containsAll(expectedOffsets));
-        verify(index).allOffsets();
+        assertEquals(3, actualOffsets.size());
+        assertTrue(actualOffsets.containsAll(List.of(intOffset, stringOffset, floatArrayOffset)));
     }
 }

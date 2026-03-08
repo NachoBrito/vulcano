@@ -178,7 +178,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
         if (commit) {
             commit();
         }
-        return index.rootOffset();
+        return offset;
     }
 
     /**
@@ -196,10 +196,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
     public Optional<byte[]> getBytes(String key) {
         var offsetOpt = index.get(ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8)));
         if (offsetOpt.isPresent()) {
-            var buffer = storage.read(offsetOpt.getAsLong());
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            return Optional.of(bytes);
+            return Optional.of(Entry.readByteArrayValue(storage.read(offsetOpt.getAsLong())));
         }
         return Optional.empty();
     }
@@ -273,10 +270,7 @@ public class TucanaKeyValueStore implements KeyValueStore {
      */
     @Override
     public byte[] getBytesAt(long offset) {
-        var buffer = storage.read(offset);
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-        return bytes;
+        return Entry.readByteArrayValue(storage.read(offset));
     }
 
     /**

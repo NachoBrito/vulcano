@@ -19,6 +19,8 @@ package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.index;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaIndex;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer.TucanaBuffer;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -40,6 +42,8 @@ import java.util.HashMap;
  * to the leaves, reducing the I/O cost per update.
  */
 public class TucanaBeTree implements TucanaIndex {
+
+    private static final Logger logger = LoggerFactory.getLogger(TucanaBeTree.class);
 
     /**
      * The storage layer responsible for allocating and retrieving node buffers.
@@ -115,7 +119,7 @@ public class TucanaBeTree implements TucanaIndex {
         long currentRootOffset = rootOffset();
         TucanaBuffer oldRoot = storage.getBuffer(currentRootOffset, nodeSize);
         int currentBufferOffset = BeTreeNodeLayout.getBufferOffset(oldRoot);
-        System.out.println("[APPEND] oldRootOff=" + currentRootOffset + " curBufOff=" + currentBufferOffset);
+        logger.debug("[APPEND] oldRootOff={} curBufOff={}", currentRootOffset, currentBufferOffset);
         int keyLen = key.remaining();
         int msgSize = 1 + 4 + keyLen + 8; // Type(1) + KeyLen(4) + Key(KeyLen) + Offset(8)
 
@@ -213,13 +217,13 @@ public class TucanaBeTree implements TucanaIndex {
             currentRoot = storage.getRootOffset(epoch).orElse(-1L);
         }
 
-        System.out.println("[GET] epoch=" + epoch + " rootOff=" + currentRoot);
+        logger.debug("[GET] epoch={} rootOff={}", epoch, currentRoot);
         if (currentRoot == -1L) {
             return OptionalLong.empty();
         }
 
         OptionalLong res = searchInNode(currentRoot, key);
-        System.out.println("[GET] res=" + res);
+        logger.debug("[GET] res={}", res);
         return res;
     }
 

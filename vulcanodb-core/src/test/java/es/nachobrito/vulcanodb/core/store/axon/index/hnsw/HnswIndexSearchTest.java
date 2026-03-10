@@ -16,6 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,10 +35,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HnswIndexSearchTest {
 
     private Path path;
+    private KeyValueStore keyValueStore;
 
     @BeforeEach
     void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test-hnsw-search");
+        keyValueStore = new KeyValueStoreProvider(path).getKeyValueStore("hnsw-test");
     }
 
     @AfterEach
@@ -52,7 +56,7 @@ public class HnswIndexSearchTest {
                 .withEfConstruction(500) // max recall
                 .withML(0)//single layer
                 .build();
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, keyValueStore)) {
             index.insert(new float[]{0.5f, 1});
             index.insert(new float[]{1, 0.5f});
             index.insert(new float[]{1, 1});

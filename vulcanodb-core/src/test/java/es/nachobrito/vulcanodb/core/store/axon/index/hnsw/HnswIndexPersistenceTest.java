@@ -16,6 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,10 +36,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HnswIndexPersistenceTest {
 
     private Path path;
+    private KeyValueStore keyValueStore;
 
     @BeforeEach
     void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test-hnsw-persistence");
+        keyValueStore = new KeyValueStoreProvider(path).getKeyValueStore("hnsw-test");
     }
 
     @AfterEach
@@ -63,7 +67,7 @@ public class HnswIndexPersistenceTest {
         List<NodeSimilarity> originalResults;
 
         // 1. Create and populate index
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, keyValueStore)) {
             for (float[] v : vectors) {
                 index.insert(v);
             }
@@ -72,7 +76,7 @@ public class HnswIndexPersistenceTest {
         }
 
         // 2. Reopen and verify
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, keyValueStore)) {
             // Verify search results are identical
             var newResults = index.search(new float[]{0.4f, 0.4f}, 2);
             assertEquals(originalResults.size(), newResults.size());
@@ -99,14 +103,14 @@ public class HnswIndexPersistenceTest {
                 .build();
 
         // Populate enough vectors to ensure we have upper layers
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, keyValueStore)) {
             for (int i = 0; i < 100; i++) {
                 index.insert(new float[]{i / 100.0f, i / 100.0f});
             }
         }
 
         // Reopen and verify we can still search
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, keyValueStore)) {
             var results = index.search(new float[]{0.5f, 0.5f}, 5);
             assertFalse(results.isEmpty());
             assertEquals(5, results.size());

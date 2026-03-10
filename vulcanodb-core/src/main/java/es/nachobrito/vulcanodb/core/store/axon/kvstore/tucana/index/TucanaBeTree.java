@@ -19,17 +19,12 @@ package es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.index;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaIndex;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer.TucanaBuffer;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.OptionalLong;
 import java.util.stream.Stream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 /**
  * A Bε-tree implementation for Tucana that maps keys to data offsets.
@@ -43,18 +38,18 @@ import java.util.HashMap;
  */
 public class TucanaBeTree implements TucanaIndex {
 
-    private static final Logger logger = LoggerFactory.getLogger(TucanaBeTree.class);
+    private static final long DEFAULT_NODE_SIZE = 4096;
 
     /**
      * The storage layer responsible for allocating and retrieving node buffers.
      */
     private final TucanaStorage storage;
-    
+
     /**
      * The fixed size of each tree node (e.g., 64KB, 256KB).
      */
     private final long nodeSize;
-    
+
     /**
      * The current root offset of the tree.
      */
@@ -63,7 +58,7 @@ public class TucanaBeTree implements TucanaIndex {
     /**
      * Constructs a new TucanaBeTree.
      *
-     * @param storage the storage layer to use
+     * @param storage  the storage layer to use
      * @param nodeSize the size for each node in the tree
      */
     public TucanaBeTree(TucanaStorage storage, long nodeSize) {
@@ -76,6 +71,10 @@ public class TucanaBeTree implements TucanaIndex {
         }
     }
 
+    public TucanaBeTree(TucanaStorage storage) {
+        this(storage, DEFAULT_NODE_SIZE);
+    }
+
     /**
      * Initializes a new, empty tree with a single leaf root node.
      */
@@ -85,7 +84,7 @@ public class TucanaBeTree implements TucanaIndex {
         buffer.putInt(BeTreeNodeLayout.OFFSET_COUNT, 0);
         buffer.putInt(BeTreeNodeLayout.OFFSET_BUFFER_START, BeTreeNodeLayout.HEADER_SIZE);
         buffer.putLong(BeTreeNodeLayout.OFFSET_PARENT, -1L);
-        
+
         // Root is always CoW, and storage handles its offset
         this.rootOffset = buffer.offset();
         storage.setRootOffset(this.rootOffset);
@@ -111,21 +110,21 @@ public class TucanaBeTree implements TucanaIndex {
     /**
      * Appends a new message (UPSERT or DELETE) to the root node's buffer.
      *
-     * @param key the key
+     * @param key    the key
      * @param offset the data offset (or -1L for DELETE)
-     * @param type the message type
+     * @param type   the message type
      */
     private void appendMessage(ByteBuffer key, long offset, byte type) {
         long currentRootOffset = rootOffset();
         TucanaBuffer oldRoot = storage.getBuffer(currentRootOffset, nodeSize);
         int currentBufferOffset = BeTreeNodeLayout.getBufferOffset(oldRoot);
-        logger.debug("[APPEND] oldRootOff={} curBufOff={}", currentRootOffset, currentBufferOffset);
+        System.out.println("[APPEND] oldRootOff=" + currentRootOffset + " curBufOff=" + currentBufferOffset);
         int keyLen = key.remaining();
         int msgSize = 1 + 4 + keyLen + 8; // Type(1) + KeyLen(4) + Key(KeyLen) + Offset(8)
 
         // Force a new root allocation for every mutation to follow CoW strictly
         TucanaBuffer newRoot = storage.allocate(nodeSize);
-        
+
         // IMPORTANT: Initialize newRoot header
         newRoot.putInt(BeTreeNodeLayout.OFFSET_MAGIC, oldRoot.getInt(BeTreeNodeLayout.OFFSET_MAGIC));
         newRoot.putLong(BeTreeNodeLayout.OFFSET_PARENT, oldRoot.getLong(BeTreeNodeLayout.OFFSET_PARENT));
@@ -136,7 +135,7 @@ public class TucanaBeTree implements TucanaIndex {
         for (int i = BeTreeNodeLayout.HEADER_SIZE; i < currentBufferOffset; i++) {
             newRoot.putByte(i, oldRoot.getByte(i));
         }
-        
+
         // Update local reference and storage
         this.rootOffset = newRoot.offset();
         TucanaBuffer root = newRoot;
@@ -180,7 +179,7 @@ public class TucanaBeTree implements TucanaIndex {
                 leaf.putLong(current + 4 + entryKeyLen, type == BeTreeNodeLayout.MSG_DELETE ? -1L : offset);
                 return;
             } else if (cmp < 0) {
-                // Insert here (Requires shift, complex for raw memory). 
+                // Insert here (Requires shift, complex for raw memory).
                 // In a true Bε-tree, we'd just buffer it or split.
                 break;
             }
@@ -197,17 +196,11 @@ public class TucanaBeTree implements TucanaIndex {
         BeTreeNodeLayout.setBufferOffset(leaf, current + 4 + keyLen + 8);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public OptionalLong get(ByteBuffer key) {
         return getAtEpoch(key, storage.currentEpoch());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public OptionalLong getAtEpoch(ByteBuffer key, long epoch) {
         long currentRoot;
@@ -217,13 +210,13 @@ public class TucanaBeTree implements TucanaIndex {
             currentRoot = storage.getRootOffset(epoch).orElse(-1L);
         }
 
-        logger.debug("[GET] epoch={} rootOff={}", epoch, currentRoot);
+        System.out.println("[GET] epoch=" + epoch + " rootOff=" + currentRoot);
         if (currentRoot == -1L) {
             return OptionalLong.empty();
         }
 
         OptionalLong res = searchInNode(currentRoot, key);
-        logger.debug("[GET] res={}", res);
+        System.out.println("[GET] res=" + res);
         return res;
     }
 
@@ -231,12 +224,12 @@ public class TucanaBeTree implements TucanaIndex {
      * Recursively searches for a key starting from the given node.
      *
      * @param nodeOffset the offset of the node to search in
-     * @param key the key to search for
+     * @param key        the key to search for
      * @return the data offset if found, or empty otherwise
      */
     private OptionalLong searchInNode(long nodeOffset, ByteBuffer key) {
         TucanaBuffer node = storage.getBuffer(nodeOffset, nodeSize);
-        
+
         // 1. Search in message buffer (most recent updates)
         OptionalLong msgResult = searchMessageBuffer(node, key);
         if (msgResult.isPresent()) {
@@ -258,13 +251,13 @@ public class TucanaBeTree implements TucanaIndex {
      * Searches the message buffer of a node for an update to the given key.
      *
      * @param node the node buffer to search
-     * @param key the key to search for
+     * @param key  the key to search for
      * @return the data offset if a message is found, or empty otherwise
      */
     private OptionalLong searchMessageBuffer(TucanaBuffer node, ByteBuffer key) {
         int bufferOffset = BeTreeNodeLayout.getBufferOffset(node);
         int current = BeTreeNodeLayout.HEADER_SIZE;
-        
+
         // Skip leaf entries if this is a leaf node
         if (BeTreeNodeLayout.isLeaf(node)) {
             int count = BeTreeNodeLayout.getCount(node);
@@ -291,7 +284,7 @@ public class TucanaBeTree implements TucanaIndex {
      * Finds the offset of the child node that may contain the given key.
      *
      * @param node the internal node buffer
-     * @param key the key to route
+     * @param key  the key to route
      * @return the offset of the child node
      */
     private long findChild(TucanaBuffer node, ByteBuffer key) {
@@ -314,7 +307,7 @@ public class TucanaBeTree implements TucanaIndex {
      * Searches the entries of a leaf node for the given key.
      *
      * @param node the leaf node buffer
-     * @param key the key to search for
+     * @param key  the key to search for
      * @return the data offset if found, or empty otherwise
      */
     private OptionalLong searchLeafEntries(TucanaBuffer node, ByteBuffer key) {
@@ -350,7 +343,7 @@ public class TucanaBeTree implements TucanaIndex {
     /**
      * Recursively traverses the tree to collect all active key-value pairs.
      *
-     * @param nodeOffset current node offset
+     * @param nodeOffset    current node offset
      * @param activeEntries map to store the results
      */
     private void collectActiveEntries(long nodeOffset, Map<ByteBuffer, Long> activeEntries) {
@@ -395,13 +388,13 @@ public class TucanaBeTree implements TucanaIndex {
             }
             current = BeTreeNodeLayout.HEADER_SIZE + leafEntriesSize;
         }
-        
+
         while (current < bufferOffset) {
             byte type = node.getByte(current);
             int keyLen = node.getInt(current + 1);
             ByteBuffer key = node.getBytes(current + 5, keyLen);
             long offset = node.getLong(current + 5 + keyLen);
-            
+
             if (type == BeTreeNodeLayout.MSG_UPSERT) {
                 activeEntries.put(key, offset);
             } else if (type == BeTreeNodeLayout.MSG_DELETE) {

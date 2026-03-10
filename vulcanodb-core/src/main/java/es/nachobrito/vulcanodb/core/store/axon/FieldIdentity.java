@@ -22,7 +22,7 @@ import es.nachobrito.vulcanodb.core.document.FieldValueType;
 /**
  * @author nacho
  */
-record FieldIdentity<T>(String fieldName, Class<T> type) {
+public record FieldIdentity<T>(String fieldName, Class<T> type) {
 
     static <V, T extends FieldValueType<V>> FieldIdentity<T> of(Field<V, T> field) {
         return new FieldIdentity<>(field.key(), field.type());

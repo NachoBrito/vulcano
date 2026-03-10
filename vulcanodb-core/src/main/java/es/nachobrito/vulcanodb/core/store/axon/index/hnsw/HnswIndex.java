@@ -18,7 +18,6 @@ package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
 import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
-import es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly.AOLKeyValueStore;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,7 @@ public final class HnswIndex implements AutoCloseable {
     private final AtomicInteger globalMaxLayer = new AtomicInteger(0);
     private final AtomicLong globalEnterPoint = new AtomicLong(0);
 
-    public HnswIndex(HnswConfig config, Path basePath) {
+    public HnswIndex(HnswConfig config, Path basePath, KeyValueStore metadataStore) {
         this.config = config;
         this.basePath = basePath;
 
@@ -57,7 +56,7 @@ public final class HnswIndex implements AutoCloseable {
 
         try {
             Files.createDirectories(basePath);
-            this.metadataStore = new AOLKeyValueStore(basePath.resolve("metadata"));
+            this.metadataStore = metadataStore;
             loadMetadata();
             this.layer0 = new PagedVectorIndex(config.blockSize(), config.dimensions(), basePath.resolve("vectors"));
             loadExistingGraphs();

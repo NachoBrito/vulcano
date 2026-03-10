@@ -54,6 +54,9 @@ public final class FilePageManager implements PageManager, AutoCloseable {
      * A cache of currently mapped pages, indexed by their page index.
      */
     private final Map<Integer, MemorySegment> pages = new ConcurrentHashMap<>();
+    
+    /** Flag to prevent multiple close operations */
+    private final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     /**
      * Creates a new FilePageManager for the specified file.
@@ -114,6 +117,9 @@ public final class FilePageManager implements PageManager, AutoCloseable {
      */
     @Override
     public void close() throws Exception {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
         flush();
         arena.close();
         channel.close();

@@ -17,12 +17,9 @@
 package es.nachobrito.vulcanodb.core.store.axon.index.string;
 
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
-import es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly.AOLKeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -33,12 +30,8 @@ public final class InvertedIndex implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final KeyValueStore kvStore;
 
-    public InvertedIndex(Path basePath) {
-        try {
-            this.kvStore = new AOLKeyValueStore(basePath);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create InvertedIndex", e);
-        }
+    public InvertedIndex(KeyValueStore keyValueStore) {
+        this.kvStore = keyValueStore;
     }
 
     public void add(String term, Long internalId) {

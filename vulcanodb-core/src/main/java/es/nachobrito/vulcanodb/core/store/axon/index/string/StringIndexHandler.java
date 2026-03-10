@@ -21,12 +21,12 @@ import es.nachobrito.vulcanodb.core.document.Field;
 import es.nachobrito.vulcanodb.core.document.StringFieldValue;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexMatch;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -40,9 +40,9 @@ public class StringIndexHandler implements IndexHandler<String> {
     private final String fieldName;
     private final InvertedIndex invertedIndex;
 
-    public StringIndexHandler(String fieldName, Path basePath) {
+    public StringIndexHandler(String fieldName, KeyValueStore keyValueStore) {
         this.fieldName = fieldName;
-        this.invertedIndex = new InvertedIndex(basePath);
+        this.invertedIndex = new InvertedIndex(keyValueStore);
     }
 
     @Override

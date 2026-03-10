@@ -21,6 +21,7 @@ import es.nachobrito.vulcanodb.core.document.Field;
 import es.nachobrito.vulcanodb.core.document.VectorFieldValue;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.IndexMatch;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LeafNode;
 import es.nachobrito.vulcanodb.core.util.PagedLongArray;
 import org.slf4j.Logger;
@@ -40,9 +41,9 @@ public class HnswIndexHandler implements IndexHandler<float[]> {
     private final String fieldName;
     private final PagedLongArray documentIdMap;
 
-    public HnswIndexHandler(String fieldName, HnswConfig hnswConfig, Path basePath) {
+    public HnswIndexHandler(String fieldName, HnswConfig hnswConfig, Path basePath, KeyValueStore metadataStore) {
         this.fieldName = fieldName;
-        this.index = new HnswIndex(hnswConfig, basePath);
+        this.index = new HnswIndex(hnswConfig, basePath, metadataStore);
         this.documentIdMap = new PagedLongArray(4096, basePath.resolve("id_map"));
     }
 

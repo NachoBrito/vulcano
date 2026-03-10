@@ -20,6 +20,8 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import es.nachobrito.vulcanodb.core.Embedding;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,10 +45,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HnswIndexSearchEmbeddingsTest {
 
     private Path path;
+    private KeyValueStore kvStore;
 
     @BeforeEach
     void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test-hnsw-embeddings");
+        kvStore = new KeyValueStoreProvider(path).getKeyValueStore("hnsw-test");
     }
 
     @AfterEach
@@ -63,7 +67,7 @@ public class HnswIndexSearchEmbeddingsTest {
                 .withEfConstruction(500) // max recall
                 .withEfSearch(500) // max recall
                 .build();
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, kvStore)) {
             var query = "how word embeddings work";
             var queryVector = embeddingModel.embed(query).content().vector();
             var similarities = new HashMap<Long, Float>();

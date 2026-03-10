@@ -26,9 +26,12 @@
             <Class name="es.nachobrito.vulcanodb.core.VulcanoDb$Builder"/>
             <Class name="es.nachobrito.vulcanodb.core.ingestion.WorkQueueIngestor"/>
             <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaKeyValueStore"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.PrefixedKeyValueStore"/>
             <Class name="es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext"/>
             <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.index.TucanaBeTree"/>
             <Class name="es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.buffer.BoundedTucanaBuffer"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswIndex"/>
+            <Class name="es.nachobrito.vulcanodb.core.store.axon.index.string.InvertedIndex"/>
         </Or>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>

@@ -28,18 +28,16 @@ import es.nachobrito.vulcanodb.core.store.axon.index.IndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswConfig;
 import es.nachobrito.vulcanodb.core.store.axon.index.hnsw.HnswIndexHandler;
 import es.nachobrito.vulcanodb.core.store.axon.index.string.StringIndexHandler;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.ExecutionContext;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.IndexRegistry;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.QueryExecutor;
 import es.nachobrito.vulcanodb.core.store.axon.queryevaluation.logical.LogicalNode;
-import es.nachobrito.vulcanodb.core.store.axon.wal.DefaultWalManager;
-import es.nachobrito.vulcanodb.core.store.axon.wal.WalManager;
 import es.nachobrito.vulcanodb.core.telemetry.MetricValue;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -47,8 +45,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-
-import static es.nachobrito.vulcanodb.core.store.axon.wal.WalEntry.Type;
 
 /**
  * The Axon data store provides support for:
@@ -64,16 +60,14 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private final Map<String, IndexHandler<?>> indexes;
     private final DocumentPersister documentPersister;
     private final QueryExecutor queryExecutor;
-    private final WalManager walManager;
     private boolean initialized = false;
     private final AtomicLong storedDocuments = new AtomicLong();
     private final AtomicLong offHeapBytesCount = new AtomicLong();
     private Future<Void> pendingOffHeapCountOperation = null;
 
-    private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister, WalManager walManager) {
+    private AxonDataStore(Map<String, IndexHandler<?>> indexes, DocumentPersister documentPersister) {
         this.indexes = indexes;
         this.documentPersister = documentPersister;
-        this.walManager = walManager;
         var ctx = new ExecutionContext(
                 documentPersister,
                 Collections.unmodifiableMap(indexes));
@@ -90,7 +84,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         return CompletableFuture.runAsync(() -> {
             log.info("Starting initialization process, recovering from WAL if needed");
 
-            recoverUncommitedOperations();
             countDocuments();
             countOffHeapBytes();
 
@@ -106,7 +99,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     private void countOffHeapBytes() {
 
         long documentOffHeapMemory = documentPersister.getOffHeapBytes();
-        long walOffHeapMemory = walManager.offHeapBytes();
         long indexOffHeapMemory = indexes
                 .values()
                 .stream()
@@ -117,49 +109,17 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                     ************************
                     Counting off heap bytes:
                     - documentOffHeapMemory: {}
-                    - walOffHeapMemory: {}
                     - indexOffHeapMemory: {}
-                    """, documentOffHeapMemory, walOffHeapMemory, indexOffHeapMemory);
+                    """, documentOffHeapMemory, indexOffHeapMemory);
         }
-        offHeapBytesCount.set(documentOffHeapMemory + walOffHeapMemory + indexOffHeapMemory);
-    }
-
-    private void recoverUncommitedOperations() {
-        try {
-            var uncommitted = walManager.readUncommitted();
-            if (!uncommitted.isEmpty()) {
-                log.info("Found {} uncommitted transactions in WAL. Recovering...", uncommitted.size());
-                for (var entry : uncommitted) {
-                    try {
-                        if (entry.type() == Type.ADD) {
-                            entry.document().ifPresent(this::addInternal);
-                        } else if (entry.type() == Type.REMOVE) {
-                            entry.documentId().ifPresent(id -> this.remove(DocumentId.of(id)));
-                        }
-                        walManager.commit(entry.txId());
-                    } catch (Exception e) {
-                        log.error("Failed to recover WAL entry {}", entry.txId(), e);
-                    }
-                }
-                log.info("Recovery complete.");
-            }
-        } catch (IOException e) {
-            log.error("Could not read WAL during initialization", e);
-        }
+        offHeapBytesCount.set(documentOffHeapMemory + indexOffHeapMemory);
     }
 
     @Override
     public void add(Document document) {
-        try {
-            long txId = walManager.recordAdd(document);
-            addInternal(document);
-            walManager.commit(txId);
-            ExecutorProvider.ingestionExecutor().execute(this::countDocuments);
-            ExecutorProvider.ingestionExecutor().execute(this::scheduleOffHeapByteCount);
-
-        } catch (IOException e) {
-            throw new AxonDataStoreException(e);
-        }
+        addInternal(document);
+        ExecutorProvider.ingestionExecutor().execute(this::countDocuments);
+        ExecutorProvider.ingestionExecutor().execute(this::scheduleOffHeapByteCount);
     }
 
     private void scheduleOffHeapByteCount() {
@@ -226,14 +186,8 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
     @Override
     public void remove(DocumentId documentId) {
-        try {
-            long txId = walManager.recordRemove(documentId.toString());
-            this.documentPersister.remove(documentId);
-            walManager.commit(txId);
-            ExecutorProvider.ingestionExecutor().execute(this::countDocuments);
-        } catch (IOException e) {
-            throw new AxonDataStoreException(e);
-        }
+        this.documentPersister.remove(documentId);
+        ExecutorProvider.ingestionExecutor().execute(this::countDocuments);
     }
 
     @Override
@@ -245,7 +199,6 @@ public class AxonDataStore implements DataStore, IndexRegistry {
     @Override
     public void close() throws Exception {
         log.info("Closing Axon Datastore...");
-        walManager.close();
         documentPersister.close();
         log.info("Document persister closed.");
         var errors = new HashMap<String, Exception>();
@@ -290,16 +243,12 @@ public class AxonDataStore implements DataStore, IndexRegistry {
         private final List<String> stringIndexes = new ArrayList<>();
 
         public AxonDataStore build() {
-            var documentPersister = new DefaultDocumentPersister(dataFolder);
-            try {
-                var walManager = new DefaultWalManager(dataFolder.resolve("wal"));
-                return new AxonDataStore(buildIndexHandlers(), documentPersister, walManager);
-            } catch (IOException e) {
-                throw new AxonDataStoreException(e);
-            }
+            var keyValueStoreProvider = new KeyValueStoreProvider(dataFolder);
+            var documentPersister = new DefaultDocumentPersister(keyValueStoreProvider);
+            return new AxonDataStore(buildIndexHandlers(keyValueStoreProvider), documentPersister);
         }
 
-        private Map<String, IndexHandler<?>> buildIndexHandlers() {
+        private Map<String, IndexHandler<?>> buildIndexHandlers(KeyValueStoreProvider keyValueStoreProvider) {
             Map<String, IndexHandler<?>> handlers = vectorIndexConfigs
                     .entrySet()
                     .stream()
@@ -307,14 +256,16 @@ public class AxonDataStore implements DataStore, IndexRegistry {
                         var indexFolder = dataFolder
                                 .resolve("index")
                                 .resolve(FileUtils.toLegalFileName(entry.getKey()));
-                        return new HnswIndexHandler(entry.getKey(), entry.getValue(), indexFolder);
+                        var metadataStore = keyValueStoreProvider.getKeyValueStore("hnsw:" + entry.getKey());
+                        return new HnswIndexHandler(entry.getKey(), entry.getValue(), indexFolder, metadataStore);
                     }));
 
             stringIndexes.forEach(fieldName -> {
                 var indexFolder = dataFolder
                         .resolve("index")
                         .resolve(FileUtils.toLegalFileName(fieldName));
-                handlers.put(fieldName, new StringIndexHandler(fieldName, indexFolder));
+                var invertedIndexStore = keyValueStoreProvider.getKeyValueStore("inverted-index:" + fieldName);
+                handlers.put(fieldName, new StringIndexHandler(fieldName, invertedIndexStore));
             });
 
             return handlers;

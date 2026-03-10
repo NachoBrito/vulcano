@@ -17,15 +17,11 @@
 package es.nachobrito.vulcanodb.core.store.axon;
 
 import es.nachobrito.vulcanodb.core.document.*;
-import es.nachobrito.vulcanodb.core.store.axon.error.AxonDataStoreException;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
-import es.nachobrito.vulcanodb.core.store.axon.kvstore.appendonly.AOLKeyValueStore;
-import es.nachobrito.vulcanodb.core.util.FileUtils;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,10 +33,10 @@ class FieldDiskStore implements AutoCloseable {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final Map<FieldIdentity<?>, KeyValueStore> stores = new ConcurrentHashMap<>();
-    private final Path dataFolder;
+    private final KeyValueStoreProvider keyValueStoreProvider;
 
-    public FieldDiskStore(Path dataFolder) {
-        this.dataFolder = dataFolder;
+    public FieldDiskStore(KeyValueStoreProvider provider) {
+        this.keyValueStoreProvider = provider;
     }
 
     /**
@@ -68,7 +64,7 @@ class FieldDiskStore implements AutoCloseable {
      */
     public <V, T extends FieldValueType<V>> FieldWriteResult writeField(String documentId, Field<V, T> field, boolean commit) {
         var fieldIdentity = FieldIdentity.of(field);
-        var store = stores.computeIfAbsent(fieldIdentity, this::createValueStore);
+        var store = stores.computeIfAbsent(fieldIdentity, keyValueStoreProvider::forField);
 
         if (log.isDebugEnabled()) {
             log.debug("[{}] Writing {}:{} ({})", Thread.currentThread(), documentId, field.key(), field.type());
@@ -89,6 +85,7 @@ class FieldDiskStore implements AutoCloseable {
         }
     }
 
+
     /**
      * Commits all field stores.
      */
@@ -100,23 +97,6 @@ class FieldDiskStore implements AutoCloseable {
         return stores.values().stream().mapToLong(KeyValueStore::offHeapBytes).sum();
     }
 
-
-    private KeyValueStore createValueStore(FieldIdentity<?> fieldIdentity) {
-        try {
-            return new AOLKeyValueStore(getDestinationPath(fieldIdentity));
-        } catch (IOException e) {
-            throw new AxonDataStoreException(e);
-        }
-    }
-
-    private Path getDestinationPath(FieldIdentity<?> identity) {
-        var folder = FileUtils.toLegalFileName(identity.fieldName());
-        var parent = dataFolder.resolve(folder, identity.type().getSimpleName());
-        if (!parent.toFile().isDirectory() && !parent.toFile().mkdirs()) {
-            throw new AxonDataStoreException("Cannot create folder: " + parent);
-        }
-        return parent;
-    }
 
     @Override
     public void close() throws Exception {
@@ -148,7 +128,7 @@ class FieldDiskStore implements AutoCloseable {
             log.debug("[{}] Reading to map {}:{} ({})", Thread.currentThread(), id, fieldName, type);
         }
         var identity = new FieldIdentity<>(fieldName, type);
-        var store = stores.computeIfAbsent(identity, this::createValueStore);
+        var store = stores.computeIfAbsent(identity, keyValueStoreProvider::forField);
         if (type.equals(IntegerFieldValue.class)) {
             store.getInt(id).ifPresent(integer -> values.put(fieldName, integer));
             return;
@@ -189,7 +169,7 @@ class FieldDiskStore implements AutoCloseable {
             log.debug("[{}] Reading {}:{} ({})", Thread.currentThread(), documentId, fieldName, valueType);
         }
         var identity = new FieldIdentity<>(fieldName, valueType);
-        var store = stores.computeIfAbsent(identity, this::createValueStore);
+        var store = stores.computeIfAbsent(identity, keyValueStoreProvider::forField);
         if (valueType.equals(IntegerFieldValue.class)) {
             return (Optional<T>) store.getInt(documentId);
 
@@ -222,7 +202,7 @@ class FieldDiskStore implements AutoCloseable {
 
     private void removeField(String fieldName, Class<? extends FieldValueType<?>> type, String documentId) {
         var identity = new FieldIdentity<>(fieldName, type);
-        var store = stores.computeIfAbsent(identity, this::createValueStore);
+        var store = stores.computeIfAbsent(identity, keyValueStoreProvider::forField);
         store.remove(documentId);
     }
 }

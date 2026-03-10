@@ -17,6 +17,7 @@
 package es.nachobrito.vulcanodb.core.store.axon;
 
 import es.nachobrito.vulcanodb.core.document.Document;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,7 @@ class DocumentPersisterTest {
 
     @Test
     void expectDocumentWritten() {
-        try (var store = new DefaultDocumentPersister(path)) {
+        try (var store = new DefaultDocumentPersister(new KeyValueStoreProvider(path))) {
             var now = ZonedDateTime.now();
             Map<String, Object> fields = Map.of(
                     "integer", 1,

@@ -16,6 +16,8 @@
 
 package es.nachobrito.vulcanodb.core.store.axon.index.hnsw;
 
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStore;
+import es.nachobrito.vulcanodb.core.store.axon.kvstore.KeyValueStoreProvider;
 import es.nachobrito.vulcanodb.core.util.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,10 +38,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class HnswIndexCreateTest {
 
     private Path path;
+    private KeyValueStore kvStore;
 
     @BeforeEach
     void setup() throws IOException {
         path = Files.createTempDirectory("vulcanodb-test-hnsw-create");
+        kvStore = new KeyValueStoreProvider(path).getKeyValueStore("hnsw-test");
     }
 
     @AfterEach
@@ -50,7 +54,7 @@ class HnswIndexCreateTest {
     @Test
     void expectBoundaryChecks() throws Exception {
         var config = HnswConfig.builder().withDimensions(2).build();
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, kvStore)) {
             assertThrows(IllegalArgumentException.class, () -> {
                 index.insert(new float[]{1});
             });
@@ -63,7 +67,7 @@ class HnswIndexCreateTest {
     @Test
     void expectIndexCreated() throws Exception {
         var config = HnswConfig.builder().build();
-        try (var index = new HnswIndex(config, path)) {
+        try (var index = new HnswIndex(config, path, kvStore)) {
             assertNotNull(index);
 
             var vectorCount = 1000;

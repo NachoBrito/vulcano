@@ -244,7 +244,7 @@ public class AxonDataStore implements DataStore, IndexRegistry {
 
         public AxonDataStore build() {
             var keyValueStoreProvider = new KeyValueStoreProvider(dataFolder);
-            var documentPersister = new DefaultDocumentPersister(keyValueStoreProvider);
+            var documentPersister = new TaskPerDocumentPersister(keyValueStoreProvider);
             return new AxonDataStore(buildIndexHandlers(keyValueStoreProvider), documentPersister);
         }
 

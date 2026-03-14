@@ -38,12 +38,12 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 /**
  * @author nacho
  */
-public final class DefaultDocumentPersister implements DocumentPersister {
+public final class TaskPerFieldDocumentPersister implements DocumentPersister {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final FieldDiskStore fieldDiskStore;
     private final KeyValueStore dictionary;
 
-    public DefaultDocumentPersister(KeyValueStoreProvider keyValueStoreProvider) {
+    public TaskPerFieldDocumentPersister(KeyValueStoreProvider keyValueStoreProvider) {
         this.fieldDiskStore = new FieldDiskStore(keyValueStoreProvider);
         this.dictionary = keyValueStoreProvider.getKeyValueStore("dictionary");
     }

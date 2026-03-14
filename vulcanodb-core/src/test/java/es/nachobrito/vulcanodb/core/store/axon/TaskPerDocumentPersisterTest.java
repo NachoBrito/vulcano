@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author nacho
  */
-class DocumentPersisterTest {
+class TaskPerDocumentPersisterTest {
     private Path path;
 
     @BeforeEach
@@ -51,7 +51,7 @@ class DocumentPersisterTest {
 
     @Test
     void expectDocumentWritten() {
-        try (var store = new DefaultDocumentPersister(new KeyValueStoreProvider(path))) {
+        try (var store = new TaskPerDocumentPersister(new KeyValueStoreProvider(path))) {
             var now = ZonedDateTime.now();
             Map<String, Object> fields = Map.of(
                     "integer", 1,

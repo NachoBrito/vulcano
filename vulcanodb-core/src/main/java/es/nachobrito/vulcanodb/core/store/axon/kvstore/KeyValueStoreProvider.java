@@ -22,6 +22,8 @@ import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.TucanaKeyValueStor
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.index.TucanaBeTree;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.AxonTucanaStorage;
 import es.nachobrito.vulcanodb.core.store.axon.kvstore.tucana.storage.TucanaStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -31,8 +33,8 @@ import java.util.Map;
  * @author nacho
  */
 public final class KeyValueStoreProvider {
+    private static final Logger LOG = LoggerFactory.getLogger(KeyValueStoreProvider.class);
     private final KeyValueStore store;
-
     private static final Map<String, KeyValueStore> stores = new HashMap<>();
 
     public KeyValueStoreProvider(Path dataFolder) {
@@ -57,5 +59,21 @@ public final class KeyValueStoreProvider {
     public KeyValueStore forField(FieldIdentity<?> fieldIdentity) {
         var prefix = fieldIdentity.fieldName() + "/" + fieldIdentity.type().getName();
         return getKeyValueStore(prefix);
+    }
+
+    public void closeAll() {
+        stores.values().forEach(this::closeStore);
+    }
+
+    private void closeStore(KeyValueStore keyValueStore) {
+        try {
+            keyValueStore.close();
+        } catch (Exception e) {
+            LOG.warn("Error while closing store {}", keyValueStore, e);
+        }
+    }
+
+    public long totalOffHeapBytes() {
+        return stores.values().stream().map(KeyValueStore::offHeapBytes).reduce(0L, Long::sum);
     }
 }
